@@ -1671,13 +1671,17 @@ function confirmPayment(){
 
 function showSuspendedPage(member){
   hide('memberDashboard'); hide('adminDashboard'); hide('paymentPage');
+  var already=el('suspendedPage').style.display!=='none';
   show('suspendedPage');
   document.body.style.overflow='auto';
   setText('suspendedName', 'Hello '+member.firstName+' — your account is currently suspended.');
-  setVal('suspendedSubject','');
-  setVal('suspendedMsg','');
-  var res=el('suspendedMsgResult');
-  if(res) res.style.display='none';
+  // Only reset form if the page wasn't already open (don't erase typing)
+  if(!already){
+    setVal('suspendedSubject','');
+    setVal('suspendedMsg','');
+    var res=el('suspendedMsgResult');
+    if(res) res.style.display='none';
+  }
   startIdleTracking();
 }
 
@@ -2386,7 +2390,10 @@ function startIdleTracking(){
     var fresh=getMembers().find(function(m){return m.id===currentUser.id;});
     if(!fresh){logout(); return;}
     if(fresh.status==='suspended'){
-      currentUser=fresh; saveSession(); showSuspendedPage(fresh); return;
+      currentUser=fresh; saveSession();
+      // Only redirect if not already on the suspended page
+      if(el('suspendedPage').style.display==='none') showSuspendedPage(fresh);
+      return;
     }
     if(fresh.status==='payment_failed'){logout();}
   },30000);
