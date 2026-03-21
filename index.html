@@ -2392,9 +2392,9 @@ function renderPaymentsTable(){
     html+='<td>'+m.tier+'</td><td style="font-weight:700;color:var(--green)">GHS '+m.fee+'</td>';
     html+='<td style="font-family:monospace;font-weight:600;color:var(--green-mid)">'+m.phone+'</td>';
     html+='<td style="font-size:11.5px;white-space:nowrap">'+sub+'</td><td>'+sb+'</td>';
-    html+='<td style="display:flex;gap:5px;flex-wrap:wrap">';
+    html+='<td><div style="display:flex;gap:5px;flex-wrap:wrap">';
     html+='<button class="abtn vbtn" data-verify="'+m.id+'">&#x2705; Verified</button>';
-    html+='<button class="abtn fbtn" data-fail="'+m.id+'">&#x2716; Failed</button></td></tr>';
+    html+='<button class="abtn fbtn" data-fail="'+m.id+'">&#x2716; Failed</button></div></td></tr>';
   });
   setHTML('aPaymentsBody', html);
   el('aPaymentsBody').querySelectorAll('[data-verify]').forEach(function(b){b.addEventListener('click',function(){verifyPayment(b.dataset.verify);});});
@@ -2556,12 +2556,14 @@ function renderMembersTable(){
       if(extraPolls!==0) html+='<div style="font-size:10.5px;color:'+(extraPolls>0?'var(--green)':'var(--red)')+'">base '+basePolls+(extraPolls>0?' +'+extraPolls:' '+extraPolls)+'</div>';
       html+='</td>';
       html+='<td style="white-space:nowrap;font-size:12px">'+m.joinedDate+'</td>';
-      html+='<td style="display:flex;gap:5px;flex-wrap:wrap">';
+      html+='<td style="min-width:120px">';
+      html+='<div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center">';
       if(m.status==='awaiting_verification') html+='<button class="abtn vbtn" data-verify="'+m.id+'">&#x2705; Verify</button>';
       if(m.status==='active') html+='<button class="abtn" data-suspend="'+m.id+'">&#x26A0; Suspend</button>';
       if(m.status==='suspended') html+='<button class="abtn reactivate" data-reactivate="'+m.id+'">&#x1F7E2; Reactivate</button>';
+      if(m.status==='payment_failed') html+='<button class="abtn vbtn" data-verify="'+m.id+'">&#x2705; Verify</button>';
       html+='<button class="abtn danger" data-del="'+m.id+'" data-delname="'+m.firstName+' '+m.lastName+'">&#x1F5D1; Delete</button>';
-      html+='</td></tr>';
+      html+='</div></td></tr>';
     });
   });
 
@@ -2627,7 +2629,7 @@ function suspendMember(id){
 function reactivateMember(id){
   var members=getMembers();
   var idx=members.findIndex(function(m){return m.id===id;});
-  if(idx<0){ alert('Member not found.'); return; }
+  if(idx<0){ adminAlert('Member not found.'); return; }
   members[idx].status='active';
   members[idx].notifications=members[idx].notifications||[];
   members[idx].notifications.push('\u2705 Your account has been reactivated by admin. You can now access all surveys, polls, and videos again. Welcome back!');
@@ -2736,11 +2738,11 @@ function renderDuplicatesTable(){
     html+='<td><strong>'+g.a.firstName+' '+g.a.lastName+'</strong><br><span style="font-size:11px;color:#6b7280">'+g.a.phone+' · '+g.a.region+'</span><br>'+stA+'</td>';
     html+='<td><strong>'+g.b.firstName+' '+g.b.lastName+'</strong><br><span style="font-size:11px;color:#6b7280">'+g.b.phone+' · '+g.b.region+'</span><br>'+stB+'</td>';
     html+='<td>'+ g.reasons.map(function(r){return '<span style="font-size:11px;font-weight:600;background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:8px;display:inline-block;margin:2px">&#x26A0; '+r+'</span>';}).join('') +'</td>';
-    html+='<td style="display:flex;flex-direction:column;gap:5px">';
+    html+='<td><div style="display:flex;flex-direction:column;gap:5px">';
     if(g.a.status==='active') html+='<button class="abtn" style="font-size:11px" data-suspend="'+g.a.id+'">&#x26A0; Suspend A</button>';
     if(g.b.status==='active') html+='<button class="abtn" style="font-size:11px" data-suspend="'+g.b.id+'">&#x26A0; Suspend B</button>';
     html+='<button class="abtn danger" style="font-size:11px" data-del="'+g.a.id+'" data-delname="'+g.a.firstName+' '+g.a.lastName+'">&#x1F5D1; Delete A</button>';
-    html+='<button class="abtn danger" style="font-size:11px" data-del="'+g.b.id+'" data-delname="'+g.b.firstName+' '+g.b.lastName+'">&#x1F5D1; Delete B</button></td></tr>';
+    html+='<button class="abtn danger" style="font-size:11px" data-del="'+g.b.id+'" data-delname="'+g.b.firstName+' '+g.b.lastName+'">&#x1F5D1; Delete B</button></div></td></tr>';
   });
   html+='</tbody></table></div>';
   setHTML('duplicatesWrap', html);
