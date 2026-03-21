@@ -631,6 +631,21 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
   </div>
 </div>
 
+<!-- PENALTY MODAL -->
+<div class="modal-overlay" id="penaltyModal">
+  <div class="modal modal-sm">
+    <button class="modal-close" id="closePenaltyBtn">&#x2715;</button>
+    <h2 style="color:var(--orange)">&#x26A0; Apply Penalty Deduction</h2>
+    <p style="font-size:13.5px;color:var(--text-muted);margin-bottom:16px">Deduct an amount from the member's balance. The member will be notified with the reason.</p>
+    <div class="fg"><label>Member</label><div style="padding:9px 12px;background:var(--warm-gray);border-radius:9px;font-size:13.5px;font-weight:600" id="penaltyMemberName">—</div></div>
+    <div class="fg"><label>Current Balance</label><div style="padding:9px 12px;background:var(--warm-gray);border-radius:9px;font-size:13.5px;font-weight:700;color:var(--green)" id="penaltyMemberBalance">GHS 0.00</div></div>
+    <div class="fg"><label>Amount to Deduct (GHS) *</label><input type="number" id="penaltyAmount" placeholder="e.g. 5.00" min="0.10" step="0.10"/></div>
+    <div class="fg"><label>Reason for Penalty *</label><textarea id="penaltyReason" rows="3" style="resize:vertical" placeholder="e.g. Violation of terms — fake survey responses detected..."></textarea></div>
+    <div class="err-box" id="penaltyError"></div>
+    <button class="sbtn" style="background:var(--orange)" id="doPenaltyBtn">Apply Penalty Deduction &#x2192;</button>
+  </div>
+</div>
+
 <!-- ADD CONTENT MODAL -->
 <div class="modal-overlay" id="addContentModal">
   <div class="modal modal-wide">
@@ -729,6 +744,11 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
           </div>
           <button id="suspendedSendBtn" style="width:100%;padding:12px;background:var(--green);color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font-body)">Send Message to Admin →</button>
           <div id="suspendedMsgResult" style="display:none;margin-top:10px;padding:10px 13px;border-radius:8px;font-size:13px;font-weight:500"></div>
+        </div>
+        <!-- Admin replies section -->
+        <div id="suspendedRepliesWrap" style="margin-bottom:20px;display:none">
+          <div style="font-size:12px;font-weight:700;color:var(--text-mid);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">📬 Replies from Support</div>
+          <div id="suspendedRepliesList"></div>
         </div>
         <button id="suspendedLogoutBtn" style="width:100%;padding:11px;background:none;border:1.5px solid #e5e7eb;border-radius:9px;font-size:13.5px;cursor:pointer;color:var(--text-muted);font-family:var(--font-body)">Log Out</button>
       </div>
@@ -1449,6 +1469,8 @@ document.addEventListener('DOMContentLoaded', function(){
   bindClick('copyRefBtn', copyRefLink);
   bindClick('suspendedSendBtn', submitSuspendedMessage);
   bindClick('suspendedLogoutBtn', logout);
+  bindClick('closePenaltyBtn', closePenaltyModal);
+  bindClick('doPenaltyBtn', applyPenalty);
   bindClick('copyRefMainBtn', copyRefMainLink);
   bindClick('submitIssueBtn', submitIssue);
   bindClick('submitUpgradeBtn', submitUpgradeRequest);
@@ -1682,6 +1704,8 @@ function showSuspendedPage(member){
     var res=el('suspendedMsgResult');
     if(res) res.style.display='none';
   }
+  // Always refresh replies (new replies may have arrived)
+  renderSuspendedReplies(member);
   startIdleTracking();
 }
 
@@ -2392,7 +2416,12 @@ function startIdleTracking(){
     if(fresh.status==='suspended'){
       currentUser=fresh; saveSession();
       // Only redirect if not already on the suspended page
-      if(el('suspendedPage').style.display==='none') showSuspendedPage(fresh);
+      if(el('suspendedPage').style.display==='none'){
+        showSuspendedPage(fresh);
+      } else {
+        // Already on page — just refresh replies silently
+        renderSuspendedReplies(fresh);
+      }
       return;
     }
     if(fresh.status==='payment_failed'){logout();}
@@ -2682,6 +2711,7 @@ function renderMembersTable(){
       if(m.status==='active') html+='<button class="abtn" data-suspend="'+m.id+'">&#x26A0; Suspend</button>';
       if(m.status==='suspended') html+='<button class="abtn reactivate" data-reactivate="'+m.id+'">&#x1F7E2; Reactivate</button>';
       if(m.status==='payment_failed') html+='<button class="abtn vbtn" data-verify="'+m.id+'">&#x2705; Verify</button>';
+      if(m.status==='active'||m.status==='suspended') html+='<button class="abtn" data-penalty="'+m.id+'" data-penaltyname="'+m.firstName+' '+m.lastName+'" data-penaltybал="'+(m.balance||0).toFixed(2)+'" style="border-color:var(--orange);color:var(--orange)">&#x26A0; Penalty</button>';
       html+='<button class="abtn danger" data-del="'+m.id+'" data-delname="'+m.firstName+' '+m.lastName+'">&#x1F5D1; Delete</button>';
       html+='</div></td></tr>';
     });
@@ -2699,6 +2729,7 @@ function renderMembersTable(){
     if(b.dataset.verify)     verifyPayment(b.dataset.verify);
     else if(b.dataset.suspend)    suspendMember(b.dataset.suspend);
     else if(b.dataset.reactivate) reactivateMember(b.dataset.reactivate);
+    else if(b.dataset.penalty)    openPenaltyModal(b.dataset.penalty, b.dataset.penaltyname, b.dataset.penaltybал);
     else if(b.dataset.del)        openDeleteModal(b.dataset.del, b.dataset.delname);
     else if(b.dataset.pollinc)    adjustPollLimit(b.dataset.pollinc, 1);
     else if(b.dataset.polldec)    adjustPollLimit(b.dataset.polldec, -1);
@@ -4048,6 +4079,80 @@ function processUpgrade(reqId, action){
   refreshAdminMetrics();
 }
 
+// ── PENALTY DEDUCTION ────────────────────────────────
+var pendingPenaltyId=null;
+
+function openPenaltyModal(id, name, balance){
+  pendingPenaltyId=id;
+  setText('penaltyMemberName', name);
+  setText('penaltyMemberBalance','GHS '+(parseFloat(balance)||0).toFixed(2));
+  setVal('penaltyAmount','');
+  setVal('penaltyReason','');
+  hideErr('penaltyError');
+  el('penaltyModal').classList.add('open');
+}
+
+function closePenaltyModal(){
+  el('penaltyModal').classList.remove('open');
+  pendingPenaltyId=null;
+}
+
+function applyPenalty(){
+  var amount=parseFloat(val('penaltyAmount'));
+  var reason=(val('penaltyReason')||'').trim();
+  if(!amount||amount<0.10){showErr('penaltyError','Please enter a valid amount (min GHS 0.10).');return;}
+  if(!reason){showErr('penaltyError','Please provide a reason for this penalty.');return;}
+  var members=getMembers();
+  var idx=members.findIndex(function(m){return m.id===pendingPenaltyId;});
+  if(idx<0){adminAlert('Member not found.');closePenaltyModal();return;}
+  var currentBal=parseFloat((members[idx].balance||0).toFixed(2));
+  var deduct=Math.min(amount, currentBal); // never go below 0
+  members[idx].balance=parseFloat((currentBal-deduct).toFixed(2));
+  members[idx].notifications=members[idx].notifications||[];
+  members[idx].notifications.push(
+    '&#x26A0; A penalty of <strong>GHS '+amount.toFixed(2)+'</strong> has been deducted from your balance. '
+    +'Reason: '+reason+'. '
+    +(deduct<amount?'(Only GHS '+deduct.toFixed(2)+' was deducted as your balance was insufficient.) ':'')
+    +'New balance: <strong>GHS '+members[idx].balance.toFixed(2)+'</strong>.'
+  );
+  saveMembers(members);
+  // Update currentUser if it's the affected member
+  if(currentUser&&!isAdminUser()&&currentUser.id===pendingPenaltyId){
+    currentUser=members[idx];
+    setText('dmBal','GHS '+(currentUser.balance||0).toFixed(2));
+    renderNotifications(currentUser);
+  }
+  closePenaltyModal();
+  renderMembersTable();
+  refreshAdminMetrics();
+  adminAlert('Penalty of GHS '+deduct.toFixed(2)+' deducted from '+members[idx].firstName+' '+members[idx].lastName+'\'s balance.');
+}
+
+// ── SUSPENDED PAGE: SHOW ADMIN REPLIES ───────────────
+function renderSuspendedReplies(member){
+  var issues=getIssues().filter(function(i){
+    return i.memberId===member.id && i.adminReply && i.adminReply.trim()!=='';
+  });
+  var wrap=el('suspendedRepliesWrap');
+  var list=el('suspendedRepliesList');
+  if(!wrap||!list) return;
+  if(!issues.length){wrap.style.display='none';return;}
+  wrap.style.display='block';
+  var html='';
+  issues.slice().reverse().forEach(function(issue){
+    html+='<div style="background:#fff;border:1.5px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:10px">';
+    html+='<div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px">Re: '+issue.subject+'</div>';
+    html+='<div style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Your message &middot; Submitted: '+issue.date+'</div>';
+    html+='<div style="font-size:13px;color:var(--text-mid);background:var(--warm-gray);border-radius:8px;padding:9px 12px;margin-bottom:10px;line-height:1.6">'+issue.body+'</div>';
+    html+='<div style="background:var(--green-pale);border-left:3px solid var(--green);border-radius:0 8px 8px 0;padding:10px 13px">';
+    html+='<div style="font-size:11.5px;font-weight:700;color:var(--green);margin-bottom:4px">&#x2705; Admin Reply &mdash; '+issue.repliedDate+'</div>';
+    html+='<div style="font-size:13.5px;color:var(--green-mid);line-height:1.7">'+issue.adminReply+'</div>';
+    html+='</div>';
+    html+='</div>';
+  });
+  list.innerHTML=html;
+}
+
 function broadcastAnn(){
   var text=(val('annText')||'').trim();
   if(!text){alert('Please enter an announcement.'); return;}
@@ -4228,6 +4333,10 @@ function renderAdminIssues(){
         members[mi].notifications.push('&#x1F4AC; Admin replied to your issue "<strong>'+issues2[idx].subject+'</strong>": '+reply.substring(0,100)+(reply.length>100?'…':''));
         saveMembers(members);
         if(currentUser&&currentUser!=='admin'&&currentUser.id===members[mi].id){currentUser=members[mi];renderNotifications(currentUser);}
+        // If affected member is on suspended page, refresh their replies
+        if(currentUser&&!isAdminUser()&&currentUser.id===issues2[idx].memberId){
+          renderSuspendedReplies(currentUser);
+        }
       }
       renderAdminIssues();
       adminAlert('Reply sent. Member notified.');
