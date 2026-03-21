@@ -1068,9 +1068,36 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
       </div>
     </div>
     <div class="a-section" id="atab-content">
-      <div class="a-card"><div class="a-card-title"><span>&#x1F4CB; Surveys</span><button class="add-btn" id="addSurveyBtn">+ Add Survey</button></div><div id="adminSurveyList"></div></div>
-      <div class="a-card"><div class="a-card-title"><span>&#x26A1; Polls</span><button class="add-btn" id="addPollBtn">+ Add Poll</button></div><div id="adminPollList"></div></div>
-      <div class="a-card"><div class="a-card-title"><span>&#x25B6; Videos</span><button class="add-btn" id="addVideoBtn">+ Add Video</button></div><div id="adminVideoList"></div></div>
+      <div class="a-card">
+        <div class="a-card-title">
+          <span>&#x1F4CB; Surveys</span>
+          <div style="display:flex;gap:7px;align-items:center">
+            <button class="add-btn" id="addSurveyBtn">+ Add Survey</button>
+            <button class="abtn content-toggle" data-target="surveyCardBody" data-label="Surveys" style="min-width:32px;padding:4px 10px;font-size:13px" title="Expand">&#x25BC;</button>
+          </div>
+        </div>
+        <div id="surveyCardBody" style="display:none"><div id="adminSurveyList"></div></div>
+      </div>
+      <div class="a-card">
+        <div class="a-card-title">
+          <span>&#x26A1; Polls</span>
+          <div style="display:flex;gap:7px;align-items:center">
+            <button class="add-btn" id="addPollBtn">+ Add Poll</button>
+            <button class="abtn content-toggle" data-target="pollCardBody" data-label="Polls" style="min-width:32px;padding:4px 10px;font-size:13px" title="Expand">&#x25BC;</button>
+          </div>
+        </div>
+        <div id="pollCardBody" style="display:none"><div id="adminPollList"></div></div>
+      </div>
+      <div class="a-card">
+        <div class="a-card-title">
+          <span>&#x25B6; Videos</span>
+          <div style="display:flex;gap:7px;align-items:center">
+            <button class="add-btn" id="addVideoBtn">+ Add Video</button>
+            <button class="abtn content-toggle" data-target="videoCardBody" data-label="Videos" style="min-width:32px;padding:4px 10px;font-size:13px" title="Expand">&#x25BC;</button>
+          </div>
+        </div>
+        <div id="videoCardBody" style="display:none"><div id="adminVideoList"></div></div>
+      </div>
     </div>
     <!-- ISSUES TAB -->
     <div class="a-section" id="atab-issues">
@@ -1504,9 +1531,29 @@ document.addEventListener('DOMContentLoaded', function(){
       renderMembersTable();
     });
   });
-  bindClick('addSurveyBtn', function(){openAddContent('survey');});
-  bindClick('addPollBtn',   function(){openAddContent('poll');});
-  bindClick('addVideoBtn',  function(){openAddContent('video');});
+  bindClick('addSurveyBtn', function(){
+    expandContentCard('surveyCardBody');
+    openAddContent('survey');
+  });
+  bindClick('addPollBtn', function(){
+    expandContentCard('pollCardBody');
+    openAddContent('poll');
+  });
+  bindClick('addVideoBtn', function(){
+    expandContentCard('videoCardBody');
+    openAddContent('video');
+  });
+  // Content section collapse/expand toggles
+  document.querySelectorAll('.content-toggle').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var body=el(btn.dataset.target);
+      if(!body) return;
+      var isOpen=body.style.display!=='none';
+      body.style.display=isOpen?'none':'block';
+      btn.innerHTML=isOpen?'&#x25BC;':'&#x25B2;';
+      btn.title=isOpen?'Expand':'Collapse';
+    });
+  });
   bindClick('broadcastBtn', broadcastAnn);
   bindClick('addAdBtn', addAd);
   // Live preview for ad image
@@ -2931,6 +2978,15 @@ function renderDuplicatesTable(){
 
 // ── ADMIN: CONTENT ────────────────────────────────────
 function renderAdminContent(){renderAdminSurveys();renderAdminPolls();renderAdminVideos();}
+
+function expandContentCard(bodyId){
+  var body=el(bodyId);
+  if(!body) return;
+  body.style.display='block';
+  // Update corresponding toggle button arrow
+  var btn=document.querySelector('.content-toggle[data-target="'+bodyId+'"]');
+  if(btn){btn.innerHTML='&#x25B2;'; btn.title='Collapse';}
+}
 
 function renderAdminSurveys(){
   var surveys=getSurveys();
