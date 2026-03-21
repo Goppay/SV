@@ -703,6 +703,39 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
   </div>
 </div>
 
+<!-- SUSPENDED MEMBER PAGE -->
+<div id="suspendedPage" style="display:none;position:fixed;inset:0;z-index:600;background:#f0f2f5;overflow-y:auto">
+  <div style="max-width:520px;margin:0 auto;padding:40px 20px">
+    <div style="text-align:center;margin-bottom:28px">
+      <div style="font-size:28px;font-weight:800;color:#0d1117;font-family:Georgia,serif">Ghana<span style="color:var(--green)">OpinionPay</span></div>
+    </div>
+    <div style="background:#fff;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,.08);overflow:hidden">
+      <div style="background:var(--red);padding:24px;text-align:center">
+        <div style="font-size:40px;margin-bottom:8px">⚠️</div>
+        <div style="font-size:20px;font-weight:700;color:#fff">Account Suspended</div>
+        <div style="font-size:13.5px;color:rgba(255,255,255,.85);margin-top:6px" id="suspendedName">Your account has been suspended.</div>
+      </div>
+      <div style="padding:24px">
+        <p style="font-size:13.5px;color:var(--text-muted);line-height:1.7;margin-bottom:20px">Your account has been temporarily suspended by our admin team. If you believe this is a mistake or would like to appeal, please send us a message below. Our support team will review your case and respond within 24 hours.</p>
+        <div style="background:var(--warm-gray);border-radius:10px;padding:16px;margin-bottom:20px">
+          <div style="font-size:12px;font-weight:700;color:var(--text-mid);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">📨 Send a Message to Support</div>
+          <div style="margin-bottom:10px">
+            <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px">Subject</label>
+            <input type="text" id="suspendedSubject" placeholder="e.g. Please review my account suspension" style="width:100%;padding:9px 12px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;outline:none;box-sizing:border-box"/>
+          </div>
+          <div style="margin-bottom:12px">
+            <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px">Your Message</label>
+            <textarea id="suspendedMsg" rows="4" placeholder="Explain your situation or why you believe your account should be reinstated..." style="width:100%;padding:9px 12px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;outline:none;resize:vertical;font-family:var(--font-body);box-sizing:border-box"></textarea>
+          </div>
+          <button id="suspendedSendBtn" style="width:100%;padding:12px;background:var(--green);color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font-body)">Send Message to Admin →</button>
+          <div id="suspendedMsgResult" style="display:none;margin-top:10px;padding:10px 13px;border-radius:8px;font-size:13px;font-weight:500"></div>
+        </div>
+        <button id="suspendedLogoutBtn" style="width:100%;padding:11px;background:none;border:1.5px solid #e5e7eb;border-radius:9px;font-size:13.5px;cursor:pointer;color:var(--text-muted);font-family:var(--font-body)">Log Out</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- MEMBER DASHBOARD -->
 <div id="memberDashboard">
   <nav class="d-nav">
@@ -1330,8 +1363,8 @@ function restoreSession(){
       showPaymentFailed('Your previous payment was not verified. Please try again.'); startIdleTracking(); return;
     }
     if(m.status==='active'){openMemberDashboard(m); startIdleTracking(); return;}
-
-    // Inactive/suspended — clear session
+    if(m.status==='suspended'){currentUser=m; showSuspendedPage(m); return;}
+    // Other inactive states — clear session
     localStorage.removeItem('gop_session');
   }catch(e){
     localStorage.removeItem('gop_session');
@@ -1414,6 +1447,8 @@ document.addEventListener('DOMContentLoaded', function(){
   bindClick('saveProfileBtn', saveProfile);
   bindClick('changePwBtn', changePassword);
   bindClick('copyRefBtn', copyRefLink);
+  bindClick('suspendedSendBtn', submitSuspendedMessage);
+  bindClick('suspendedLogoutBtn', logout);
   bindClick('copyRefMainBtn', copyRefMainLink);
   bindClick('submitIssueBtn', submitIssue);
   bindClick('submitUpgradeBtn', submitUpgradeRequest);
@@ -1552,6 +1587,9 @@ function doLogin(){
     pendingReg={firstName:m.firstName,lastName:m.lastName,email:m.email,phone:m.phone,region:m.region,age:m.age,password:m.password};
     showPaymentFailed('Your previous payment was not verified. Please try again.'); return;
   }
+  if(m.status==='suspended'){
+    closeLoginModal(); currentUser=m; saveSession(); showSuspendedPage(m); return;
+  }
   if(m.status!=='active'){showErr('loginError','Your account is not active. Contact support.'); return;}
   currentUser=m; saveSession(); closeLoginModal(); openMemberDashboard(m); startIdleTracking();
 }
@@ -1629,6 +1667,54 @@ function confirmPayment(){
   currentUser=m;
   saveSession();
   showPaymentWaiting(m);
+}
+
+function showSuspendedPage(member){
+  hide('memberDashboard'); hide('adminDashboard'); hide('paymentPage');
+  show('suspendedPage');
+  document.body.style.overflow='auto';
+  setText('suspendedName', 'Hello '+member.firstName+' — your account is currently suspended.');
+  setVal('suspendedSubject','');
+  setVal('suspendedMsg','');
+  var res=el('suspendedMsgResult');
+  if(res) res.style.display='none';
+  startIdleTracking();
+}
+
+function submitSuspendedMessage(){
+  if(!currentUser||isAdminUser()) return;
+  var subject=(val('suspendedSubject')||'').trim();
+  var body=(val('suspendedMsg')||'').trim();
+  var res=el('suspendedMsgResult');
+  function showRes(type,txt){
+    if(!res) return;
+    res.style.display='block';
+    res.style.background=type==='error'?'var(--red-pale)':'var(--green-pale)';
+    res.style.border='1px solid '+(type==='error'?'var(--red)':'var(--green)');
+    res.style.color=type==='error'?'var(--red)':'var(--green)';
+    res.innerHTML=txt;
+  }
+  if(!subject){showRes('error','Please enter a subject.'); return;}
+  if(!body||body.length<10){showRes('error','Please write a message (at least 10 characters).'); return;}
+  var issues=getIssues();
+  issues.push({
+    id:'I'+Date.now(),
+    memberId:currentUser.id,
+    memberName:currentUser.firstName+' '+currentUser.lastName,
+    memberPhone:currentUser.phone,
+    memberTier:currentUser.tier,
+    category:'Account Suspension Appeal',
+    subject:subject,
+    body:body,
+    status:'open',
+    date:today(),
+    adminReply:'',
+    repliedDate:''
+  });
+  saveIssues(issues);
+  setVal('suspendedSubject','');
+  setVal('suspendedMsg','');
+  showRes('success','✅ Message sent! Our support team will review your case and respond within 24 hours.');
 }
 
 function showPaymentWaiting(m){
@@ -2298,9 +2384,11 @@ function startIdleTracking(){
       if(bl.indexOf(currentUser.id)>=0){logout(); return;}
     }catch(e){}
     var fresh=getMembers().find(function(m){return m.id===currentUser.id;});
-    if(!fresh||fresh.status==='suspended'||fresh.status==='payment_failed'){
-      logout();
+    if(!fresh){logout(); return;}
+    if(fresh.status==='suspended'){
+      currentUser=fresh; saveSession(); showSuspendedPage(fresh); return;
     }
+    if(fresh.status==='payment_failed'){logout();}
   },30000);
 }
 
@@ -2318,6 +2406,7 @@ function logout(){
   hide('memberDashboard');
   hide('adminDashboard');
   hide('paymentPage');
+  hide('suspendedPage');
   document.body.style.overflow='auto';
   window.scrollTo(0,0);
 }
@@ -2657,6 +2746,13 @@ function reactivateMember(id){
   saveMembers(members);
   renderMembersTable();
   refreshAdminMetrics();
+  // If this member is currently on the suspended page, redirect them to dashboard
+  if(currentUser && !isAdminUser() && currentUser.id===id){
+    currentUser=members[idx];
+    saveSession();
+    hide('suspendedPage');
+    openMemberDashboard(currentUser);
+  }
   adminAlert('Account reactivated: '+members[idx].firstName+' '+members[idx].lastName);
 }
 
