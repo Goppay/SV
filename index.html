@@ -2100,7 +2100,8 @@ function renderVideoList(member){
     var hasUrl=v.videoUrl&&v.videoUrl.trim()!=='';
     var hasFb2=v.fbUrl&&v.fbUrl.trim()!=='';
     var hasTt2=v.ttUrl&&v.ttUrl.trim()!=='';
-    var hasAnyLink=hasUrl||hasFb2||hasTt2;
+    var hasExtra2=(v.extraUrls||[]).some(function(eu){return eu.url&&eu.url.trim()!=='';});
+    var hasAnyLink=hasUrl||hasFb2||hasTt2||hasExtra2;
     html+='<div class="c-item" style="flex-direction:column;align-items:stretch;gap:10px">';
     html+='<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">';
     html+='<div style="display:flex;align-items:center;gap:12px">';
@@ -2118,12 +2119,16 @@ function renderVideoList(member){
     if(hasAnyLink&&!watched){
       html+='<div id="vplayer_'+v.id+'" style="display:none;border-radius:10px;overflow:hidden;border:2px solid var(--green)">';
       // Source tabs if multiple platforms
-      var srcCount2=(hasUrl?1:0)+(hasFb2?1:0)+(hasTt2?1:0);
+      var srcCount2=(hasUrl?1:0)+(hasFb2?1:0)+(hasTt2?1:0)+((v.extraUrls||[]).filter(function(eu){return eu.url;}).length);
       if(srcCount2>1){
         html+='<div style="display:flex;gap:0;background:#f9fafb;border-bottom:1px solid #e5e7eb">';
         if(hasUrl) html+='<button class="c-btn" data-vid="'+v.id+'" data-vsrc="yt" style="border-radius:0;background:#fff;color:var(--green);border:none;border-right:1px solid #e5e7eb;font-size:12px;padding:8px 14px">&#x25B6; YouTube</button>';
         if(hasFb2) html+='<button class="c-btn" data-vid="'+v.id+'" data-vsrc="fb" style="border-radius:0;background:none;color:#1877f2;border:none;border-right:1px solid #e5e7eb;font-size:12px;padding:8px 14px">&#x1F7E6; Facebook</button>';
         if(hasTt2) html+='<button class="c-btn" data-vid="'+v.id+'" data-vsrc="tt" style="border-radius:0;background:none;color:#000;border:none;font-size:12px;padding:8px 14px">&#x25FC; TikTok</button>';
+        // Extra URLs tabs
+        (v.extraUrls||[]).forEach(function(eu,ei){
+          if(eu.url) html+='<button class="c-btn" data-vid="'+v.id+'" data-vsrc="ex'+ei+'" style="border-radius:0;background:none;color:#374151;border:none;border-left:1px solid #e5e7eb;font-size:12px;padding:8px 14px">&#x1F517; '+(eu.label||'Link '+(ei+1))+'</button>';
+        });
         html+='</div>';
       }
       // Default frame area
@@ -2173,6 +2178,12 @@ function openVideoPlayer(vid, btn){
           frameDiv.innerHTML='<div style="padding:20px;text-align:center;background:#f0f4ff"><a href="'+v.fbUrl+'" target="_blank" rel="noopener" class="c-btn" style="display:inline-block;background:#1877f2;color:#fff;text-decoration:none;padding:12px 24px;border-radius:9px;font-size:14px">&#x1F7E6; Open on Facebook to Watch</a><p style="font-size:12px;color:#6b7280;margin-top:8px">Facebook videos open in a new tab. Come back and click Claim when done.</p></div>';
         } else if(src==='tt'&&v.ttUrl){
           frameDiv.innerHTML='<div style="padding:20px;text-align:center;background:#f9f9f9"><a href="'+v.ttUrl+'" target="_blank" rel="noopener" class="c-btn" style="display:inline-block;background:#000;color:#fff;text-decoration:none;padding:12px 24px;border-radius:9px;font-size:14px">&#x25FC; Open on TikTok to Watch</a><p style="font-size:12px;color:#6b7280;margin-top:8px">TikTok videos open in a new tab. Come back and click Claim when done.</p></div>';
+        } else if(src.indexOf('ex')===0){
+          var ei2=parseInt(src.replace('ex',''));
+          var eu=(v.extraUrls||[])[ei2];
+          if(eu&&eu.url){
+            frameDiv.innerHTML='<div style="padding:20px;text-align:center;background:#f9fafb"><a href="'+eu.url+'" target="_blank" rel="noopener" class="c-btn" style="display:inline-block;background:#374151;color:#fff;text-decoration:none;padding:12px 24px;border-radius:9px;font-size:14px">&#x1F517; Open '+(eu.label||'Link')+' to Watch</a><p style="font-size:12px;color:#6b7280;margin-top:8px">Opens in a new tab. Come back and click Claim when done.</p></div>';
+          }
         }
       });
     });
@@ -3298,6 +3309,22 @@ function renderAdminVideos(){
     if(hasTt) html+='<a href="'+v.ttUrl+'" target="_blank" rel="noopener" class="abtn" style="text-decoration:none;white-space:nowrap">&#x1F441; Preview</a>';
     html+='</div>';
     html+='<div style="font-size:11px;color:#9ca3af;margin-top:4px">YouTube: Share → Embed → copy src="..." value &nbsp;|&nbsp; Facebook: share link of video post &nbsp;|&nbsp; TikTok: copy video link</div>';
+    // Extra / additional URLs
+    var extraUrls=v.extraUrls||[];
+    html+='<div style="margin-top:8px;border-top:1px dashed #e5e7eb;padding-top:8px">';
+    html+='<div style="font-size:12px;font-weight:600;color:#374151;margin-bottom:6px">&#x2795; Additional Links</div>';
+    if(extraUrls.length){
+      extraUrls.forEach(function(eu,ei){
+        html+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;flex-wrap:wrap">';
+        html+='<input type="text" data-velabeli="'+i+'" data-vei="'+ei+'" value="'+(eu.label||'').replace(/"/g,'&quot;')+'" placeholder="Label e.g. Rerun" style="width:90px;padding:5px 9px;border:1.5px solid #e5e7eb;border-radius:7px;font-size:12px;outline:none"/>';
+        html+='<input type="url" data-veurli="'+i+'" data-vei="'+ei+'" value="'+(eu.url||'')+'" placeholder="https://..." style="flex:1;min-width:150px;padding:5px 9px;border:1.5px solid #e5e7eb;border-radius:7px;font-size:12.5px;outline:none"/>';
+        html+='<button class="abtn" data-vsaveextra="'+i+'" data-vei="'+ei+'" style="white-space:nowrap">&#x1F4BE; Save</button>';
+        html+='<button class="abtn danger" data-vdelextra="'+i+'" data-vei="'+ei+'" style="padding:4px 8px;font-size:11px">&#x2212;</button>';
+        html+='</div>';
+      });
+    }
+    html+='<button class="abtn" data-vaddextra="'+i+'" style="font-size:12px;margin-top:2px">&#x2795; Add Another Link</button>';
+    html+='</div>';
     html+='</div>';
   });
   setHTML('adminVideoList', html);
@@ -3317,6 +3344,42 @@ function renderAdminVideos(){
       saveVideos(v);
       renderAdminVideos();
       adminAlert('Video title updated.');
+    });
+  });
+  // Add extra URL entry
+  el('adminVideoList').querySelectorAll('[data-vaddextra]').forEach(function(b){
+    b.addEventListener('click',function(){
+      var idx=parseInt(b.dataset.vaddextra);
+      var v=getVideos();
+      v[idx].extraUrls=v[idx].extraUrls||[];
+      v[idx].extraUrls.push({label:'',url:''});
+      saveVideos(v); renderAdminVideos();
+    });
+  });
+  // Save an extra URL entry
+  el('adminVideoList').querySelectorAll('[data-vsaveextra]').forEach(function(b){
+    b.addEventListener('click',function(){
+      var idx=parseInt(b.dataset.vsaveextra);
+      var ei=parseInt(b.dataset.vei);
+      var labelInp=el('adminVideoList').querySelectorAll('[data-velabeli="'+idx+'"][data-vei="'+ei+'"]')[0];
+      var urlInp=el('adminVideoList').querySelectorAll('[data-veurli="'+idx+'"][data-vei="'+ei+'"]')[0];
+      var url=urlInp?urlInp.value.trim():'';
+      if(url&&!url.startsWith('http')){adminAlert('Please enter a valid URL starting with https://');return;}
+      var v=getVideos();
+      v[idx].extraUrls=v[idx].extraUrls||[];
+      v[idx].extraUrls[ei]={label:labelInp?labelInp.value.trim():'',url:url};
+      saveVideos(v); renderAdminVideos();
+      adminAlert(url?'Extra link saved!':'Extra link cleared.');
+    });
+  });
+  // Remove an extra URL entry
+  el('adminVideoList').querySelectorAll('[data-vdelextra]').forEach(function(b){
+    b.addEventListener('click',function(){
+      var idx=parseInt(b.dataset.vdelextra);
+      var ei=parseInt(b.dataset.vei);
+      var v=getVideos();
+      if(v[idx].extraUrls) v[idx].extraUrls.splice(ei,1);
+      saveVideos(v); renderAdminVideos();
     });
   });
   el('adminVideoList').querySelectorAll('[data-vsaveurl]').forEach(function(b){
