@@ -1281,6 +1281,57 @@ function openMobMenu(){var m=el('mobMenu');if(m)m.classList.add('open');}
 function closeMobMenu(){var m=el('mobMenu');if(m)m.classList.remove('open');}
 
 // Close mob menu when any mob-link is clicked
+// ── SESSION PERSISTENCE ───────────────────────────────
+function saveSession(){
+  try{
+    if(currentUser){
+      localStorage.setItem('gop_session', JSON.stringify(currentUser));
+    } else {
+      localStorage.removeItem('gop_session');
+    }
+  }catch(e){}
+}
+
+function restoreSession(){
+  try{
+    var raw=localStorage.getItem('gop_session');
+    if(!raw) return;
+    var saved=JSON.parse(raw);
+    if(!saved) return;
+
+    // Admin / sub-admin session
+    if(saved.role==='superadmin'){
+      currentUser=saved;
+      openAdminDashboard();
+      return;
+    }
+    if(saved.role==='subadmin'){
+      // Verify sub-admin still exists and is active
+      var sub=getSubAdmins().find(function(s){return s.id===saved.id && s.active;});
+      if(sub){currentUser=saved; openAdminDashboard(); return;}
+      localStorage.removeItem('gop_session'); return;
+    }
+
+    // Member session — re-read fresh from storage
+    var members=getMembers();
+    var m=members.find(function(x){return x.id===saved.id;});
+    if(!m){localStorage.removeItem('gop_session'); return;}
+
+    currentUser=m;
+    if(m.status==='awaiting_verification'){showPaymentWaiting(m); return;}
+    if(m.status==='payment_failed'){
+      pendingReg={firstName:m.firstName,lastName:m.lastName,email:m.email,phone:m.phone,region:m.region,age:m.age,password:m.password};
+      showPaymentFailed('Your previous payment was not verified. Please try again.'); return;
+    }
+    if(m.status==='active'){openMemberDashboard(m); return;}
+
+    // Inactive/suspended — clear session
+    localStorage.removeItem('gop_session');
+  }catch(e){
+    localStorage.removeItem('gop_session');
+  }
+}
+
 document.addEventListener('DOMContentLoaded', function(){
   // Hamburger
   var hb=el('hamburgerBtn');
@@ -1421,6 +1472,9 @@ document.addEventListener('DOMContentLoaded', function(){
       this.value=this.value.replace(/\D/g,'');
     });
   });
+
+  // Restore session after refresh — must be last so all DOM elements are ready
+  restoreSession();
 });
 
 function bindClick(id, fn){var b=el(id);if(b) b.addEventListener('click',fn);}
@@ -1469,18 +1523,18 @@ function doLogin(){
   var pass  = val('loginPassword');
   hideErr('loginError');
   if(phone===ADMIN_PHONE && pass===ADMIN_PASS){
-    closeLoginModal(); currentUser={role:'superadmin',name:'Super Admin',phone:ADMIN_PHONE}; openAdminDashboard(); return;
+    closeLoginModal(); currentUser={role:'superadmin',name:'Super Admin',phone:ADMIN_PHONE}; saveSession(); openAdminDashboard(); return;
   }
   // Check sub-admins
   var subs=getSubAdmins();
   var sub=subs.find(function(s){return s.phone===phone && s.password===pass && s.active;});
   if(sub){
-    closeLoginModal(); currentUser={role:'subadmin',name:sub.name,phone:sub.phone,id:sub.id}; openAdminDashboard(); return;
+    closeLoginModal(); currentUser={role:'subadmin',name:sub.name,phone:sub.phone,id:sub.id}; saveSession(); openAdminDashboard(); return;
   }
   var m = getMembers().find(function(x){return x.phone===phone && x.password===pass;});
   if(!m){showErr('loginError','Incorrect phone number or password.'); return;}
   if(m.status==='awaiting_verification'){
-    closeLoginModal(); currentUser=m; showPaymentWaiting(m); return;
+    closeLoginModal(); currentUser=m; saveSession(); showPaymentWaiting(m); return;
   }
   if(m.status==='payment_failed'){
     closeLoginModal(); currentUser=m;
@@ -1488,7 +1542,7 @@ function doLogin(){
     showPaymentFailed('Your previous payment was not verified. Please try again.'); return;
   }
   if(m.status!=='active'){showErr('loginError','Your account is not active. Contact support.'); return;}
-  currentUser=m; closeLoginModal(); openMemberDashboard(m);
+  currentUser=m; saveSession(); closeLoginModal(); openMemberDashboard(m);
 }
 
 // ── REGISTER ──────────────────────────────────────────
@@ -1562,6 +1616,7 @@ function confirmPayment(){
   };
   var members=getMembers(); members.push(m); saveMembers(members);
   currentUser=m;
+  saveSession();
   showPaymentWaiting(m);
 }
 
@@ -2207,6 +2262,7 @@ function copyRefLink(){
 // ── LOGOUT ────────────────────────────────────────────
 function logout(){
   currentUser=null; pendingReg=null;
+  saveSession(); // clears localStorage session
   if(waitInterval) clearInterval(waitInterval);
   hide('memberDashboard');
   hide('adminDashboard');
@@ -2327,7 +2383,7 @@ function verifyPayment(id){
   members[idx].notifications=members[idx].notifications||[];
   members[idx].notifications.push('\u2705 Payment verified! Your '+members[idx].tier+' account is now active with a GHS 5.00 welcome bonus. Complete the Ghana Affairs Survey for another GHS 3.00 instantly!');
   saveMembers(members);
-  if(currentUser&&currentUser!=='admin'&&currentUser.id===id){currentUser=members[idx];setTimeout(function(){openMemberDashboard(currentUser);},400);}
+  if(currentUser&&currentUser!=='admin'&&currentUser.id===id){currentUser=members[idx];saveSession();setTimeout(function(){openMemberDashboard(currentUser);},400);}
   renderPaymentsTable(); renderMembersTable(); refreshAdminMetrics();
   adminAlert('Payment verified. Member activated with GHS 5 welcome bonus.');
 }
