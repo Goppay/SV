@@ -6,736 +6,299 @@
 <title>GhanaOpinionPay — Earn Ghana Cedis for Your Opinion</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <style>
-:root {
-  --green: #0d4a22;
-  --green-mid: #1a5c2e;
-  --green-light: #2e7d47;
-  --green-pale: #d4edda;
-  --gold: #FCD116;
-  --gold-dark: #c9a500;
-  --gold-pale: #fff8d6;
-  --red: #CE1126;
-  --red-pale: #fdeaec;
-  --cream: #fdfaf3;
-  --warm-gray: #f5f2eb;
-  --text: #1a1a18;
-  --text-mid: #4a4a42;
-  --text-muted: #7a7a70;
-  --border: rgba(0,0,0,0.08);
-  --shadow: 0 4px 24px rgba(13,74,34,0.10);
-  --shadow-lg: 0 12px 48px rgba(13,74,34,0.15);
-  --radius: 16px;
-  --radius-sm: 10px;
-  --font-display: 'Playfair Display', serif;
-  --font-body: 'Outfit', sans-serif;
-}
+:root{--green:#0d4a22;--green-mid:#1a5c2e;--green-light:#2e7d47;--green-pale:#d4edda;--gold:#FCD116;--gold-dark:#c9a500;--gold-pale:#fff8d6;--red:#CE1126;--red-pale:#fdeaec;--cream:#fdfaf3;--warm-gray:#f5f2eb;--text:#1a1a18;--text-mid:#4a4a42;--text-muted:#7a7a70;--border:rgba(0,0,0,0.08);--shadow:0 4px 24px rgba(13,74,34,.10);--shadow-lg:0 12px 48px rgba(13,74,34,.15);--radius:16px;--radius-sm:10px;--font-display:'Playfair Display',serif;--font-body:'Outfit',sans-serif}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--font-body);background:var(--cream);color:var(--text);font-size:16px;line-height:1.7;overflow-x:hidden}
+.container{max-width:1100px;margin:0 auto;padding:0 24px}
 
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(253,250,243,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 24px;height:68px;display:flex;align-items:center;justify-content:space-between;transition:box-shadow .3s}
+nav.scrolled{box-shadow:var(--shadow)}
+.nav-logo{display:flex;align-items:center;gap:10px;text-decoration:none}
+.nav-flag{display:flex;gap:2px;border-radius:4px;overflow:hidden;height:18px}
+.nf-r{width:8px;background:#CE1126}.nf-g{width:8px;background:#FCD116}.nf-b{width:8px;background:#006B3F}
+.nav-wordmark{font-family:var(--font-display);font-size:20px;color:var(--green)}
+.nav-wordmark span{color:var(--red)}
+.nav-links{display:flex;align-items:center;gap:28px}
+.nav-links a{font-size:14px;font-weight:500;color:var(--text-mid);text-decoration:none;transition:color .2s}
+.nav-links a:hover{color:var(--green)}
+.nav-cta{background:var(--green);color:#fff!important;padding:9px 22px;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none;transition:background .2s,transform .15s}
+.nav-cta:hover{background:var(--green-light);transform:translateY(-1px)}
+.nav-login-btn{background:transparent;color:var(--green)!important;padding:9px 18px;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none;border:1.5px solid var(--green);transition:all .2s}
+.nav-login-btn:hover{background:var(--green);color:#fff!important}
+.hamburger{display:none;background:none;border:none;cursor:pointer;padding:4px}
+.hamburger span{display:block;width:22px;height:2px;background:var(--text);border-radius:2px;margin:5px 0}
+.mob-menu{display:none;position:fixed;top:68px;left:0;right:0;background:var(--cream);border-bottom:1px solid var(--border);padding:16px 24px 24px;flex-direction:column;gap:16px;z-index:99}
+.mob-menu a{font-size:15px;font-weight:500;color:var(--text);text-decoration:none}
+.mob-menu .nav-cta{text-align:center;padding:12px}
+@media(max-width:768px){.nav-links{display:none}.hamburger{display:block}.mob-menu.open{display:flex}}
 
-html { scroll-behavior: smooth; }
+/* HERO */
+.hero{padding:140px 24px 100px;background:var(--green);position:relative;overflow:hidden;text-align:center}
+.hero-pattern{position:absolute;inset:0;opacity:.06;background-image:repeating-linear-gradient(45deg,#fff 0,#fff 1px,transparent 0,transparent 50%),repeating-linear-gradient(-45deg,#fff 0,#fff 1px,transparent 0,transparent 50%);background-size:30px 30px}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(252,209,22,.18);border:1px solid rgba(252,209,22,.35);color:var(--gold);font-size:12px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;padding:6px 16px;border-radius:20px;margin-bottom:28px;animation:fadeUp .6s ease both}
+.hero-badge .dot{width:6px;height:6px;border-radius:50%;background:var(--gold)}
+.hero h1{font-family:var(--font-display);font-size:clamp(2.4rem,5vw,4rem);font-weight:900;color:#fff;line-height:1.15;max-width:780px;margin:0 auto 24px;animation:fadeUp .6s .1s ease both}
+.hero h1 em{color:var(--gold);font-style:normal}
+.hero p{font-size:18px;color:rgba(255,255,255,.78);max-width:560px;margin:0 auto 40px;animation:fadeUp .6s .2s ease both}
+.hero-actions{display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap;animation:fadeUp .6s .3s ease both}
+.btn-primary{background:var(--gold);color:var(--green);font-weight:700;font-size:15px;padding:14px 32px;border-radius:10px;text-decoration:none;border:none;cursor:pointer;transition:transform .2s,box-shadow .2s;display:inline-block}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(252,209,22,.4)}
+.btn-ghost{color:rgba(255,255,255,.85);font-weight:500;font-size:15px;padding:14px 28px;border-radius:10px;text-decoration:none;border:1.5px solid rgba(255,255,255,.3);transition:border-color .2s,background .2s;display:inline-block}
+.btn-ghost:hover{border-color:rgba(255,255,255,.6);background:rgba(255,255,255,.07)}
+.hero-stats{margin-top:72px;display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:rgba(255,255,255,.12);border-top:1px solid rgba(255,255,255,.12);animation:fadeUp .6s .4s ease both}
+.hero-stat{padding:28px 16px;text-align:center}
+.hero-stat-num{font-family:var(--font-display);font-size:2.2rem;font-weight:700;color:var(--gold);line-height:1;margin-bottom:6px}
+.hero-stat-label{font-size:13px;color:rgba(255,255,255,.65)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
 
-body {
-  font-family: var(--font-body);
-  background: var(--cream);
-  color: var(--text);
-  font-size: 16px;
-  line-height: 1.7;
-  overflow-x: hidden;
-}
+/* SECTIONS */
+.section{padding:96px 0}
+.section-label{font-size:12px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--green-light);margin-bottom:12px}
+.section-title{font-family:var(--font-display);font-size:clamp(1.8rem,3vw,2.8rem);font-weight:700;line-height:1.2;color:var(--text);margin-bottom:16px}
+.section-sub{font-size:17px;color:var(--text-mid);max-width:560px}
+.steps-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;margin-top:64px}
+.step-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:32px 24px;position:relative;transition:transform .25s,box-shadow .25s}
+.step-card:hover{transform:translateY(-6px);box-shadow:var(--shadow-lg)}
+.step-num{width:44px;height:44px;border-radius:12px;background:var(--green-pale);color:var(--green);font-weight:700;font-size:18px;display:flex;align-items:center;justify-content:center;margin-bottom:20px}
+.step-card h3{font-size:16px;font-weight:600;margin-bottom:8px}
+.step-card p{font-size:14px;color:var(--text-muted);line-height:1.6}
+.step-connector{position:absolute;top:46px;right:-13px;width:26px;height:2px;background:var(--green-pale);z-index:1}
+.step-connector::after{content:'';position:absolute;right:-4px;top:-4px;width:10px;height:10px;border-top:2px solid var(--green-pale);border-right:2px solid var(--green-pale);transform:rotate(45deg)}
+.earn-section{background:var(--warm-gray)}
+.earn-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:60px}
+.earn-card{background:#fff;border-radius:var(--radius);border:1px solid var(--border);padding:28px 24px;transition:transform .25s,box-shadow .25s}
+.earn-card:hover{transform:translateY(-4px);box-shadow:var(--shadow)}
+.earn-icon{width:52px;height:52px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:18px}
+.ei-green{background:var(--green-pale)}.ei-gold{background:var(--gold-pale)}.ei-red{background:var(--red-pale)}
+.earn-card h3{font-size:16px;font-weight:600;margin-bottom:6px}
+.earn-card p{font-size:13.5px;color:var(--text-muted);margin-bottom:14px;line-height:1.6}
+.earn-amount{font-size:14px;font-weight:700;color:var(--green);background:var(--green-pale);padding:5px 12px;border-radius:6px;display:inline-block}
+.table-wrap{margin-top:60px;background:#fff;border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;box-shadow:var(--shadow)}
+table{width:100%;border-collapse:collapse}
+thead{background:var(--green)}
+thead th{padding:16px 20px;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:rgba(255,255,255,.75);text-align:left}
+tbody tr{border-bottom:1px solid var(--border);transition:background .15s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:var(--warm-gray)}
+tbody td{padding:16px 20px;font-size:14px}
+tbody td:first-child{font-weight:500}
+.pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600}
+.pill-green{background:var(--green-pale);color:var(--green)}.pill-gold{background:var(--gold-pale);color:var(--gold-dark)}
+.pill-orange{background:#fff3e0;color:#e65100}.pill-blue{background:#e3f2fd;color:#1565c0}.pill-gray{background:#f0f0f0;color:#555}
+.tiers-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:60px}
+.tier-card{border-radius:var(--radius);padding:36px 28px;position:relative;overflow:hidden;transition:transform .25s}
+.tier-card:hover{transform:translateY(-4px)}
+.tier-bronze{background:#fdf5ee;border:2px solid #d4a06a}.tier-silver{background:#f4f5f6;border:2px solid #adb5bd}.tier-gold-card{background:#fffbeb;border:2px solid var(--gold)}
+.tier-popular-badge{position:absolute;top:16px;right:16px;background:var(--gold);color:var(--green);font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;padding:3px 10px;border-radius:20px}
+.tier-icon{font-size:2.4rem;margin-bottom:16px}
+.tier-name{font-family:var(--font-display);font-size:1.5rem;font-weight:700;margin-bottom:4px}
+.tier-bronze .tier-name{color:#7a4515}.tier-silver .tier-name{color:#495057}.tier-gold-card .tier-name{color:var(--gold-dark)}
+.tier-req{font-size:13px;color:var(--text-muted);margin-bottom:20px}
+.tier-min{font-size:24px;font-weight:700;color:var(--green);margin-bottom:20px}
+.tier-min small{font-size:14px;font-weight:400;color:var(--text-muted)}
+.tier-perks{list-style:none;display:flex;flex-direction:column;gap:8px}
+.tier-perks li{font-size:14px;color:var(--text-mid);display:flex;align-items:center;gap:10px}
+.tier-perks li::before{content:'✓';width:20px;height:20px;border-radius:50%;background:var(--green-pale);color:var(--green);font-size:11px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+.payment-section{background:var(--green);color:#fff}
+.payment-section .section-title{color:#fff}.payment-section .section-sub{color:rgba(255,255,255,.72)}.payment-section .section-label{color:var(--gold)}
+.payment-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px;margin-top:56px}
+.payment-card{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:var(--radius);padding:28px;backdrop-filter:blur(4px);transition:background .25s}
+.payment-card:hover{background:rgba(255,255,255,.13)}
+.payment-logo{width:48px;height:48px;border-radius:12px;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:16px}
+.payment-card h3{font-size:16px;font-weight:600;color:#fff;margin-bottom:6px}
+.payment-card p{font-size:14px;color:rgba(255,255,255,.65);line-height:1.6}
+.payment-note{margin-top:40px;background:rgba(252,209,22,.12);border:1px solid rgba(252,209,22,.3);border-radius:var(--radius-sm);padding:20px 24px;display:flex;align-items:flex-start;gap:16px}
+.payment-note-icon{font-size:22px;flex-shrink:0;margin-top:2px}
+.payment-note p{font-size:14px;color:rgba(255,255,255,.85);line-height:1.6}
+.cat-tags{display:flex;flex-wrap:wrap;gap:10px;margin-top:52px}
+.cat-tag{padding:8px 18px;border-radius:30px;font-size:14px;font-weight:500;background:#fff;border:1.5px solid var(--border);color:var(--text-mid);cursor:default;transition:all .2s}
+.cat-tag:hover{background:var(--green);color:#fff;border-color:var(--green)}
+.testimonials-section{background:var(--warm-gray)}
+.testimonials-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:56px}
+.testimonial-card{background:#fff;border-radius:var(--radius);border:1px solid var(--border);padding:28px;transition:transform .25s,box-shadow .25s}
+.testimonial-card:hover{transform:translateY(-4px);box-shadow:var(--shadow)}
+.stars{color:var(--gold);font-size:14px;letter-spacing:2px;margin-bottom:14px}
+.testimonial-text{font-size:15px;color:var(--text-mid);line-height:1.7;margin-bottom:20px;font-style:italic}
+.testimonial-author{display:flex;align-items:center;gap:12px}
+.avatar{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;flex-shrink:0}
+.av-green{background:var(--green-pale);color:var(--green)}.av-gold{background:var(--gold-pale);color:var(--gold-dark)}.av-red{background:var(--red-pale);color:var(--red)}
+.author-name{font-size:14px;font-weight:600}.author-loc{font-size:12px;color:var(--text-muted)}
+.roadmap-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-top:60px;position:relative}
+.roadmap-grid::before{content:'';position:absolute;top:26px;left:5%;right:5%;height:2px;background:var(--green-pale)}
+.phase{text-align:center;padding:0 16px;position:relative;z-index:1}
+.phase-dot{width:52px;height:52px;border-radius:50%;background:var(--green);color:#fff;font-weight:700;font-size:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;box-shadow:0 0 0 6px var(--green-pale)}
+.phase-dot.future{background:#fff;color:var(--green);border:2px solid var(--green-pale);box-shadow:0 0 0 6px #fff}
+.phase h3{font-size:14px;font-weight:600;margin-bottom:6px}.phase p{font-size:12px;color:var(--text-muted);line-height:1.6}
+.phase-tag{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px}
+.pt-live{background:var(--green-pale);color:var(--green)}.pt-soon{background:var(--gold-pale);color:var(--gold-dark)}.pt-future{background:#f0f0f0;color:var(--text-muted)}
+.faq-section{background:var(--warm-gray)}
+.faq-list{margin-top:52px;display:flex;flex-direction:column;gap:12px;max-width:760px}
+.faq-item{background:#fff;border-radius:var(--radius-sm);border:1px solid var(--border);overflow:hidden}
+.faq-q{width:100%;background:none;border:none;display:flex;align-items:center;justify-content:space-between;padding:20px 24px;font-size:15px;font-weight:500;color:var(--text);cursor:pointer;text-align:left;gap:12px}
+.faq-q:hover{color:var(--green)}
+.faq-chevron{width:22px;height:22px;border-radius:50%;background:var(--green-pale);color:var(--green);display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;transition:transform .3s}
+.faq-item.open .faq-chevron{transform:rotate(180deg)}
+.faq-a{max-height:0;overflow:hidden;transition:max-height .35s ease,padding .35s ease;font-size:14px;color:var(--text-muted);line-height:1.7;padding:0 24px}
+.faq-item.open .faq-a{max-height:240px;padding:0 24px 20px}
+.cta-banner{background:var(--gold);padding:80px 24px;text-align:center}
+.cta-banner h2{font-family:var(--font-display);font-size:clamp(1.8rem,3.5vw,3rem);font-weight:900;color:var(--green);margin-bottom:16px}
+.cta-banner p{font-size:17px;color:var(--green-mid);margin-bottom:36px}
+.btn-dark{background:var(--green);color:#fff;font-weight:700;font-size:15px;padding:14px 36px;border-radius:10px;text-decoration:none;display:inline-block;transition:transform .2s,box-shadow .2s}
+.btn-dark:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(13,74,34,.35)}
+footer{background:var(--green);color:rgba(255,255,255,.7);padding:64px 24px 32px}
+.footer-inner{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:40px;margin-bottom:48px}
+.footer-brand h3{font-family:var(--font-display);font-size:1.4rem;color:#fff;margin-bottom:10px}
+.footer-brand p{font-size:13.5px;line-height:1.7;max-width:280px}
+.footer-col h4{font-size:13px;font-weight:700;color:#fff;margin-bottom:16px;letter-spacing:.5px;text-transform:uppercase}
+.footer-col ul{list-style:none;display:flex;flex-direction:column;gap:10px}
+.footer-col ul li a{font-size:13.5px;color:rgba(255,255,255,.65);text-decoration:none;transition:color .2s}
+.footer-col ul li a:hover{color:var(--gold)}
+.footer-bottom{max-width:1100px;margin:0 auto;border-top:1px solid rgba(255,255,255,.12);padding-top:24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.footer-bottom p{font-size:12.5px}
+.footer-flags{display:flex;gap:3px;border-radius:3px;overflow:hidden}
+.ff-r{width:8px;height:14px;background:#CE1126}.ff-g{width:8px;height:14px;background:#FCD116}.ff-b{width:8px;height:14px;background:#006B3F}
 
-/* ─── UTILITIES ─────────────────────────────── */
-.container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
-.tag {
-  display: inline-block;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: .8px;
-  text-transform: uppercase;
-  padding: 4px 12px;
-  border-radius: 20px;
-}
-.tag-green { background: var(--green-pale); color: var(--green); }
-.tag-gold  { background: var(--gold-pale); color: var(--gold-dark); }
-.tag-red   { background: var(--red-pale); color: var(--red); }
+/* MODALS */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200;align-items:center;justify-content:center;padding:24px}
+.modal-overlay.open{display:flex}
+.modal{background:var(--cream);border-radius:20px;padding:36px 32px;max-width:500px;width:100%;position:relative;animation:modalIn .3s ease;max-height:92vh;overflow-y:auto}
+.modal-sm{max-width:420px}
+@keyframes modalIn{from{opacity:0;transform:scale(.94) translateY(16px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.modal-close{position:absolute;top:14px;right:14px;background:var(--warm-gray);border:none;width:32px;height:32px;border-radius:50%;font-size:18px;cursor:pointer;color:var(--text-mid);display:flex;align-items:center;justify-content:center;transition:background .2s}
+.modal-close:hover{background:var(--border)}
+.modal h2{font-family:var(--font-display);font-size:1.7rem;font-weight:700;color:var(--green);margin-bottom:6px}
+.bonus-note{font-size:14px;color:var(--green-light);background:var(--green-pale);border-radius:8px;padding:8px 14px;margin-bottom:20px;font-weight:500}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:13px;font-weight:600;margin-bottom:5px;color:var(--text-mid)}
+.form-group input,.form-group select{width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:10px;font-family:var(--font-body);font-size:14px;background:#fff;color:var(--text);outline:none;transition:border-color .2s}
+.form-group input:focus,.form-group select:focus{border-color:var(--green)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.submit-btn{width:100%;padding:14px;background:var(--green);color:#fff;font-family:var(--font-body);font-size:14px;font-weight:700;border:none;border-radius:10px;cursor:pointer;margin-top:8px;transition:background .2s,transform .15s}
+.submit-btn:hover{background:var(--green-light);transform:translateY(-1px)}
+.modal-terms{font-size:11.5px;color:var(--text-muted);text-align:center;margin-top:12px}
+.modal-terms a{color:var(--green)}
+.tab-row{display:flex;gap:0;margin-bottom:24px;border-radius:10px;overflow:hidden;border:1.5px solid var(--border)}
+.tab-btn{flex:1;padding:10px;background:#fff;border:none;font-family:var(--font-body);font-size:14px;font-weight:600;cursor:pointer;color:var(--text-muted);transition:all .2s}
+.tab-btn.active{background:var(--green);color:#fff}
 
-/* ─── NAVBAR ─────────────────────────────────── */
-nav {
-  position: fixed; top: 0; left: 0; right: 0;
-  z-index: 100;
-  background: rgba(253,250,243,0.92);
-  backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--border);
-  padding: 0 24px;
-  height: 68px;
-  display: flex; align-items: center; justify-content: space-between;
-  transition: box-shadow .3s;
-}
-nav.scrolled { box-shadow: var(--shadow); }
+/* MOMO */
+.momo-box{background:linear-gradient(135deg,#0d4a22 0%,#1a5c2e 100%);border-radius:14px;padding:20px;margin-bottom:14px;position:relative;overflow:hidden}
+.momo-box::before{content:'';position:absolute;top:-20px;right:-20px;width:100px;height:100px;border-radius:50%;background:rgba(252,209,22,.10)}
+.momo-lbl{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,.5);margin-bottom:12px}
+.momo-row{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.momo-num-title{font-size:10px;color:rgba(255,255,255,.5);margin-bottom:2px}
+.momo-num{font-size:21px;font-weight:700;color:#FCD116;letter-spacing:2px}
+.momo-anon{font-size:11px;color:rgba(255,255,255,.4);margin-top:3px}
+.momo-amt-title{font-size:10px;color:rgba(255,255,255,.5);margin-bottom:2px;text-align:right}
+.momo-amt{font-size:26px;font-weight:700;color:#FCD116;text-align:right}
+.momo-foot{border-top:1px solid rgba(255,255,255,.12);padding-top:10px;font-size:11.5px;color:rgba(255,255,255,.45);line-height:1.6}
+.prompt-status{border-radius:10px;padding:11px 13px;font-size:13px;line-height:1.6;margin-bottom:14px;transition:all .5s ease}
+.prompt-status.sending{background:#fff8d6;border:1px solid #e8c800;color:#6b5200}
+.prompt-status.sent{background:var(--green-pale);border:1px solid var(--green);color:#0d4a22}
+.pay-steps{display:flex;flex-direction:column;gap:8px;margin-bottom:18px}
+.pay-step{display:flex;align-items:flex-start;gap:10px;font-size:13px;color:var(--text-mid)}
+.step-circle{width:22px;height:22px;border-radius:50%;background:var(--green);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.success-state{display:none}
+.checkmark{width:60px;height:60px;border-radius:50%;background:var(--green-pale);color:var(--green);font-size:26px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px}
 
-.nav-logo {
-  display: flex; align-items: center; gap: 10px;
-  text-decoration: none;
-}
-.nav-flag {
-  display: flex; gap: 2px; border-radius: 4px; overflow: hidden; height: 18px;
-}
-.nf-r { width: 8px; background: #CE1126; }
-.nf-g { width: 8px; background: #FCD116; }
-.nf-b { width: 8px; background: #006B3F; }
-.nav-wordmark {
-  font-family: var(--font-display);
-  font-size: 20px;
-  color: var(--green);
-}
-.nav-wordmark span { color: var(--red); }
+/* ──────────────────────────────────────────────
+   MEMBER DASHBOARD
+────────────────────────────────────────────── */
+#memberDashboard{display:none;position:fixed;inset:0;z-index:150;background:var(--warm-gray);overflow-y:auto}
+.dash-nav{background:var(--green);padding:0 24px;height:64px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+.dash-nav-logo{font-family:var(--font-display);font-size:18px;color:#fff}
+.dash-nav-logo span{color:var(--gold)}
+.dash-user-info{display:flex;align-items:center;gap:12px}
+.dash-avatar{width:36px;height:36px;border-radius:50%;background:var(--gold);color:var(--green);font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center}
+.dash-user-name{font-size:14px;color:rgba(255,255,255,.85);font-weight:500}
+.dash-logout{background:rgba(255,255,255,.15);border:none;color:#fff;font-family:var(--font-body);font-size:13px;font-weight:500;padding:7px 14px;border-radius:7px;cursor:pointer;transition:background .2s}
+.dash-logout:hover{background:rgba(255,255,255,.25)}
+.dash-body{max-width:1000px;margin:0 auto;padding:32px 24px}
+.dash-greeting{font-family:var(--font-display);font-size:1.6rem;font-weight:700;color:var(--text);margin-bottom:4px}
+.dash-sub{font-size:14px;color:var(--text-muted);margin-bottom:28px}
 
-.nav-links { display: flex; align-items: center; gap: 28px; }
-.nav-links a {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text-mid);
-  text-decoration: none;
-  transition: color .2s;
-}
-.nav-links a:hover { color: var(--green); }
-.nav-cta {
-  background: var(--green);
-  color: #fff !important;
-  padding: 9px 22px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  text-decoration: none;
-  transition: background .2s, transform .15s;
-}
-.nav-cta:hover { background: var(--green-light); transform: translateY(-1px); }
-.hamburger { display: none; background: none; border: none; cursor: pointer; padding: 4px; }
-.hamburger span {
-  display: block; width: 22px; height: 2px;
-  background: var(--text); border-radius: 2px; margin: 5px 0;
-  transition: all .3s;
-}
-.mob-menu {
-  display: none; position: fixed;
-  top: 68px; left: 0; right: 0;
-  background: var(--cream);
-  border-bottom: 1px solid var(--border);
-  padding: 16px 24px 24px;
-  flex-direction: column; gap: 16px;
-  z-index: 99;
-}
-.mob-menu a {
-  font-size: 15px; font-weight: 500;
-  color: var(--text); text-decoration: none;
-}
-.mob-menu .nav-cta { text-align: center; padding: 12px; }
-@media(max-width:768px) {
-  .nav-links { display: none; }
-  .hamburger { display: block; }
-  .mob-menu.open { display: flex; }
-}
+/* Notif banner */
+.notif-banner{background:var(--green-pale);border:1px solid var(--green);border-radius:10px;padding:12px 16px;margin-bottom:20px;font-size:13.5px;color:var(--green);display:flex;align-items:flex-start;gap:10px;line-height:1.6}
+.notif-banner-icon{font-size:18px;flex-shrink:0;margin-top:1px}
 
-/* ─── HERO ───────────────────────────────────── */
-.hero {
-  padding: 140px 24px 100px;
-  background: var(--green);
-  position: relative;
-  overflow: hidden;
-  text-align: center;
-}
-.hero-pattern {
-  position: absolute; inset: 0; opacity: .06;
-  background-image:
-    repeating-linear-gradient(45deg, #fff 0, #fff 1px, transparent 0, transparent 50%),
-    repeating-linear-gradient(-45deg, #fff 0, #fff 1px, transparent 0, transparent 50%);
-  background-size: 30px 30px;
-}
-.hero-badge {
-  display: inline-flex; align-items: center; gap: 8px;
-  background: rgba(252,209,22,0.18);
-  border: 1px solid rgba(252,209,22,0.35);
-  color: var(--gold);
-  font-size: 12px; font-weight: 600;
-  letter-spacing: .6px; text-transform: uppercase;
-  padding: 6px 16px; border-radius: 20px;
-  margin-bottom: 28px;
-  animation: fadeUp .6s ease both;
-}
-.hero-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--gold); }
-.hero h1 {
-  font-family: var(--font-display);
-  font-size: clamp(2.4rem, 5vw, 4rem);
-  font-weight: 900;
-  color: #fff;
-  line-height: 1.15;
-  max-width: 780px; margin: 0 auto 24px;
-  animation: fadeUp .6s .1s ease both;
-}
-.hero h1 em { color: var(--gold); font-style: normal; }
-.hero p {
-  font-size: 18px; color: rgba(255,255,255,0.78);
-  max-width: 560px; margin: 0 auto 40px;
-  animation: fadeUp .6s .2s ease both;
-}
-.hero-actions {
-  display: flex; align-items: center; justify-content: center; gap: 16px; flex-wrap: wrap;
-  animation: fadeUp .6s .3s ease both;
-}
-.btn-primary {
-  background: var(--gold);
-  color: var(--green);
-  font-weight: 700; font-size: 15px;
-  padding: 14px 32px; border-radius: 10px;
-  text-decoration: none;
-  border: none; cursor: pointer;
-  transition: transform .2s, box-shadow .2s;
-  display: inline-block;
-}
-.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(252,209,22,0.4); }
-.btn-ghost {
-  color: rgba(255,255,255,0.85);
-  font-weight: 500; font-size: 15px;
-  padding: 14px 28px; border-radius: 10px;
-  text-decoration: none; border: 1.5px solid rgba(255,255,255,0.3);
-  transition: border-color .2s, background .2s;
-  display: inline-block;
-}
-.btn-ghost:hover { border-color: rgba(255,255,255,0.6); background: rgba(255,255,255,0.07); }
+.dash-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px}
+.dash-metric{background:#fff;border-radius:var(--radius-sm);padding:20px;border:1px solid var(--border)}
+.dm-label{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--text-muted);margin-bottom:8px;font-weight:600}
+.dm-value{font-size:24px;font-weight:700;color:var(--green);line-height:1}
+.dm-sub{font-size:12px;color:var(--text-muted);margin-top:4px}
+.dash-section-title{font-size:16px;font-weight:600;color:var(--text);margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.dash-card{background:#fff;border-radius:var(--radius);border:1px solid var(--border);padding:24px;margin-bottom:20px}
+.withdraw-form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.withdraw-note{background:#fff8d6;border:1px solid #e8c800;border-radius:8px;padding:10px 14px;font-size:13px;color:#6b5200;margin-bottom:14px;line-height:1.6}
+.dash-table{width:100%;border-collapse:collapse;font-size:13px}
+.dash-table th{padding:10px 14px;font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--text-muted);font-weight:600;border-bottom:1.5px solid var(--border);text-align:left}
+.dash-table td{padding:12px 14px;border-bottom:1px solid var(--border);color:var(--text-mid)}
+.dash-table tr:last-child td{border-bottom:none}
+.phase-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.phase-pending{background:#fff3e0;color:#e65100}
+.phase-processing{background:#e3f2fd;color:#1565c0}
+.phase-complete{background:var(--green-pale);color:var(--green)}
 
-.hero-stats {
-  margin-top: 72px;
-  display: grid; grid-template-columns: repeat(3,1fr);
-  gap: 1px; background: rgba(255,255,255,0.12);
-  border-top: 1px solid rgba(255,255,255,0.12);
-  animation: fadeUp .6s .4s ease both;
-}
-.hero-stat {
-  padding: 28px 16px;
-  text-align: center;
-}
-.hero-stat-num {
-  font-family: var(--font-display);
-  font-size: 2.2rem; font-weight: 700;
-  color: var(--gold); line-height: 1;
-  margin-bottom: 6px;
-}
-.hero-stat-label { font-size: 13px; color: rgba(255,255,255,0.65); }
+/* ──────────────────────────────────────────────
+   ADMIN DASHBOARD
+────────────────────────────────────────────── */
+#adminDashboard{display:none;position:fixed;inset:0;z-index:160;background:#f0f2f5;overflow-y:auto}
+.admin-nav{background:#0d1117;padding:0 24px;height:64px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+.admin-nav-logo{font-family:var(--font-display);font-size:18px;color:#fff}
+.admin-nav-logo span{color:var(--gold)}
+.admin-badge{background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;letter-spacing:.5px;text-transform:uppercase;margin-left:8px}
+.admin-logout{background:rgba(255,255,255,.1);border:none;color:#fff;font-family:var(--font-body);font-size:13px;font-weight:500;padding:7px 14px;border-radius:7px;cursor:pointer;transition:background .2s}
+.admin-logout:hover{background:rgba(255,255,255,.2)}
+.admin-body{max-width:1200px;margin:0 auto;padding:32px 24px}
+.admin-title{font-family:var(--font-display);font-size:1.8rem;font-weight:700;color:#0d1117;margin-bottom:4px}
+.admin-sub{font-size:14px;color:#6b7280;margin-bottom:32px}
+.admin-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:32px}
+.admin-metric{background:#fff;border-radius:12px;padding:20px 22px;border:1px solid #e5e7eb}
+.am-label{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:#9ca3af;margin-bottom:8px;font-weight:600}
+.am-value{font-size:26px;font-weight:700;color:#0d1117;line-height:1}
+.am-sub{font-size:12px;color:#9ca3af;margin-top:4px}
+.admin-tabs{display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap}
+.admin-tab{padding:8px 20px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:1.5px solid #e5e7eb;background:#fff;color:#6b7280;transition:all .2s;font-family:var(--font-body)}
+.admin-tab.active{background:#0d1117;color:#fff;border-color:#0d1117}
+.admin-section{display:none}
+.admin-section.active{display:block}
+.admin-card{background:#fff;border-radius:12px;border:1px solid #e5e7eb;padding:24px;margin-bottom:20px}
+.admin-card-title{font-size:15px;font-weight:600;color:#0d1117;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid #e5e7eb}
+.admin-table{width:100%;border-collapse:collapse;font-size:13px}
+.admin-table th{padding:10px 14px;font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:#9ca3af;font-weight:600;border-bottom:1.5px solid #e5e7eb;text-align:left;white-space:nowrap}
+.admin-table td{padding:12px 14px;border-bottom:1px solid #f3f4f6;color:#374151;vertical-align:middle}
+.admin-table tr:last-child td{border-bottom:none}
+.admin-table tr:hover td{background:#f9fafb}
+.status-active{display:inline-block;background:#d1fae5;color:#065f46;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px}
+.status-pending{display:inline-block;background:#fef3c7;color:#92400e;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px}
+.action-btn{background:none;border:1.5px solid #e5e7eb;border-radius:7px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;font-family:var(--font-body);color:#374151}
+.action-btn:hover{background:#0d1117;color:#fff;border-color:#0d1117}
+.action-btn.danger{color:var(--red);border-color:var(--red)}
+.action-btn.danger:hover{background:var(--red);color:#fff}
+.phase-select{border:1.5px solid #e5e7eb;border-radius:7px;padding:5px 10px;font-size:12px;font-family:var(--font-body);color:#374151;cursor:pointer;outline:none;background:#fff;transition:border-color .2s}
+.phase-select:focus{border-color:#0d1117}
+.search-bar{display:flex;gap:10px;margin-bottom:16px}
+.search-bar input{flex:1;padding:10px 14px;border:1.5px solid #e5e7eb;border-radius:9px;font-family:var(--font-body);font-size:13px;outline:none;transition:border-color .2s}
+.search-bar input:focus{border-color:#0d1117}
+.empty-state{text-align:center;padding:40px 20px;color:#9ca3af;font-size:14px}
 
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(24px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
+/* REVEAL */
+.reveal{opacity:0;transform:translateY(32px);transition:opacity .6s ease,transform .6s ease}
+.reveal.visible{opacity:1;transform:translateY(0)}
 
-/* ─── HOW IT WORKS ───────────────────────────── */
-.section { padding: 96px 0; }
-.section-label {
-  font-size: 12px; font-weight: 700;
-  letter-spacing: 1.2px; text-transform: uppercase;
-  color: var(--green-light); margin-bottom: 12px;
-}
-.section-title {
-  font-family: var(--font-display);
-  font-size: clamp(1.8rem, 3vw, 2.8rem);
-  font-weight: 700; line-height: 1.2;
-  color: var(--text); margin-bottom: 16px;
-}
-.section-sub { font-size: 17px; color: var(--text-mid); max-width: 560px; }
-
-.steps-grid {
-  display: grid; grid-template-columns: repeat(4,1fr); gap: 24px;
-  margin-top: 64px;
-}
-.step-card {
-  background: #fff;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 32px 24px;
-  position: relative;
-  transition: transform .25s, box-shadow .25s;
-}
-.step-card:hover { transform: translateY(-6px); box-shadow: var(--shadow-lg); }
-.step-num {
-  width: 44px; height: 44px;
-  border-radius: 12px;
-  background: var(--green-pale);
-  color: var(--green);
-  font-weight: 700; font-size: 18px;
-  display: flex; align-items: center; justify-content: center;
-  margin-bottom: 20px;
-}
-.step-card h3 { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
-.step-card p  { font-size: 14px; color: var(--text-muted); line-height: 1.6; }
-.step-connector {
-  position: absolute; top: 46px; right: -13px;
-  width: 26px; height: 2px;
-  background: var(--green-pale);
-  z-index: 1;
-}
-.step-connector::after {
-  content: '';
-  position: absolute; right: -4px; top: -4px;
-  width: 10px; height: 10px;
-  border-top: 2px solid var(--green-pale);
-  border-right: 2px solid var(--green-pale);
-  transform: rotate(45deg);
-}
-
-/* ─── EARN METHODS ───────────────────────────── */
-.earn-section { background: var(--warm-gray); }
-.earn-grid {
-  display: grid; grid-template-columns: repeat(3,1fr); gap: 20px;
-  margin-top: 60px;
-}
-.earn-card {
-  background: #fff; border-radius: var(--radius);
-  border: 1px solid var(--border);
-  padding: 28px 24px;
-  transition: transform .25s, box-shadow .25s;
-}
-.earn-card:hover { transform: translateY(-4px); box-shadow: var(--shadow); }
-.earn-icon {
-  width: 52px; height: 52px;
-  border-radius: 14px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 22px; margin-bottom: 18px;
-}
-.ei-green { background: var(--green-pale); }
-.ei-gold  { background: var(--gold-pale); }
-.ei-red   { background: var(--red-pale); }
-.earn-card h3 { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
-.earn-card p  { font-size: 13.5px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.6; }
-.earn-amount {
-  font-size: 14px; font-weight: 700;
-  color: var(--green);
-  background: var(--green-pale);
-  padding: 5px 12px; border-radius: 6px;
-  display: inline-block;
-}
-
-/* ─── EARNINGS TABLE ─────────────────────────── */
-.table-wrap {
-  margin-top: 60px;
-  background: #fff;
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
-  overflow: hidden;
-  box-shadow: var(--shadow);
-}
-table { width: 100%; border-collapse: collapse; }
-thead { background: var(--green); }
-thead th {
-  padding: 16px 20px;
-  font-size: 12px; font-weight: 600;
-  text-transform: uppercase; letter-spacing: .8px;
-  color: rgba(255,255,255,0.75);
-  text-align: left;
-}
-tbody tr { border-bottom: 1px solid var(--border); transition: background .15s; }
-tbody tr:last-child { border-bottom: none; }
-tbody tr:hover { background: var(--warm-gray); }
-tbody td { padding: 16px 20px; font-size: 14px; }
-tbody td:first-child { font-weight: 500; }
-.pill {
-  display: inline-block;
-  padding: 3px 10px; border-radius: 20px;
-  font-size: 12px; font-weight: 600;
-}
-.pill-green { background: var(--green-pale); color: var(--green); }
-.pill-gold  { background: var(--gold-pale); color: var(--gold-dark); }
-
-/* ─── TIERS ──────────────────────────────────── */
-.tiers-grid {
-  display: grid; grid-template-columns: repeat(3,1fr); gap: 24px;
-  margin-top: 60px;
-}
-.tier-card {
-  border-radius: var(--radius);
-  padding: 36px 28px;
-  position: relative; overflow: hidden;
-  transition: transform .25s;
-}
-.tier-card:hover { transform: translateY(-4px); }
-.tier-bronze { background: #fdf5ee; border: 2px solid #d4a06a; }
-.tier-silver { background: #f4f5f6; border: 2px solid #adb5bd; }
-.tier-gold-card   { background: #fffbeb; border: 2px solid var(--gold); }
-.tier-popular-badge {
-  position: absolute; top: 16px; right: 16px;
-  background: var(--gold); color: var(--green);
-  font-size: 10px; font-weight: 700;
-  letter-spacing: .5px; text-transform: uppercase;
-  padding: 3px 10px; border-radius: 20px;
-}
-.tier-icon { font-size: 2.4rem; margin-bottom: 16px; }
-.tier-name { font-family: var(--font-display); font-size: 1.5rem; font-weight: 700; margin-bottom: 4px; }
-.tier-bronze .tier-name { color: #7a4515; }
-.tier-silver .tier-name { color: #495057; }
-.tier-gold-card   .tier-name { color: var(--gold-dark); }
-.tier-req { font-size: 13px; color: var(--text-muted); margin-bottom: 20px; }
-.tier-min {
-  font-size: 24px; font-weight: 700;
-  color: var(--green); margin-bottom: 20px;
-}
-.tier-min small { font-size: 14px; font-weight: 400; color: var(--text-muted); }
-.tier-perks { list-style: none; display: flex; flex-direction: column; gap: 8px; }
-.tier-perks li {
-  font-size: 14px; color: var(--text-mid);
-  display: flex; align-items: center; gap: 10px;
-}
-.tier-perks li::before {
-  content: '✓';
-  width: 20px; height: 20px;
-  border-radius: 50%;
-  background: var(--green-pale); color: var(--green);
-  font-size: 11px; font-weight: 700;
-  display: inline-flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
-}
-
-/* ─── PAYMENT ────────────────────────────────── */
-.payment-section { background: var(--green); color: #fff; }
-.payment-section .section-title { color: #fff; }
-.payment-section .section-sub { color: rgba(255,255,255,0.72); }
-.payment-section .section-label { color: var(--gold); }
-.payment-grid {
-  display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;
-  margin-top: 56px;
-}
-.payment-card {
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.15);
-  border-radius: var(--radius);
-  padding: 28px;
-  backdrop-filter: blur(4px);
-  transition: background .25s;
-}
-.payment-card:hover { background: rgba(255,255,255,0.13); }
-.payment-logo {
-  width: 48px; height: 48px;
-  border-radius: 12px;
-  background: rgba(255,255,255,0.15);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 20px; margin-bottom: 16px;
-}
-.payment-card h3 { font-size: 16px; font-weight: 600; color: #fff; margin-bottom: 6px; }
-.payment-card p  { font-size: 14px; color: rgba(255,255,255,0.65); line-height: 1.6; }
-.payment-note {
-  margin-top: 40px;
-  background: rgba(252,209,22,0.12);
-  border: 1px solid rgba(252,209,22,0.3);
-  border-radius: var(--radius-sm);
-  padding: 20px 24px;
-  display: flex; align-items: flex-start; gap: 16px;
-}
-.payment-note-icon { font-size: 22px; flex-shrink: 0; margin-top: 2px; }
-.payment-note p { font-size: 14px; color: rgba(255,255,255,0.85); line-height: 1.6; }
-
-/* ─── CATEGORIES ─────────────────────────────── */
-.categories-wrap { margin-top: 52px; }
-.categories-wrap .cat-tags {
-  display: flex; flex-wrap: wrap; gap: 10px;
-}
-.cat-tag {
-  padding: 8px 18px;
-  border-radius: 30px;
-  font-size: 14px; font-weight: 500;
-  background: #fff;
-  border: 1.5px solid var(--border);
-  color: var(--text-mid);
-  cursor: default;
-  transition: all .2s;
-}
-.cat-tag:hover {
-  background: var(--green);
-  color: #fff;
-  border-color: var(--green);
-}
-
-/* ─── TESTIMONIALS ───────────────────────────── */
-.testimonials-section { background: var(--warm-gray); }
-.testimonials-grid {
-  display: grid; grid-template-columns: repeat(3,1fr); gap: 24px;
-  margin-top: 56px;
-}
-.testimonial-card {
-  background: #fff;
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
-  padding: 28px;
-  transition: transform .25s, box-shadow .25s;
-}
-.testimonial-card:hover { transform: translateY(-4px); box-shadow: var(--shadow); }
-.stars { color: var(--gold); font-size: 14px; letter-spacing: 2px; margin-bottom: 14px; }
-.testimonial-text {
-  font-size: 15px; color: var(--text-mid);
-  line-height: 1.7; margin-bottom: 20px;
-  font-style: italic;
-}
-.testimonial-author {
-  display: flex; align-items: center; gap: 12px;
-}
-.avatar {
-  width: 40px; height: 40px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-weight: 700; font-size: 15px;
-  flex-shrink: 0;
-}
-.av-green { background: var(--green-pale); color: var(--green); }
-.av-gold  { background: var(--gold-pale); color: var(--gold-dark); }
-.av-red   { background: var(--red-pale); color: var(--red); }
-.author-name { font-size: 14px; font-weight: 600; }
-.author-loc  { font-size: 12px; color: var(--text-muted); }
-
-/* ─── ROADMAP ────────────────────────────────── */
-.roadmap-grid {
-  display: grid; grid-template-columns: repeat(4,1fr); gap: 0;
-  margin-top: 60px;
-  position: relative;
-}
-.roadmap-grid::before {
-  content: '';
-  position: absolute; top: 26px; left: 5%; right: 5%;
-  height: 2px; background: var(--green-pale);
-}
-.phase {
-  text-align: center; padding: 0 16px;
-  position: relative; z-index: 1;
-}
-.phase-dot {
-  width: 52px; height: 52px;
-  border-radius: 50%;
-  background: var(--green);
-  color: #fff;
-  font-weight: 700; font-size: 16px;
-  display: flex; align-items: center; justify-content: center;
-  margin: 0 auto 20px;
-  box-shadow: 0 0 0 6px var(--green-pale);
-}
-.phase-dot.future { background: #fff; color: var(--green); border: 2px solid var(--green-pale); box-shadow: 0 0 0 6px #fff; }
-.phase h3 { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
-.phase p  { font-size: 12px; color: var(--text-muted); line-height: 1.6; }
-.phase-tag {
-  display: inline-block;
-  font-size: 10px; font-weight: 700;
-  padding: 2px 8px; border-radius: 10px;
-  margin-bottom: 10px;
-  text-transform: uppercase; letter-spacing: .5px;
-}
-.pt-live { background: var(--green-pale); color: var(--green); }
-.pt-soon { background: var(--gold-pale); color: var(--gold-dark); }
-.pt-future { background: #f0f0f0; color: var(--text-muted); }
-
-/* ─── FAQ ────────────────────────────────────── */
-.faq-section { background: var(--warm-gray); }
-.faq-list { margin-top: 52px; display: flex; flex-direction: column; gap: 12px; max-width: 760px; }
-.faq-item {
-  background: #fff; border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-  overflow: hidden;
-}
-.faq-q {
-  width: 100%; background: none; border: none;
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 20px 24px;
-  font-size: 15px; font-weight: 500;
-  color: var(--text); cursor: pointer; text-align: left;
-  gap: 12px;
-}
-.faq-q:hover { color: var(--green); }
-.faq-chevron {
-  width: 22px; height: 22px; border-radius: 50%;
-  background: var(--green-pale); color: var(--green);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 12px; flex-shrink: 0;
-  transition: transform .3s;
-}
-.faq-item.open .faq-chevron { transform: rotate(180deg); }
-.faq-a {
-  max-height: 0; overflow: hidden;
-  transition: max-height .35s ease, padding .35s ease;
-  font-size: 14px; color: var(--text-muted); line-height: 1.7;
-  padding: 0 24px;
-}
-.faq-item.open .faq-a { max-height: 200px; padding: 0 24px 20px; }
-
-/* ─── CTA BANNER ─────────────────────────────── */
-.cta-banner {
-  background: var(--gold);
-  padding: 80px 24px;
-  text-align: center;
-}
-.cta-banner h2 {
-  font-family: var(--font-display);
-  font-size: clamp(1.8rem, 3.5vw, 3rem);
-  font-weight: 900; color: var(--green);
-  margin-bottom: 16px;
-}
-.cta-banner p { font-size: 17px; color: var(--green-mid); margin-bottom: 36px; }
-.btn-dark {
-  background: var(--green);
-  color: #fff;
-  font-weight: 700; font-size: 15px;
-  padding: 14px 36px; border-radius: 10px;
-  text-decoration: none; display: inline-block;
-  transition: transform .2s, box-shadow .2s;
-}
-.btn-dark:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(13,74,34,0.35); }
-
-/* ─── FOOTER ─────────────────────────────────── */
-footer {
-  background: var(--green);
-  color: rgba(255,255,255,0.7);
-  padding: 64px 24px 32px;
-}
-.footer-inner {
-  max-width: 1100px; margin: 0 auto;
-  display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 40px;
-  margin-bottom: 48px;
-}
-.footer-brand h3 {
-  font-family: var(--font-display);
-  font-size: 1.4rem; color: #fff;
-  margin-bottom: 10px;
-}
-.footer-brand p { font-size: 13.5px; line-height: 1.7; max-width: 280px; }
-.footer-col h4 { font-size: 13px; font-weight: 700; color: #fff; margin-bottom: 16px; letter-spacing: .5px; text-transform: uppercase; }
-.footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 10px; }
-.footer-col ul li a {
-  font-size: 13.5px; color: rgba(255,255,255,0.65);
-  text-decoration: none; transition: color .2s;
-}
-.footer-col ul li a:hover { color: var(--gold); }
-.footer-bottom {
-  max-width: 1100px; margin: 0 auto;
-  border-top: 1px solid rgba(255,255,255,0.12);
-  padding-top: 24px;
-  display: flex; align-items: center; justify-content: space-between;
-  flex-wrap: wrap; gap: 12px;
-}
-.footer-bottom p { font-size: 12.5px; }
-.footer-flags { display: flex; gap: 3px; border-radius: 3px; overflow: hidden; }
-.ff-r { width: 8px; height: 14px; background: #CE1126; }
-.ff-g { width: 8px; height: 14px; background: #FCD116; }
-.ff-b { width: 8px; height: 14px; background: #006B3F; }
-
-/* ─── REGISTER MODAL ─────────────────────────── */
-.modal-overlay {
-  display: none; position: fixed; inset: 0;
-  background: rgba(0,0,0,0.55); z-index: 200;
-  align-items: center; justify-content: center;
-  padding: 24px;
-}
-.modal-overlay.open { display: flex; }
-.modal {
-  background: var(--cream); border-radius: 20px;
-  padding: 40px; max-width: 480px; width: 100%;
-  position: relative;
-  animation: modalIn .3s ease;
-}
-@keyframes modalIn {
-  from { opacity: 0; transform: scale(.94) translateY(16px); }
-  to   { opacity: 1; transform: scale(1) translateY(0); }
-}
-.modal-close {
-  position: absolute; top: 16px; right: 16px;
-  background: var(--warm-gray); border: none;
-  width: 32px; height: 32px; border-radius: 50%;
-  font-size: 18px; cursor: pointer; color: var(--text-mid);
-  display: flex; align-items: center; justify-content: center;
-  transition: background .2s;
-}
-.modal-close:hover { background: var(--border); }
-.modal h2 {
-  font-family: var(--font-display);
-  font-size: 1.7rem; font-weight: 700;
-  color: var(--green); margin-bottom: 6px;
-}
-.modal .bonus-note {
-  font-size: 14px; color: var(--green-light);
-  background: var(--green-pale); border-radius: 8px;
-  padding: 8px 14px; margin-bottom: 24px;
-  font-weight: 500;
-}
-.form-group { margin-bottom: 16px; }
-.form-group label {
-  display: block; font-size: 13px; font-weight: 600;
-  margin-bottom: 6px; color: var(--text-mid);
-}
-.form-group input, .form-group select {
-  width: 100%; padding: 12px 14px;
-  border: 1.5px solid var(--border);
-  border-radius: 10px; font-family: var(--font-body); font-size: 14px;
-  background: #fff; color: var(--text);
-  outline: none; transition: border-color .2s;
-}
-.form-group input:focus, .form-group select:focus { border-color: var(--green); }
-.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.submit-btn {
-  width: 100%; padding: 14px;
-  background: var(--green); color: #fff;
-  font-family: var(--font-body);
-  font-size: 15px; font-weight: 700;
-  border: none; border-radius: 10px; cursor: pointer;
-  margin-top: 8px;
-  transition: background .2s, transform .15s;
-}
-.submit-btn:hover { background: var(--green-light); transform: translateY(-1px); }
-.modal-terms {
-  font-size: 11.5px; color: var(--text-muted);
-  text-align: center; margin-top: 14px;
-}
-.modal-terms a { color: var(--green); }
-
-/* ─── SUCCESS STATE ──────────────────────────── */
-.success-state { text-align: center; display: none; }
-.success-state .checkmark {
-  width: 64px; height: 64px; border-radius: 50%;
-  background: var(--green-pale); color: var(--green);
-  font-size: 28px;
-  display: flex; align-items: center; justify-content: center;
-  margin: 0 auto 20px;
-}
-.success-state h3 { font-family: var(--font-display); font-size: 1.5rem; color: var(--green); margin-bottom: 8px; }
-.success-state p  { font-size: 14px; color: var(--text-muted); }
-
-/* ─── RESPONSIVE ─────────────────────────────── */
-@media(max-width:960px) {
-  .steps-grid { grid-template-columns: repeat(2,1fr); }
-  .step-connector { display: none; }
-  .earn-grid { grid-template-columns: repeat(2,1fr); }
-  .tiers-grid { grid-template-columns: repeat(2,1fr); }
-  .testimonials-grid { grid-template-columns: repeat(2,1fr); }
-  .roadmap-grid { grid-template-columns: repeat(2,1fr); gap: 32px; }
-  .roadmap-grid::before { display: none; }
-  .footer-inner { grid-template-columns: 1fr 1fr; }
-  .payment-grid { grid-template-columns: 1fr 1fr; }
-}
-@media(max-width:640px) {
-  .hero-stats { grid-template-columns: 1fr; }
-  .steps-grid, .earn-grid, .tiers-grid, .testimonials-grid { grid-template-columns: 1fr; }
-  .roadmap-grid { grid-template-columns: 1fr 1fr; }
-  .payment-grid { grid-template-columns: 1fr; }
-  .footer-inner { grid-template-columns: 1fr; }
-  .footer-bottom { flex-direction: column; align-items: flex-start; }
-  .form-row { grid-template-columns: 1fr; }
-  .modal { padding: 28px 20px; }
-}
-
-/* ─── SCROLL REVEAL ──────────────────────────── */
-.reveal {
-  opacity: 0; transform: translateY(32px);
-  transition: opacity .6s ease, transform .6s ease;
-}
-.reveal.visible { opacity: 1; transform: translateY(0); }
+/* RESPONSIVE */
+@media(max-width:960px){.steps-grid,.earn-grid,.tiers-grid,.testimonials-grid{grid-template-columns:repeat(2,1fr)}.step-connector{display:none}.roadmap-grid{grid-template-columns:repeat(2,1fr);gap:32px}.roadmap-grid::before{display:none}.footer-inner{grid-template-columns:1fr 1fr}.payment-grid{grid-template-columns:1fr 1fr}.dash-metrics,.admin-metrics{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:640px){.hero-stats{grid-template-columns:1fr}.steps-grid,.earn-grid,.tiers-grid,.testimonials-grid,.payment-grid{grid-template-columns:1fr}.roadmap-grid{grid-template-columns:1fr 1fr}.footer-inner{grid-template-columns:1fr}.footer-bottom{flex-direction:column;align-items:flex-start}.form-row,.withdraw-form-row{grid-template-columns:1fr}.modal{padding:24px 18px}.dash-metrics,.admin-metrics{grid-template-columns:1fr 1fr}}
 </style>
 </head>
 <body>
 
-<!-- ═══ NAVBAR ═══════════════════════════════ -->
+<!-- ══ NAVBAR ══════════════════════════════════ -->
 <nav id="navbar">
   <a href="#" class="nav-logo">
-    <div class="nav-flag">
-      <div class="nf-r"></div><div class="nf-g"></div><div class="nf-b"></div>
-    </div>
+    <div class="nav-flag"><div class="nf-r"></div><div class="nf-g"></div><div class="nf-b"></div></div>
     <span class="nav-wordmark">GhanaOpinion<span>Pay</span></span>
   </a>
   <div class="nav-links">
@@ -743,7 +306,8 @@ footer {
     <a href="#earn">Ways to earn</a>
     <a href="#tiers">Membership</a>
     <a href="#faq">FAQ</a>
-    <a href="#" class="nav-cta" onclick="openModal()">Join Free</a>
+    <a href="#" class="nav-login-btn" onclick="openLoginModal()">Log In</a>
+    <a href="#" class="nav-cta" onclick="openRegisterModal()">Join Free</a>
   </div>
   <button class="hamburger" onclick="toggleMenu()" aria-label="Menu">
     <span></span><span></span><span></span>
@@ -754,699 +318,845 @@ footer {
   <a href="#earn" onclick="closeMenu()">Ways to earn</a>
   <a href="#tiers" onclick="closeMenu()">Membership</a>
   <a href="#faq" onclick="closeMenu()">FAQ</a>
-  <a href="#" class="nav-cta" onclick="openModal(); closeMenu();">Join Free — Get GH₵ 5 Bonus</a>
+  <a href="#" onclick="openLoginModal();closeMenu()">Log In</a>
+  <a href="#" class="nav-cta" onclick="openRegisterModal();closeMenu()">Join Free — Get GH&#8373; 5 Bonus</a>
 </div>
 
-<!-- ═══ HERO ══════════════════════════════════ -->
+<!-- ══ HERO ════════════════════════════════════ -->
 <section class="hero">
   <div class="hero-pattern"></div>
   <div class="hero-badge"><span class="dot"></span>Ghana's #1 Paid Survey Platform</div>
   <h1>Share Your <em>Opinion.</em><br>Earn Real Ghana Cedis.</h1>
   <p>Join thousands of Ghanaians making money from home by answering simple surveys, watching videos, and completing tasks.</p>
   <div class="hero-actions">
-    <a href="#" class="btn-primary" onclick="openModal()">Get Started — It's Free</a>
+    <a href="#" class="btn-primary" onclick="openRegisterModal()">Get Started — It's Free</a>
     <a href="#how-it-works" class="btn-ghost">See how it works</a>
   </div>
   <div class="hero-stats">
-    <div class="hero-stat">
-      <div class="hero-stat-num">GH₵ 5</div>
-      <div class="hero-stat-label">Welcome bonus on sign-up</div>
-    </div>
-    <div class="hero-stat">
-      <div class="hero-stat-num">GH₵ 20</div>
-      <div class="hero-stat-label">Minimum cashout amount</div>
-    </div>
-    <div class="hero-stat">
-      <div class="hero-stat-num">50K+</div>
-      <div class="hero-stat-label">Active Ghanaian members</div>
-    </div>
+    <div class="hero-stat"><div class="hero-stat-num">GH&#8373; 5</div><div class="hero-stat-label">Welcome bonus on sign-up</div></div>
+    <div class="hero-stat"><div class="hero-stat-num">GH&#8373; 20</div><div class="hero-stat-label">Minimum cashout amount</div></div>
+    <div class="hero-stat"><div class="hero-stat-num">50K+</div><div class="hero-stat-label">Active Ghanaian members</div></div>
   </div>
 </section>
 
-<!-- ═══ HOW IT WORKS ══════════════════════════ -->
+<!-- ══ HOW IT WORKS ═════════════════════════════ -->
 <section class="section" id="how-it-works">
   <div class="container">
-    <div class="reveal">
-      <div class="section-label">Simple Process</div>
-      <h2 class="section-title">Start earning in 4 easy steps</h2>
-      <p class="section-sub">No experience needed. No hidden fees. Just your honest opinions, paid in Ghana Cedis.</p>
-    </div>
+    <div class="reveal"><div class="section-label">Simple Process</div><h2 class="section-title">Start earning in 4 easy steps</h2><p class="section-sub">No experience needed. Just your honest opinions, paid in Ghana Cedis.</p></div>
     <div class="steps-grid reveal">
-      <div class="step-card">
-        <div class="step-num">1</div>
-        <h3>Register for Free</h3>
-        <p>Sign up with your email or phone number. Ghanaian residents aged 18+ are welcome. Takes under 2 minutes.</p>
-        <div class="step-connector"></div>
-      </div>
-      <div class="step-card">
-        <div class="step-num">2</div>
-        <h3>Complete Your Profile</h3>
-        <p>Tell us about yourself — your region, job, interests. This gets you matched with the highest-paying surveys.</p>
-        <div class="step-connector"></div>
-      </div>
-      <div class="step-card">
-        <div class="step-num">3</div>
-        <h3>Answer Surveys & Tasks</h3>
-        <p>Complete surveys, watch videos, or take polls. Each activity adds Ghana Cedis directly to your balance.</p>
-        <div class="step-connector"></div>
-      </div>
-      <div class="step-card">
-        <div class="step-num">4</div>
-        <h3>Withdraw to MoMo or Bank</h3>
-        <p>Cash out via MTN MoMo, Telecel Cash, or your Ghanaian bank account. Payments processed twice weekly.</p>
-      </div>
+      <div class="step-card"><div class="step-num">1</div><h3>Register for Free</h3><p>Sign up with your email and MoMo number. Ghanaian residents aged 18+ are welcome.</p><div class="step-connector"></div></div>
+      <div class="step-card"><div class="step-num">2</div><h3>Pay Registration Fee</h3><p>Approve the Mobile Money payment prompt sent to your number to activate your chosen tier.</p><div class="step-connector"></div></div>
+      <div class="step-card"><div class="step-num">3</div><h3>Answer Surveys &amp; Tasks</h3><p>Complete surveys, watch videos, or take polls. Each activity adds Ghana Cedis to your balance.</p><div class="step-connector"></div></div>
+      <div class="step-card"><div class="step-num">4</div><h3>Withdraw to MoMo or Bank</h3><p>Cash out via MTN MoMo, Telecel Cash, or your Ghanaian bank account. Processed twice weekly.</p></div>
     </div>
   </div>
 </section>
 
-<!-- ═══ WAYS TO EARN ══════════════════════════ -->
+<!-- ══ EARN ═════════════════════════════════════ -->
 <section class="section earn-section" id="earn">
   <div class="container">
-    <div class="reveal">
-      <div class="section-label">Earning Methods</div>
-      <h2 class="section-title">Multiple ways to grow your balance</h2>
-      <p class="section-sub">From quick polls to in-depth surveys — every activity pays you in Ghana Cedis.</p>
-    </div>
+    <div class="reveal"><div class="section-label">Earning Methods</div><h2 class="section-title">Multiple ways to grow your balance</h2><p class="section-sub">Every activity pays you in Ghana Cedis.</p></div>
     <div class="earn-grid reveal">
-      <div class="earn-card">
-        <div class="earn-icon ei-green">📋</div>
-        <h3>Paid Surveys</h3>
-        <p>Answer questions from brands and research firms. Topics include consumer goods, health, agriculture, and more.</p>
-        <span class="earn-amount">GH₵ 1 – 15 each</span>
-      </div>
-      <div class="earn-card">
-        <div class="earn-icon ei-gold">⚡</div>
-        <h3>Short Polls</h3>
-        <p>Quick 1–3 question polls that take under a minute. Great for earning on the go throughout the day.</p>
-        <span class="earn-amount">GH₵ 0.50 each</span>
-      </div>
-      <div class="earn-card">
-        <div class="earn-icon ei-red">▶️</div>
-        <h3>Sponsored Videos</h3>
-        <p>Watch short brand videos, then answer a simple follow-up question. Easy passive earning — GH₵ 1 guaranteed per video watched.</p>
-        <span class="earn-amount">GH₵ 1 per video</span>
-      </div>
-      <div class="earn-card">
-        <div class="earn-icon ei-green">🏷️</div>
-        <h3>Product Testing</h3>
-        <p>Selected members get invited to review local products and services. Highest-paying activity on the platform.</p>
-        <span class="earn-amount">GH₵ 5 – 25 each</span>
-      </div>
-      <div class="earn-card">
-        <div class="earn-icon ei-gold">👥</div>
-        <h3>Referral Programme</h3>
-        <p>Invite friends using your unique link. Earn GH₵ 3 for every friend who registers and makes their first cashout.</p>
-        <span class="earn-amount">GH₵ 3 per referral</span>
-      </div>
-      <div class="earn-card">
-        <div class="earn-icon ei-red">🔥</div>
-        <h3>Daily Streak Bonus</h3>
-        <p>Log in every day and complete at least one task to build your streak. The longer the streak, the bigger the bonus.</p>
-        <span class="earn-amount">GH₵ 0.10 – 1 daily</span>
-      </div>
+      <div class="earn-card"><div class="earn-icon ei-green">&#x1F4CB;</div><h3>Paid Surveys</h3><p>Answer questions from brands and research firms on consumer goods, health, agriculture, and more.</p><span class="earn-amount">GH&#8373; 1 – 15 each</span></div>
+      <div class="earn-card"><div class="earn-icon ei-gold">&#x26A1;</div><h3>Short Polls</h3><p>Quick 1–3 question polls that take under a minute. Great for earning on the go throughout the day.</p><span class="earn-amount">GH&#8373; 0.50 each</span></div>
+      <div class="earn-card"><div class="earn-icon ei-red">&#x25B6;&#xFE0F;</div><h3>Sponsored Videos</h3><p>Watch short brand videos and earn a flat guaranteed GH&#8373; 1 per video — no quiz required.</p><span class="earn-amount">GH&#8373; 1 per video</span></div>
+      <div class="earn-card"><div class="earn-icon ei-green">&#x1F3F7;&#xFE0F;</div><h3>Product Testing</h3><p>Selected members get invited to review local products and services. Highest-paying activity.</p><span class="earn-amount">GH&#8373; 5 – 25 each</span></div>
+      <div class="earn-card"><div class="earn-icon ei-gold">&#x1F465;</div><h3>Referral Programme</h3><p>Invite friends using your unique link. Earn GH&#8373; 3 for every friend who makes their first cashout.</p><span class="earn-amount">GH&#8373; 3 per referral</span></div>
+      <div class="earn-card"><div class="earn-icon ei-red">&#x1F525;</div><h3>Daily Streak Bonus</h3><p>Log in every day and complete at least one task to build your streak for bigger bonuses.</p><span class="earn-amount">GH&#8373; 0.10 – 1 daily</span></div>
     </div>
-
-    <!-- Earnings Table -->
-    <div class="reveal" style="margin-top: 48px;">
-      <h3 style="font-size:18px; font-weight:600; margin-bottom:4px;">Full Earnings Breakdown</h3>
-      <p style="font-size:14px; color:var(--text-muted); margin-bottom:0;">All amounts in Ghana Cedis (GH₵)</p>
-    </div>
+    <div class="reveal" style="margin-top:48px"><h3 style="font-size:18px;font-weight:600;margin-bottom:4px">Full Earnings Breakdown</h3><p style="font-size:14px;color:var(--text-muted)">All amounts in Ghana Cedis (GH&#8373;)</p></div>
     <div class="table-wrap reveal">
-      <table>
-        <thead>
-          <tr>
-            <th>Activity</th>
-            <th>Payout Range</th>
-            <th>Frequency</th>
-            <th>Time Required</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>Standard Survey</td>
-            <td><span class="pill pill-green">GH₵ 1 – 5</span></td>
-            <td>Daily</td>
-            <td>5–15 minutes</td>
-          </tr>
-          <tr>
-            <td>Premium Survey</td>
-            <td><span class="pill pill-gold">GH₵ 6 – 15</span></td>
-            <td>2–4 / week</td>
-            <td>15–30 minutes</td>
-          </tr>
-          <tr>
-            <td>Short Poll</td>
-            <td><span class="pill pill-green">GH₵ 0.50</span></td>
-            <td>Multiple / day</td>
-            <td>Under 1 minute</td>
-          </tr>
-          <tr>
-            <td>Sponsored Video</td>
-            <td><span class="pill pill-green">GH₵ 1.00</span></td>
-            <td>Daily limit applies</td>
-            <td>2–5 minutes</td>
-          </tr>
-          <tr>
-            <td>Product Test & Review</td>
-            <td><span class="pill pill-gold">GH₵ 5 – 25</span></td>
-            <td>By invite</td>
-            <td>30–60 minutes</td>
-          </tr>
-          <tr>
-            <td>Referral Bonus</td>
-            <td><span class="pill pill-green">GH₵ 3</span></td>
-            <td>Unlimited</td>
-            <td>Instant on cashout</td>
-          </tr>
-          <tr>
-            <td>Daily Check-in Streak</td>
-            <td><span class="pill pill-green">GH₵ 0.10 – 1</span></td>
-            <td>Daily</td>
-            <td>Instant</td>
-          </tr>
-          <tr>
-            <td>Monthly Sweepstakes</td>
-            <td><span class="pill pill-gold">Prize draw</span></td>
-            <td>Monthly</td>
-            <td>Auto-entry</td>
-          </tr>
-        </tbody>
-      </table>
+      <table><thead><tr><th>Activity</th><th>Payout</th><th>Frequency</th><th>Time</th></tr></thead>
+      <tbody>
+        <tr><td>Standard Survey</td><td><span class="pill pill-green">GH&#8373; 1 – 5</span></td><td>Daily</td><td>5–15 min</td></tr>
+        <tr><td>Premium Survey</td><td><span class="pill pill-gold">GH&#8373; 6 – 15</span></td><td>2–4/week</td><td>15–30 min</td></tr>
+        <tr><td>Short Poll</td><td><span class="pill pill-green">GH&#8373; 0.50</span></td><td>Multiple/day</td><td>&lt;1 min</td></tr>
+        <tr><td>Sponsored Video</td><td><span class="pill pill-green">GH&#8373; 1.00</span></td><td>Daily limit</td><td>2–5 min</td></tr>
+        <tr><td>Product Test &amp; Review</td><td><span class="pill pill-gold">GH&#8373; 5 – 25</span></td><td>By invite</td><td>30–60 min</td></tr>
+        <tr><td>Referral Bonus</td><td><span class="pill pill-green">GH&#8373; 3</span></td><td>Unlimited</td><td>Instant</td></tr>
+        <tr><td>Daily Check-in Streak</td><td><span class="pill pill-green">GH&#8373; 0.10 – 1</span></td><td>Daily</td><td>Instant</td></tr>
+      </tbody></table>
     </div>
   </div>
 </section>
 
-<!-- ═══ SURVEY CATEGORIES ═════════════════════ -->
+<!-- ══ CATEGORIES ════════════════════════════════ -->
 <section class="section">
   <div class="container">
-    <div class="reveal">
-      <div class="section-label">Survey Topics</div>
-      <h2 class="section-title">Topics that matter to Ghanaians</h2>
-      <p class="section-sub">Every survey is designed with the Ghanaian context in mind — no irrelevant foreign topics.</p>
-    </div>
-    <div class="categories-wrap reveal">
-      <div class="cat-tags">
-        <span class="cat-tag">Consumer Goods</span>
-        <span class="cat-tag">Mobile & Telecoms</span>
-        <span class="cat-tag">Banking & MoMo</span>
-        <span class="cat-tag">Healthcare</span>
-        <span class="cat-tag">Agriculture & Farming</span>
-        <span class="cat-tag">Politics & Governance</span>
-        <span class="cat-tag">Education</span>
-        <span class="cat-tag">Entertainment & Media</span>
-        <span class="cat-tag">Food & Beverage</span>
-        <span class="cat-tag">Real Estate</span>
-        <span class="cat-tag">Transport & Logistics</span>
-        <span class="cat-tag">Sports & Betting</span>
-        <span class="cat-tag">Fashion & Beauty</span>
-        <span class="cat-tag">Energy & Utilities</span>
-        <span class="cat-tag">Small Business</span>
-        <span class="cat-tag">Social Issues</span>
-      </div>
+    <div class="reveal"><div class="section-label">Survey Topics</div><h2 class="section-title">Topics that matter to Ghanaians</h2><p class="section-sub">Every survey is designed with the Ghanaian context in mind.</p></div>
+    <div class="cat-tags reveal">
+      <span class="cat-tag">Consumer Goods</span><span class="cat-tag">Mobile &amp; Telecoms</span><span class="cat-tag">Banking &amp; MoMo</span><span class="cat-tag">Healthcare</span><span class="cat-tag">Agriculture &amp; Farming</span><span class="cat-tag">Politics &amp; Governance</span><span class="cat-tag">Education</span><span class="cat-tag">Entertainment &amp; Media</span><span class="cat-tag">Food &amp; Beverage</span><span class="cat-tag">Real Estate</span><span class="cat-tag">Transport &amp; Logistics</span><span class="cat-tag">Sports &amp; Betting</span><span class="cat-tag">Fashion &amp; Beauty</span><span class="cat-tag">Energy &amp; Utilities</span><span class="cat-tag">Small Business</span><span class="cat-tag">Social Issues</span>
     </div>
   </div>
 </section>
 
-<!-- ═══ MEMBERSHIP TIERS ══════════════════════ -->
-<section class="section" id="tiers" style="background:#fff;">
+<!-- ══ TIERS ══════════════════════════════════════ -->
+<section class="section" id="tiers" style="background:#fff">
   <div class="container">
-    <div class="reveal">
-      <div class="section-label">Membership Levels</div>
-      <h2 class="section-title">The more you do, the more you earn</h2>
-      <p class="section-sub">Complete surveys and climb through tiers to unlock better rates and lower cashout thresholds.</p>
-    </div>
+    <div class="reveal"><div class="section-label">Membership Levels</div><h2 class="section-title">Choose your tier &amp; start earning</h2><p class="section-sub">Pay a one-time registration fee via Mobile Money and unlock your earnings.</p></div>
     <div class="tiers-grid reveal">
       <div class="tier-card tier-bronze">
-        <div class="tier-icon">🥉</div>
-        <div class="tier-name">Bronze</div>
-        <div class="tier-req">Registration fee: <strong style="color:#7a4515;">GH₵ 60</strong></div>
-        <div class="tier-min">GH₵ 20 <small>minimum cashout</small></div>
-        <ul class="tier-perks">
-          <li>Access to all standard surveys</li>
-          <li>Standard payout rate</li>
-          <li>MTN MoMo & bank withdrawal</li>
-          <li>Daily streak bonus</li>
-          <li>Monthly sweepstakes entry</li>
-        </ul>
+        <div class="tier-icon">&#x1F949;</div><div class="tier-name">Bronze</div>
+        <div class="tier-req">Registration fee: <strong style="color:#7a4515">GH&#8373; 60</strong></div>
+        <div class="tier-min">GH&#8373; 20 <small>minimum cashout</small></div>
+        <ul class="tier-perks"><li>All standard surveys</li><li>Standard payout rate</li><li>MTN MoMo &amp; bank withdrawal</li><li>Daily streak bonus</li><li>Monthly sweepstakes</li></ul>
       </div>
       <div class="tier-card tier-silver">
-        <div class="tier-icon">🥈</div>
-        <div class="tier-name">Silver</div>
-        <div class="tier-req">Registration fee: <strong style="color:#495057;">GH₵ 100</strong></div>
-        <div class="tier-min">GH₵ 15 <small>minimum cashout</small></div>
-        <ul class="tier-perks">
-          <li>Everything in Bronze</li>
-          <li>+10% bonus on all surveys</li>
-          <li>Priority survey access</li>
-          <li>Faster payment processing</li>
-          <li>Silver member leaderboard</li>
-        </ul>
+        <div class="tier-icon">&#x1F948;</div><div class="tier-name">Silver</div>
+        <div class="tier-req">Registration fee: <strong style="color:#495057">GH&#8373; 100</strong></div>
+        <div class="tier-min">GH&#8373; 15 <small>minimum cashout</small></div>
+        <ul class="tier-perks"><li>Everything in Bronze</li><li>+10% bonus on all surveys</li><li>Priority survey access</li><li>Faster payment processing</li><li>Silver leaderboard</li></ul>
       </div>
       <div class="tier-card tier-gold-card">
         <div class="tier-popular-badge">Top Tier</div>
-        <div class="tier-icon">🥇</div>
-        <div class="tier-name">Gold</div>
-        <div class="tier-req">Registration fee: <strong style="color:#856e00;">GH₵ 150</strong></div>
-        <div class="tier-min">GH₵ 10 <small>minimum cashout</small></div>
-        <ul class="tier-perks">
-          <li>Everything in Silver</li>
-          <li>+20% bonus on all surveys</li>
-          <li>Exclusive product test invites</li>
-          <li>Dedicated account manager</li>
-          <li>Monthly top-earner prize pool</li>
-        </ul>
+        <div class="tier-icon">&#x1F947;</div><div class="tier-name">Gold</div>
+        <div class="tier-req">Registration fee: <strong style="color:#856e00">GH&#8373; 150</strong></div>
+        <div class="tier-min">GH&#8373; 10 <small>minimum cashout</small></div>
+        <ul class="tier-perks"><li>Everything in Silver</li><li>+20% bonus on all surveys</li><li>Exclusive product test invites</li><li>Dedicated account manager</li><li>Monthly prize pool</li></ul>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ═══ PAYMENT METHODS ═══════════════════════ -->
+<!-- ══ PAYMENT ════════════════════════════════════ -->
 <section class="section payment-section" id="payment">
   <div class="container">
-    <div class="reveal">
-      <div class="section-label">Withdrawals</div>
-      <h2 class="section-title">Get paid the Ghanaian way</h2>
-      <p class="section-sub">Cash out to the payment method that works best for you. All payouts in Ghana Cedis.</p>
-    </div>
+    <div class="reveal"><div class="section-label">Withdrawals</div><h2 class="section-title">Get paid the Ghanaian way</h2><p class="section-sub">Cash out to the payment method that works best for you.</p></div>
     <div class="payment-grid reveal">
-      <div class="payment-card">
-        <div class="payment-logo">📱</div>
-        <h3>MTN Mobile Money</h3>
-        <p>Instant transfer to your MTN MoMo wallet. The fastest and most popular cashout method for our members.</p>
-      </div>
-      <div class="payment-card">
-        <div class="payment-logo">💸</div>
-        <h3>Telecel Cash / AirtelTigo</h3>
-        <p>Transfer your earnings to your Telecel Cash or AirtelTigo Money account within 24 hours.</p>
-      </div>
-      <div class="payment-card">
-        <div class="payment-logo">🏦</div>
-        <h3>Bank Transfer</h3>
-        <p>Receive funds directly into any Ghanaian bank — GCB, Ecobank, Absa, Fidelity, Cal Bank, and more.</p>
-      </div>
-      <div class="payment-card">
-        <div class="payment-logo">🎁</div>
-        <h3>Gift Vouchers</h3>
-        <p>Redeem your balance as Melcom or local e-commerce vouchers — sometimes at a 5% bonus rate.</p>
-      </div>
+      <div class="payment-card"><div class="payment-logo">&#x1F4F1;</div><h3>MTN Mobile Money</h3><p>Instant transfer to your MTN MoMo wallet. The fastest and most popular cashout method.</p></div>
+      <div class="payment-card"><div class="payment-logo">&#x1F4B8;</div><h3>Telecel Cash / AirtelTigo</h3><p>Transfer your earnings to Telecel Cash (formerly Vodafone Cash) or AirtelTigo Money within 24 hours.</p></div>
+      <div class="payment-card"><div class="payment-logo">&#x1F3E6;</div><h3>Bank Transfer</h3><p>Receive funds into any Ghanaian bank — GCB, Ecobank, Absa, Fidelity, Cal Bank, and more.</p></div>
+      <div class="payment-card"><div class="payment-logo">&#x1F381;</div><h3>Gift Vouchers</h3><p>Redeem your balance as Melcom or local e-commerce vouchers — sometimes at a 5% bonus rate.</p></div>
     </div>
     <div class="payment-note reveal">
-      <div class="payment-note-icon">📅</div>
-      <p><strong style="color:#fff;">Payment schedule:</strong> Cashouts are processed every Monday and Thursday. Minimum withdrawal is GH₵ 20 (Bronze), GH₵ 15 (Silver), or GH₵ 10 (Gold). Maximum monthly withdrawal is GH₵ 2,000. Ghana Card or national ID verification is required before your first cashout. <strong style="color:#fff;">Registration fees:</strong> GH₵ 60 (Bronze) · GH₵ 100 (Silver) · GH₵ 150 (Gold).</p>
+      <div class="payment-note-icon">&#x1F4C5;</div>
+      <p><strong style="color:#fff">Payment schedule:</strong> Cashouts processed every Monday and Thursday. Minimum withdrawal: GH&#8373; 20 (Bronze) &middot; GH&#8373; 15 (Silver) &middot; GH&#8373; 10 (Gold). <strong style="color:#fff">&#x23F1; Withdrawal timeline:</strong> All withdrawals pass through three phases (Pending &#x2192; Processing &#x2192; Complete) and take <strong style="color:var(--gold)">at least 2 business days</strong> to complete. You will be notified at each phase change.</p>
     </div>
   </div>
 </section>
 
-<!-- ═══ TESTIMONIALS ══════════════════════════ -->
+<!-- ══ TESTIMONIALS ═══════════════════════════════ -->
 <section class="section testimonials-section">
   <div class="container">
-    <div class="reveal">
-      <div class="section-label">Member Stories</div>
-      <h2 class="section-title">Real members, real earnings</h2>
-      <p class="section-sub">Thousands of Ghanaians are already cashing out. Here's what they're saying.</p>
-    </div>
+    <div class="reveal"><div class="section-label">Member Stories</div><h2 class="section-title">Real members, real earnings</h2><p class="section-sub">Thousands of Ghanaians are already cashing out.</p></div>
     <div class="testimonials-grid reveal">
-      <div class="testimonial-card">
-        <div class="stars">★★★★★</div>
-        <p class="testimonial-text">"I cashed out GH₵ 85 in my first month — just by answering surveys during my lunch break. The MTN MoMo transfer was instant!"</p>
-        <div class="testimonial-author">
-          <div class="avatar av-green">AK</div>
-          <div>
-            <div class="author-name">Abena Kyei</div>
-            <div class="author-loc">Kumasi, Ashanti Region</div>
-          </div>
-        </div>
-      </div>
-      <div class="testimonial-card">
-        <div class="stars">★★★★★</div>
-        <p class="testimonial-text">"As a student, every cedi counts. I reached Silver tier within two months and now earn about GH₵ 60 monthly on top of my studies."</p>
-        <div class="testimonial-author">
-          <div class="avatar av-gold">KO</div>
-          <div>
-            <div class="author-name">Kwame Osei</div>
-            <div class="author-loc">Accra, Greater Accra</div>
-          </div>
-        </div>
-      </div>
-      <div class="testimonial-card">
-        <div class="stars">★★★★☆</div>
-        <p class="testimonial-text">"The app works well even on my 3G connection in Tamale. I completed a product testing survey and earned GH₵ 20 in one day!"</p>
-        <div class="testimonial-author">
-          <div class="avatar av-red">FA</div>
-          <div>
-            <div class="author-name">Fatima Alhassan</div>
-            <div class="author-loc">Tamale, Northern Region</div>
-          </div>
-        </div>
-      </div>
+      <div class="testimonial-card"><div class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div><p class="testimonial-text">"I cashed out GH&#8373; 85 in my first month — just by answering surveys during my lunch break. The MTN MoMo transfer was instant!"</p><div class="testimonial-author"><div class="avatar av-green">AK</div><div><div class="author-name">Abena Kyei</div><div class="author-loc">Kumasi, Ashanti Region</div></div></div></div>
+      <div class="testimonial-card"><div class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div><p class="testimonial-text">"As a student every cedi counts. I'm on Silver tier now and earn about GH&#8373; 60 monthly on top of my studies — totally worth it."</p><div class="testimonial-author"><div class="avatar av-gold">KO</div><div><div class="author-name">Kwame Osei</div><div class="author-loc">Accra, Greater Accra</div></div></div></div>
+      <div class="testimonial-card"><div class="stars">&#9733;&#9733;&#9733;&#9733;&#9734;</div><p class="testimonial-text">"The app works well even on my 3G in Tamale. I completed a product testing survey and earned GH&#8373; 20 in one day!"</p><div class="testimonial-author"><div class="avatar av-red">FA</div><div><div class="author-name">Fatima Alhassan</div><div class="author-loc">Tamale, Northern Region</div></div></div></div>
     </div>
   </div>
 </section>
 
-<!-- ═══ LAUNCH ROADMAP ════════════════════════ -->
-<section class="section" style="background:#fff;">
+<!-- ══ ROADMAP ════════════════════════════════════ -->
+<section class="section" style="background:#fff">
   <div class="container">
-    <div class="reveal">
-      <div class="section-label">Platform Roadmap</div>
-      <h2 class="section-title">Where we're headed</h2>
-      <p class="section-sub">Built in Ghana, growing across West Africa.</p>
-    </div>
+    <div class="reveal"><div class="section-label">Platform Roadmap</div><h2 class="section-title">Where we're headed</h2><p class="section-sub">Built in Ghana, growing across West Africa.</p></div>
     <div class="roadmap-grid reveal">
-      <div class="phase">
-        <div class="phase-dot">1</div>
-        <div class="phase-tag pt-live">Live</div>
-        <h3>MVP & Beta</h3>
-        <p>500 beta testers, core survey engine, MoMo payouts</p>
-      </div>
-      <div class="phase">
-        <div class="phase-dot">2</div>
-        <div class="phase-tag pt-live">Live</div>
-        <h3>Public Launch</h3>
-        <p>Open to all Ghanaians. Accra & Kumasi focus. 10,000 members</p>
-      </div>
-      <div class="phase">
-        <div class="phase-dot future">3</div>
-        <div class="phase-tag pt-soon">Coming Soon</div>
-        <h3>All 16 Regions</h3>
-        <p>Full national coverage. Android & iOS app launch.</p>
-      </div>
-      <div class="phase">
-        <div class="phase-dot future">4</div>
-        <div class="phase-tag pt-future">2026</div>
-        <h3>ECOWAS Expansion</h3>
-        <p>Expanding into Nigeria and Côte d'Ivoire markets</p>
-      </div>
+      <div class="phase"><div class="phase-dot">1</div><div class="phase-tag pt-live">Live</div><h3>MVP &amp; Beta</h3><p>500 beta testers, core survey engine, MoMo payouts</p></div>
+      <div class="phase"><div class="phase-dot">2</div><div class="phase-tag pt-live">Live</div><h3>Public Launch</h3><p>Open to all Ghanaians. Accra &amp; Kumasi focus. 10,000 members</p></div>
+      <div class="phase"><div class="phase-dot future">3</div><div class="phase-tag pt-soon">Coming Soon</div><h3>All 16 Regions</h3><p>Full national coverage. Android &amp; iOS app launch.</p></div>
+      <div class="phase"><div class="phase-dot future">4</div><div class="phase-tag pt-future">2026</div><h3>ECOWAS Expansion</h3><p>Expanding into Nigeria and Côte d'Ivoire markets</p></div>
     </div>
   </div>
 </section>
 
-<!-- ═══ FAQ ════════════════════════════════════ -->
+<!-- ══ FAQ ════════════════════════════════════════ -->
 <section class="section faq-section" id="faq">
   <div class="container">
-    <div class="reveal">
-      <div class="section-label">Questions & Answers</div>
-      <h2 class="section-title">Frequently asked questions</h2>
-      <p class="section-sub">Everything you need to know about earning on GhanaOpinionPay.</p>
-    </div>
+    <div class="reveal"><div class="section-label">Questions &amp; Answers</div><h2 class="section-title">Frequently asked questions</h2><p class="section-sub">Everything you need to know about GhanaOpinionPay.</p></div>
     <div class="faq-list reveal">
-      <div class="faq-item">
-        <button class="faq-q" onclick="toggleFaq(this)">
-          Is GhanaOpinionPay free to join?
-          <span class="faq-chevron">▾</span>
-        </button>
-        <div class="faq-a">Yes, completely free! There are no registration fees, no subscription costs, and no hidden charges. We even give you a GH₵ 5 welcome bonus just for signing up and verifying your account.</div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q" onclick="toggleFaq(this)">
-          Who is eligible to join?
-          <span class="faq-chevron">▾</span>
-        </button>
-        <div class="faq-a">GhanaOpinionPay is open to Ghanaian residents aged 18 and above. You will need a valid Ghana Card or voter ID for identity verification before your first cashout. Only one account is allowed per household.</div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q" onclick="toggleFaq(this)">
-          How much can I earn per month?
-          <span class="faq-chevron">▾</span>
-        </button>
-        <div class="faq-a">Earnings vary depending on your activity level, your tier, and the surveys available to you. Active members typically earn between GH₵ 40 and GH₵ 150 per month. Gold-tier members with referrals can earn significantly more. There is a maximum monthly withdrawal limit of GH₵ 2,000.</div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q" onclick="toggleFaq(this)">
-          How and when do I get paid?
-          <span class="faq-chevron">▾</span>
-        </button>
-        <div class="faq-a">You can withdraw via MTN MoMo, Telecel Cash, AirtelTigo Money, direct bank transfer, or gift vouchers. Payments are processed every Monday and Thursday. MTN MoMo transfers are typically instant, while bank transfers take 2–3 business days.</div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q" onclick="toggleFaq(this)">
-          What is the minimum amount I can withdraw?
-          <span class="faq-chevron">▾</span>
-        </button>
-        <div class="faq-a">The minimum cashout is GH₵ 20 for Bronze members, GH₵ 15 for Silver, and GH₵ 10 for Gold tier members. The tier you achieve determines how quickly you can access your earnings.</div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q" onclick="toggleFaq(this)">
-          Is my personal data safe?
-          <span class="faq-chevron">▾</span>
-        </button>
-        <div class="faq-a">Absolutely. We are fully compliant with Ghana's Data Protection Act, 2012 (Act 843). Your personal data is never sold to third parties. Survey responses are anonymised before being shared with clients. We use industry-standard encryption and conduct monthly third-party security audits.</div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q" onclick="toggleFaq(this)">
-          What happens if I get screened out of a survey?
-          <span class="faq-chevron">▾</span>
-        </button>
-        <div class="faq-a">We understand screen-outs can be frustrating. Our AI matching system is designed to minimise them by connecting you with surveys that fit your profile. If you do get screened out after answering more than 5 questions, you receive a small consolation credit of GH₵ 0.10.</div>
-      </div>
+      <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">Is GhanaOpinionPay free to join?<span class="faq-chevron">&#x25BE;</span></button><div class="faq-a">Sign-up is free. A one-time membership fee applies: GH&#8373; 60 (Bronze), GH&#8373; 100 (Silver), or GH&#8373; 150 (Gold), paid via Mobile Money prompt sent to your registered number after sign-up. You also receive a GH&#8373; 5 welcome bonus on activation.</div></div>
+      <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">How long does withdrawal take?<span class="faq-chevron">&#x25BE;</span></button><div class="faq-a">All withdrawals pass through three phases: Pending &#x2192; Processing &#x2192; Complete. The full process takes at least 2 business days. You will receive a notification at each phase change. Payments are processed on Mondays and Thursdays.</div></div>
+      <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">How do I pay the registration fee?<span class="faq-chevron">&#x25BE;</span></button><div class="faq-a">After completing sign-up, a Mobile Money payment prompt is automatically sent to your registered phone number. Approve it on your phone to activate your account. Works on MTN MoMo, Telecel Cash (formerly Vodafone Cash), and AirtelTigo Money.</div></div>
+      <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">Who is eligible to join?<span class="faq-chevron">&#x25BE;</span></button><div class="faq-a">GhanaOpinionPay is open to Ghanaian residents aged 18 and above with an active Mobile Money account. Ghana Card or voter ID required for verification before your first cashout. One account per household.</div></div>
+      <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">How much can I earn per month?<span class="faq-chevron">&#x25BE;</span></button><div class="faq-a">Active members typically earn between GH&#8373; 40 and GH&#8373; 150 per month. Gold-tier members with active referrals can earn significantly more. Maximum monthly withdrawal limit: GH&#8373; 2,000.</div></div>
+      <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">What if I don't receive the MoMo prompt?<span class="faq-chevron">&#x25BE;</span></button><div class="faq-a">Prompts typically arrive within 2 minutes. If it doesn't arrive, manually send the registration fee to 0203910730 and email support@ghanaopinionpay.com with your name and number for manual activation.</div></div>
     </div>
   </div>
 </section>
 
-<!-- ═══ CTA BANNER ════════════════════════════ -->
+<!-- ══ CTA ════════════════════════════════════════ -->
 <section class="cta-banner">
   <h2>Ready to start earning Ghana Cedis?</h2>
-  <p>Join over 50,000 Ghanaians already making money from their opinions. Sign up today and get GH₵ 5 instantly.</p>
-  <a href="#" class="btn-dark" onclick="openModal()">Create Your Free Account →</a>
+  <p>Join over 50,000 Ghanaians already making money from their opinions.</p>
+  <a href="#" class="btn-dark" onclick="openRegisterModal()">Create Your Free Account &#x2192;</a>
 </section>
 
-<!-- ═══ FOOTER ════════════════════════════════ -->
+<!-- ══ FOOTER ══════════════════════════════════════ -->
 <footer>
   <div class="footer-inner">
-    <div class="footer-brand">
-      <h3>GhanaOpinionPay</h3>
-      <p>Ghana's premier paid survey platform. Earn real Ghana Cedis for sharing your opinion on topics that matter.</p>
-    </div>
-    <div class="footer-col">
-      <h4>Earn</h4>
-      <ul>
-        <li><a href="#">Paid Surveys</a></li>
-        <li><a href="#">Short Polls</a></li>
-        <li><a href="#">Sponsored Videos</a></li>
-        <li><a href="#">Referral Programme</a></li>
-        <li><a href="#">Product Testing</a></li>
-      </ul>
-    </div>
-    <div class="footer-col">
-      <h4>Account</h4>
-      <ul>
-        <li><a href="#">Sign Up</a></li>
-        <li><a href="#">Log In</a></li>
-        <li><a href="#">Membership Tiers</a></li>
-        <li><a href="#">Withdrawal Methods</a></li>
-        <li><a href="#">Leaderboard</a></li>
-      </ul>
-    </div>
-    <div class="footer-col">
-      <h4>Company</h4>
-      <ul>
-        <li><a href="#">About Us</a></li>
-        <li><a href="#">Privacy Policy</a></li>
-        <li><a href="#">Terms of Service</a></li>
-        <li><a href="#">Contact Support</a></li>
-        <li><a href="#">For Businesses</a></li>
-      </ul>
-    </div>
+    <div class="footer-brand"><h3>GhanaOpinionPay</h3><p>Ghana's premier paid survey platform. Earn real Ghana Cedis for sharing your opinion on topics that matter.</p></div>
+    <div class="footer-col"><h4>Earn</h4><ul><li><a href="#">Paid Surveys</a></li><li><a href="#">Short Polls</a></li><li><a href="#">Sponsored Videos</a></li><li><a href="#">Referral Programme</a></li><li><a href="#">Product Testing</a></li></ul></div>
+    <div class="footer-col"><h4>Account</h4><ul><li><a href="#" onclick="openRegisterModal()">Sign Up</a></li><li><a href="#" onclick="openLoginModal()">Log In</a></li><li><a href="#">Membership Tiers</a></li><li><a href="#">Withdrawals</a></li><li><a href="#">Leaderboard</a></li></ul></div>
+    <div class="footer-col"><h4>Company</h4><ul><li><a href="#">About Us</a></li><li><a href="#">Privacy Policy</a></li><li><a href="#">Terms of Service</a></li><li><a href="#">Contact Support</a></li><li><a href="#">For Businesses</a></li></ul></div>
   </div>
   <div class="footer-bottom">
-    <p>© 2025 GhanaOpinionPay. All rights reserved. Made with 🇬🇭 in Ghana.</p>
-    <div style="display:flex;align-items:center;gap:8px;">
-      <div class="footer-flags"><div class="ff-r"></div><div class="ff-g"></div><div class="ff-b"></div></div>
-      <span style="font-size:12px;">Payouts in GH₵ · Compliant with Act 843</span>
-    </div>
+    <p>&#169; 2025 GhanaOpinionPay. All rights reserved. Made with &#x1F1EC;&#x1F1ED; in Ghana.</p>
+    <div style="display:flex;align-items:center;gap:8px"><div class="footer-flags"><div class="ff-r"></div><div class="ff-g"></div><div class="ff-b"></div></div><span style="font-size:12px">Payouts in GH&#8373; &middot; Compliant with Act 843</span></div>
   </div>
 </footer>
 
-<!-- ═══ REGISTER MODAL ════════════════════════ -->
-<div class="modal-overlay" id="modal" onclick="handleOverlayClick(event)">
-  <div class="modal">
-    <button class="modal-close" onclick="closeModal()">✕</button>
-    <div id="formState">
-      <h2>Join GhanaOpinionPay</h2>
-      <div class="bonus-note">🎉 You'll receive GH₵ 5 welcome bonus instantly!</div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>First Name</label>
-          <input type="text" placeholder="e.g. Kwame" id="firstName"/>
-        </div>
-        <div class="form-group">
-          <label>Last Name</label>
-          <input type="text" placeholder="e.g. Mensah" id="lastName"/>
-        </div>
-      </div>
+<!-- ══════════════════════════════════════════════
+     LOGIN MODAL
+══════════════════════════════════════════════ -->
+<div class="modal-overlay" id="loginModal" onclick="handleLoginOverlay(event)">
+  <div class="modal modal-sm">
+    <button class="modal-close" onclick="closeLoginModal()">&#x2715;</button>
+    <div id="loginForm">
+      <h2>Welcome Back</h2>
+      <p style="font-size:14px;color:var(--text-muted);margin-bottom:20px">Log in to your GhanaOpinionPay account.</p>
       <div class="form-group">
-        <label>Email Address</label>
-        <input type="email" placeholder="you@example.com" id="email"/>
-      </div>
-      <div class="form-group">
-        <label>Phone Number</label>
-        <input type="tel" placeholder="024 000 0000" id="phone"/>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Region</label>
-          <select id="region">
-            <option value="">Select region</option>
-            <option>Greater Accra</option>
-            <option>Ashanti</option>
-            <option>Northern</option>
-            <option>Western</option>
-            <option>Eastern</option>
-            <option>Central</option>
-            <option>Volta</option>
-            <option>Upper East</option>
-            <option>Upper West</option>
-            <option>Brong-Ahafo</option>
-            <option>Oti</option>
-            <option>Bono East</option>
-            <option>Ahafo</option>
-            <option>North East</option>
-            <option>Savannah</option>
-            <option>Western North</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Age Range</label>
-          <select id="age">
-            <option value="">Select age</option>
-            <option>18–24</option>
-            <option>25–34</option>
-            <option>35–44</option>
-            <option>45–54</option>
-            <option>55+</option>
-          </select>
-        </div>
+        <label>Mobile Money Number</label>
+        <input type="tel" placeholder="e.g. 0241234567" id="loginPhone" inputmode="numeric" maxlength="10" oninput="this.value=this.value.replace(/\D/g,'')"/>
       </div>
       <div class="form-group">
         <label>Password</label>
-        <input type="password" placeholder="Create a password" id="password"/>
+        <input type="password" placeholder="Your password" id="loginPassword"/>
       </div>
-      <div class="form-group">
-        <label>Choose Membership Tier</label>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px;" id="tierPicker">
-          <div class="tier-pick" data-tier="Bronze" data-fee="60" onclick="selectTier(this)"
-            style="border:1.5px solid #d4a06a;border-radius:10px;padding:10px 8px;text-align:center;cursor:pointer;background:#fdf5ee;transition:all .2s;">
-            <div style="font-size:18px;">🥉</div>
-            <div style="font-size:13px;font-weight:600;color:#7a4515;">Bronze</div>
-            <div style="font-size:12px;color:#7a4515;font-weight:700;margin-top:2px;">GH₵ 60</div>
-          </div>
-          <div class="tier-pick" data-tier="Silver" data-fee="100" onclick="selectTier(this)"
-            style="border:1.5px solid #adb5bd;border-radius:10px;padding:10px 8px;text-align:center;cursor:pointer;background:#f4f5f6;transition:all .2s;">
-            <div style="font-size:18px;">🥈</div>
-            <div style="font-size:13px;font-weight:600;color:#495057;">Silver</div>
-            <div style="font-size:12px;color:#495057;font-weight:700;margin-top:2px;">GH₵ 100</div>
-          </div>
-          <div class="tier-pick" data-tier="Gold" data-fee="150" onclick="selectTier(this)"
-            style="border:1.5px solid #c9a500;border-radius:10px;padding:10px 8px;text-align:center;cursor:pointer;background:#fffbeb;transition:all .2s;">
-            <div style="font-size:18px;">🥇</div>
-            <div style="font-size:13px;font-weight:600;color:#856e00;">Gold</div>
-            <div style="font-size:12px;color:#856e00;font-weight:700;margin-top:2px;">GH₵ 150</div>
-          </div>
-        </div>
-        <div id="tierFeeNote" style="display:none;margin-top:8px;font-size:12.5px;color:var(--green);background:var(--green-pale);border-radius:8px;padding:7px 12px;font-weight:500;"></div>
-      </div>
-      <button class="submit-btn" id="submitBtn" onclick="submitForm()">Select a Membership Tier →</button>
-      <p class="modal-terms">By signing up, you agree to our <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>. Ghana residents only.</p>
-    </div>
-    <div class="success-state" id="successState">
-      <div class="checkmark">✓</div>
-      <h3>Welcome aboard!</h3>
-      <p style="margin-bottom:12px;">Your account has been created successfully.<br>Check your email or SMS to verify your account.</p>
-      <p id="successTierMsg"><strong style="color:var(--green);">GH₵ 5 welcome bonus</strong> will be credited once you verify your account.</p>
-      <button class="submit-btn" style="margin-top:24px;" onclick="closeModal()">Start Exploring Surveys</button>
+      <div id="loginError" style="display:none;background:var(--red-pale);border:1px solid var(--red);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--red);margin-bottom:12px"></div>
+      <button class="submit-btn" onclick="doLogin()">Log In &#x2192;</button>
+      <p class="modal-terms" style="margin-top:14px">Don't have an account? <a href="#" onclick="closeLoginModal();openRegisterModal()">Sign up free</a></p>
     </div>
   </div>
 </div>
 
-<!-- ═══ SCRIPTS ═══════════════════════════════ -->
+<!-- ══════════════════════════════════════════════
+     REGISTER MODAL
+══════════════════════════════════════════════ -->
+<div class="modal-overlay" id="registerModal" onclick="handleRegisterOverlay(event)">
+  <div class="modal">
+    <button class="modal-close" onclick="closeRegisterModal()">&#x2715;</button>
+
+    <!-- STEP 1: FORM -->
+    <div id="formState">
+      <h2>Join GhanaOpinionPay</h2>
+      <div class="bonus-note">&#x1F389; Sign up now and receive a GH&#8373; 5 welcome bonus on activation!</div>
+      <div class="form-row">
+        <div class="form-group"><label>First Name</label><input type="text" placeholder="e.g. Kwame" id="firstName"/></div>
+        <div class="form-group"><label>Last Name</label><input type="text" placeholder="e.g. Mensah" id="lastName"/></div>
+      </div>
+      <div class="form-group"><label>Email Address</label><input type="email" placeholder="you@example.com" id="email"/></div>
+      <div class="form-group">
+        <label>Mobile Money Number</label>
+        <input type="tel" placeholder="e.g. 0241234567" id="phone" inputmode="numeric" maxlength="10" oninput="this.value=this.value.replace(/\D/g,'');liveValidatePhone(this)"/>
+        <div style="margin-top:8px;padding:10px 13px;background:#fff8d6;border:1.5px solid #e8c800;border-radius:9px;font-size:12.5px;color:#6b5200;line-height:1.6">
+          <strong>&#9888;&#65039; MoMo numbers only</strong> — enter a number active and registered on Mobile Money:
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">
+            <span style="background:#ffc107;color:#3a2800;font-size:11px;font-weight:700;padding:3px 9px;border-radius:10px">&#x1F4F1; MTN MoMo</span>
+            <span style="background:#e53935;color:#fff;font-size:11px;font-weight:700;padding:3px 9px;border-radius:10px">&#x1F4F1; Telecel Cash</span>
+            <span style="background:#1565c0;color:#fff;font-size:11px;font-weight:700;padding:3px 9px;border-radius:10px">&#x1F4F1; AirtelTigo Money</span>
+          </div>
+          <div style="margin-top:5px;font-size:11.5px;color:#7a5800">Telecel Cash was formerly Vodafone Cash. A Mobile Money payment prompt will be sent to this number. Numbers not on any MoMo network will be rejected.</div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Region</label>
+          <select id="region"><option value="">Select region</option><option>Greater Accra</option><option>Ashanti</option><option>Northern</option><option>Western</option><option>Eastern</option><option>Central</option><option>Volta</option><option>Upper East</option><option>Upper West</option><option>Brong-Ahafo</option><option>Oti</option><option>Bono East</option><option>Ahafo</option><option>North East</option><option>Savannah</option><option>Western North</option></select>
+        </div>
+        <div class="form-group">
+          <label>Age Range</label>
+          <select id="age"><option value="">Select age</option><option>18–24</option><option>25–34</option><option>35–44</option><option>45–54</option><option>55+</option></select>
+        </div>
+      </div>
+      <div class="form-group"><label>Password</label><input type="password" placeholder="Create a password (min. 6 chars)" id="password"/></div>
+      <div class="form-group">
+        <label>Choose Membership Tier</label>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px" id="tierPicker">
+          <div class="tier-pick" data-tier="Bronze" data-fee="60" onclick="selectTier(this)" style="border:1.5px solid #d4a06a;border-radius:10px;padding:10px 8px;text-align:center;cursor:pointer;background:#fdf5ee;transition:all .2s">
+            <div style="font-size:18px">&#x1F949;</div><div style="font-size:13px;font-weight:600;color:#7a4515">Bronze</div><div style="font-size:12px;color:#7a4515;font-weight:700;margin-top:2px">GH&#8373; 60</div>
+          </div>
+          <div class="tier-pick" data-tier="Silver" data-fee="100" onclick="selectTier(this)" style="border:1.5px solid #adb5bd;border-radius:10px;padding:10px 8px;text-align:center;cursor:pointer;background:#f4f5f6;transition:all .2s">
+            <div style="font-size:18px">&#x1F948;</div><div style="font-size:13px;font-weight:600;color:#495057">Silver</div><div style="font-size:12px;color:#495057;font-weight:700;margin-top:2px">GH&#8373; 100</div>
+          </div>
+          <div class="tier-pick" data-tier="Gold" data-fee="150" onclick="selectTier(this)" style="border:1.5px solid #c9a500;border-radius:10px;padding:10px 8px;text-align:center;cursor:pointer;background:#fffbeb;transition:all .2s">
+            <div style="font-size:18px">&#x1F947;</div><div style="font-size:13px;font-weight:600;color:#856e00">Gold</div><div style="font-size:12px;color:#856e00;font-weight:700;margin-top:2px">GH&#8373; 150</div>
+          </div>
+        </div>
+        <div id="tierFeeNote" style="display:none;margin-top:8px;font-size:12.5px;color:var(--green);background:var(--green-pale);border-radius:8px;padding:7px 12px;font-weight:500"></div>
+      </div>
+      <button class="submit-btn" id="submitBtn" onclick="submitRegister()">Select a Membership Tier &#x2192;</button>
+      <p class="modal-terms">By signing up, you agree to our <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>. Ghana residents only.</p>
+    </div>
+
+    <!-- STEP 2: MOMO PROMPT -->
+    <div class="success-state" id="successState">
+      <div class="checkmark">&#x2713;</div>
+      <h3 style="font-family:var(--font-display);font-size:1.45rem;color:var(--green);margin-bottom:6px;text-align:center">Account Created!</h3>
+      <p style="font-size:13.5px;color:var(--text-muted);margin-bottom:18px;text-align:center">Approve the Mobile Money prompt being sent to your number to activate your account.</p>
+      <div class="momo-box">
+        <div class="momo-lbl">&#x1F4F1; Mobile Money Payment Request</div>
+        <div class="momo-row">
+          <div><div class="momo-num-title">Send payment to</div><div class="momo-num">0203 910 730</div><div class="momo-anon">&#x1F512; Recipient name is private &amp; anonymous</div></div>
+          <div><div class="momo-amt-title">Amount</div><div class="momo-amt" id="payAmount">GH&#8373; —</div></div>
+        </div>
+        <div class="momo-foot">Use your <strong style="color:rgba(255,255,255,.8)">full registered name</strong> as reference. Works on MTN MoMo, Telecel Cash, and AirtelTigo Money.</div>
+      </div>
+      <div class="prompt-status sending" id="promptStatus">
+        <strong>&#x1F4F2; Sending prompt…</strong><br>A GH&#8373; <span id="promptAmtInline">—</span> request is being sent to <strong id="promptPhone">your number</strong>. <strong>Approve it on your phone</strong> when it arrives (up to 2 minutes).
+      </div>
+      <div class="pay-steps">
+        <div class="pay-step"><div class="step-circle">1</div><span>Wait for the MoMo prompt and <strong>&nbsp;approve the payment.</strong></span></div>
+        <div class="pay-step"><div class="step-circle">2</div><span>Account activated within <strong>&nbsp;minutes of confirmation.</strong></span></div>
+        <div class="pay-step"><div class="step-circle">3</div><span>Your <strong>&nbsp;GH&#8373; 5 welcome bonus</strong> is credited automatically.</span></div>
+      </div>
+      <button class="submit-btn" onclick="closeRegisterModal()">Got It — I'll Approve the Prompt</button>
+      <p style="font-size:11.5px;color:var(--text-muted);margin-top:12px;text-align:center">No prompt? Manually send to <strong>0203910730</strong> then email <strong>support@ghanaopinionpay.com</strong></p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     MEMBER DASHBOARD
+══════════════════════════════════════════════ -->
+<div id="memberDashboard">
+  <nav class="dash-nav">
+    <div class="dash-nav-logo">Ghana<span>OpinionPay</span></div>
+    <div class="dash-user-info">
+      <div class="dash-avatar" id="dashAvatar">K</div>
+      <div class="dash-user-name" id="dashUserName">Member</div>
+      <button class="dash-logout" onclick="logout()">Log Out</button>
+    </div>
+  </nav>
+  <div class="dash-body">
+    <div class="dash-greeting" id="dashGreeting">Welcome back!</div>
+    <div class="dash-sub" id="dashSub">Here's your earnings summary.</div>
+
+    <!-- Notifications area -->
+    <div id="memberNotifs"></div>
+
+    <!-- Metrics -->
+    <div class="dash-metrics">
+      <div class="dash-metric"><div class="dm-label">Total Balance</div><div class="dm-value" id="dmBalance">GH&#8373; 0.00</div><div class="dm-sub">Available to withdraw</div></div>
+      <div class="dash-metric"><div class="dm-label">This Month</div><div class="dm-value" style="color:var(--gold-dark)">GH&#8373; 0.00</div><div class="dm-sub">Earned in surveys</div></div>
+      <div class="dash-metric"><div class="dm-label">Membership</div><div class="dm-value" style="font-size:18px" id="dmTier">Bronze</div><div class="dm-sub">Current tier</div></div>
+      <div class="dash-metric"><div class="dm-label">Referrals</div><div class="dm-value" style="color:var(--green-light)">0</div><div class="dm-sub">Active referrals</div></div>
+    </div>
+
+    <!-- Withdrawal Form -->
+    <div class="dash-card">
+      <div class="dash-section-title">&#x1F4B8; Request a Withdrawal</div>
+      <div class="withdraw-note">
+        &#x23F1; <strong>Please note:</strong> All withdrawals pass through <strong>3 phases: Pending &#x2192; Processing &#x2192; Complete</strong> and take <strong>at least 2 business days</strong> to be completed. You will receive a notification at each phase change. Payments are processed on Mondays and Thursdays only.
+      </div>
+      <div class="withdraw-form-row">
+        <div class="form-group" style="margin:0"><label>Amount (GH&#8373;)</label><input type="number" placeholder="e.g. 50" id="withdrawAmount" min="10"/></div>
+        <div class="form-group" style="margin:0">
+          <label>Method</label>
+          <select id="withdrawMethod"><option>MTN Mobile Money</option><option>Telecel Cash</option><option>AirtelTigo Money</option><option>Bank Transfer</option><option>Gift Voucher</option></select>
+        </div>
+      </div>
+      <div class="form-group"><label>Account Number / MoMo Number</label><input type="text" placeholder="Enter your MoMo or bank account number" id="withdrawAccount"/></div>
+      <button class="submit-btn" style="margin-top:4px" onclick="submitWithdrawal()">Submit Withdrawal Request &#x2192;</button>
+    </div>
+
+    <!-- Withdrawal History -->
+    <div class="dash-card">
+      <div class="dash-section-title">&#x1F4CB; Withdrawal History</div>
+      <div id="withdrawalHistoryTable"><p style="font-size:14px;color:var(--text-muted);text-align:center;padding:20px">No withdrawal requests yet.</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     ADMIN DASHBOARD
+══════════════════════════════════════════════ -->
+<div id="adminDashboard">
+  <nav class="admin-nav">
+    <div class="admin-nav-logo">Ghana<span>OpinionPay</span><span class="admin-badge">Admin</span></div>
+    <button class="admin-logout" onclick="logout()">Log Out</button>
+  </nav>
+  <div class="admin-body">
+    <div class="admin-title">Admin Control Panel</div>
+    <div class="admin-sub">Full platform oversight — members, withdrawals, and site control.</div>
+
+    <!-- Admin metrics -->
+    <div class="admin-metrics">
+      <div class="admin-metric"><div class="am-label">Total Members</div><div class="am-value" id="adminTotalMembers">0</div><div class="am-sub">Registered accounts</div></div>
+      <div class="admin-metric"><div class="am-label">Active Members</div><div class="am-value" id="adminActiveMembers">0</div><div class="am-sub">Paid &amp; activated</div></div>
+      <div class="admin-metric"><div class="am-label">Pending Withdrawals</div><div class="am-value" id="adminPendingWithdrawals" style="color:#e65100">0</div><div class="am-sub">Awaiting processing</div></div>
+      <div class="admin-metric"><div class="am-label">Total Paid Out</div><div class="am-value" id="adminTotalPaid">GH&#8373; 0</div><div class="am-sub">Lifetime withdrawals</div></div>
+    </div>
+
+    <!-- Admin tabs -->
+    <div class="admin-tabs">
+      <button class="admin-tab active" onclick="switchAdminTab('members',this)">&#x1F465; All Members</button>
+      <button class="admin-tab" onclick="switchAdminTab('withdrawals',this)">&#x1F4B8; Withdrawals</button>
+      <button class="admin-tab" onclick="switchAdminTab('settings',this)">&#x2699;&#xFE0F; Site Settings</button>
+    </div>
+
+    <!-- MEMBERS TAB -->
+    <div class="admin-section active" id="tab-members">
+      <div class="admin-card">
+        <div class="admin-card-title">Registered Members</div>
+        <div class="search-bar"><input type="text" placeholder="&#x1F50D; Search by name or phone..." id="memberSearchInput" oninput="renderMembersTable()"/></div>
+        <div style="overflow-x:auto"><table class="admin-table">
+          <thead><tr><th>#</th><th>Name</th><th>Phone</th><th>Region</th><th>Tier</th><th>Status</th><th>Joined</th><th>Actions</th></tr></thead>
+          <tbody id="adminMembersBody"><tr><td colspan="8" class="empty-state">No members yet.</td></tr></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- WITHDRAWALS TAB -->
+    <div class="admin-section" id="tab-withdrawals">
+      <div class="admin-card">
+        <div class="admin-card-title">All Withdrawal Requests</div>
+        <div style="overflow-x:auto"><table class="admin-table">
+          <thead><tr><th>#</th><th>Member</th><th>Amount</th><th>Method</th><th>Account</th><th>Date</th><th>Phase</th><th>Update Phase</th></tr></thead>
+          <tbody id="adminWithdrawalsBody"><tr><td colspan="8" class="empty-state">No withdrawal requests yet.</td></tr></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- SETTINGS TAB -->
+    <div class="admin-section" id="tab-settings">
+      <div class="admin-card">
+        <div class="admin-card-title">&#x1F4E2; Platform Announcements</div>
+        <div class="form-group"><label>Broadcast message to all members (shown on their dashboard)</label><textarea id="announcementText" rows="3" style="width:100%;padding:11px 14px;border:1.5px solid #e5e7eb;border-radius:10px;font-family:var(--font-body);font-size:14px;resize:vertical;outline:none" placeholder="e.g. Surveys are now available for the Christmas season. Complete 5 surveys before 25 Dec to earn a bonus!"></textarea></div>
+        <button class="submit-btn" style="max-width:260px" onclick="broadcastAnnouncement()">Send to All Members &#x2192;</button>
+        <div id="announcementStatus" style="margin-top:10px;font-size:13px;color:var(--green)"></div>
+      </div>
+      <div class="admin-card">
+        <div class="admin-card-title">&#x1F527; Site Controls</div>
+        <div style="display:flex;flex-wrap:wrap;gap:12px">
+          <button class="action-btn" onclick="adminAlert('Survey pool refreshed for all members.')">&#x1F504; Refresh Survey Pool</button>
+          <button class="action-btn" onclick="adminAlert('Payment run triggered for Monday/Thursday batch.')">&#x1F4B3; Trigger Payment Run</button>
+          <button class="action-btn" onclick="adminAlert('Leaderboard recalculated successfully.')">&#x1F3C6; Recalculate Leaderboard</button>
+          <button class="action-btn danger" onclick="adminAlert('Maintenance mode toggled.')">&#x26A0;&#xFE0F; Toggle Maintenance Mode</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SCRIPTS
+══════════════════════════════════════════════ -->
 <script>
-// Navbar scroll
-window.addEventListener('scroll', () => {
-  document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 20);
-});
+// ─── CONSTANTS ────────────────────────────────
+var ADMIN_PHONE    = '0551152894';
+var ADMIN_PASSWORD = '123Akati@';
 
-// Mobile menu
-function toggleMenu() {
-  document.getElementById('mobMenu').classList.toggle('open');
-}
-function closeMenu() {
-  document.getElementById('mobMenu').classList.remove('open');
-}
+// ─── DATA STORE (localStorage-backed) ────────
+function loadData(key,def){ try{ var v=localStorage.getItem(key); return v?JSON.parse(v):def; }catch(e){ return def; } }
+function saveData(key,val){ try{ localStorage.setItem(key,JSON.stringify(val)); }catch(e){} }
 
-// Modal
-function openModal() {
-  document.getElementById('modal').classList.add('open');
-  document.body.style.overflow = 'hidden';
-  document.getElementById('formState').style.display = 'block';
-  document.getElementById('successState').style.display = 'none';
-  selectedTier = null; selectedFee = null;
-  document.querySelectorAll('.tier-pick').forEach(p => {
-    p.style.boxShadow = 'none'; p.style.transform = 'scale(1)'; p.style.opacity = '1';
-  });
-  document.getElementById('tierFeeNote').style.display = 'none';
-  document.getElementById('submitBtn').textContent = 'Select a Membership Tier →';
-}
-function closeModal() {
-  document.getElementById('modal').classList.remove('open');
-  document.body.style.overflow = '';
-}
-function handleOverlayClick(e) {
-  if (e.target === document.getElementById('modal')) closeModal();
-}
+// Members array: [{id,firstName,lastName,phone,email,region,age,tier,fee,password,status,joinedDate,balance,notifications}]
+function getMembers(){ return loadData('gop_members',[]); }
+function saveMembers(m){ saveData('gop_members',m); }
 
-// Form submit (demo)
-let selectedTier = null;
-let selectedFee = null;
+// Withdrawals array: [{id,memberId,memberName,phone,amount,method,account,date,phase}]
+function getWithdrawals(){ return loadData('gop_withdrawals',[]); }
+function saveWithdrawals(w){ saveData('gop_withdrawals',w); }
 
-function selectTier(el) {
-  document.querySelectorAll('.tier-pick').forEach(p => {
-    p.style.boxShadow = 'none';
-    p.style.transform = 'scale(1)';
-    p.style.opacity = '0.75';
-  });
-  el.style.boxShadow = '0 0 0 3px var(--green)';
-  el.style.transform = 'scale(1.04)';
-  el.style.opacity = '1';
-  selectedTier = el.dataset.tier;
-  selectedFee  = el.dataset.fee;
-  const note = document.getElementById('tierFeeNote');
-  note.style.display = 'block';
-  note.textContent = `✓ ${selectedTier} membership selected — registration fee: GH₵ ${selectedFee}. This will be collected on account activation.`;
-  document.getElementById('submitBtn').textContent = `Create ${selectedTier} Account — Pay GH₵ ${selectedFee} →`;
+// Announcement
+function getAnnouncement(){ return loadData('gop_announcement',''); }
+function saveAnnouncement(a){ saveData('gop_announcement',a); }
+
+// Current session
+var currentUser = null; // null | 'admin' | member object
+
+// ─── NAVBAR ───────────────────────────────────
+window.addEventListener('scroll',function(){ document.getElementById('navbar').classList.toggle('scrolled',window.scrollY>20); });
+function toggleMenu(){ document.getElementById('mobMenu').classList.toggle('open'); }
+function closeMenu(){ document.getElementById('mobMenu').classList.remove('open'); }
+
+// ─── LOGIN MODAL ──────────────────────────────
+function openLoginModal(){
+  document.getElementById('loginModal').classList.add('open');
+  document.body.style.overflow='hidden';
+  document.getElementById('loginPhone').value='';
+  document.getElementById('loginPassword').value='';
+  document.getElementById('loginError').style.display='none';
 }
+function closeLoginModal(){
+  document.getElementById('loginModal').classList.remove('open');
+  document.body.style.overflow='';
+}
+function handleLoginOverlay(e){ if(e.target===document.getElementById('loginModal')) closeLoginModal(); }
 
-function submitForm() {
-  const first  = document.getElementById('firstName').value.trim();
-  const email  = document.getElementById('email').value.trim();
-  const region = document.getElementById('region').value;
-  if (!first || !email || !region) {
-    alert('Please fill in your name, email, and region to continue.');
+function doLogin(){
+  var phone=document.getElementById('loginPhone').value.trim();
+  var pass =document.getElementById('loginPassword').value;
+  var errEl=document.getElementById('loginError');
+
+  // Admin check
+  if(phone===ADMIN_PHONE && pass===ADMIN_PASSWORD){
+    closeLoginModal();
+    document.body.style.overflow='';
+    currentUser='admin';
+    openAdminDashboard();
     return;
   }
-  if (!selectedTier) {
-    alert('Please select a membership tier (Bronze, Silver, or Gold) to continue.');
+
+  // Member check
+  var members=getMembers();
+  var member=members.find(function(m){ return m.phone===phone && m.password===pass; });
+  if(member){
+    currentUser=member;
+    closeLoginModal();
+    document.body.style.overflow='';
+    openMemberDashboard(member);
     return;
   }
-  document.getElementById('formState').style.display = 'none';
-  document.getElementById('successState').style.display = 'block';
-  document.getElementById('successTierMsg').innerHTML =
-    `You've chosen the <strong style="color:var(--green);">${selectedTier} tier</strong> (GH₵ ${selectedFee} registration fee). Payment instructions have been sent to your email. Once confirmed, your <strong style="color:var(--green);">GH₵ 5 welcome bonus</strong> will be credited automatically.`;
+
+  errEl.textContent='Incorrect number or password. Please try again.';
+  errEl.style.display='block';
 }
 
-// FAQ accordion
-function toggleFaq(btn) {
-  const item = btn.closest('.faq-item');
-  const isOpen = item.classList.contains('open');
-  document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
-  if (!isOpen) item.classList.add('open');
+// ─── REGISTER MODAL ───────────────────────────
+var selectedTier=null, selectedFee=null;
+
+function openRegisterModal(){
+  document.getElementById('registerModal').classList.add('open');
+  document.body.style.overflow='hidden';
+  document.getElementById('formState').style.display='block';
+  document.getElementById('successState').style.display='none';
+  selectedTier=null; selectedFee=null;
+  document.querySelectorAll('.tier-pick').forEach(function(p){ p.style.boxShadow='none'; p.style.transform='scale(1)'; p.style.opacity='1'; });
+  document.getElementById('tierFeeNote').style.display='none';
+  document.getElementById('submitBtn').textContent='Select a Membership Tier \u2192';
+  resetPromptStatus();
+}
+function closeRegisterModal(){
+  document.getElementById('registerModal').classList.remove('open');
+  document.body.style.overflow='';
+}
+function handleRegisterOverlay(e){ if(e.target===document.getElementById('registerModal')) closeRegisterModal(); }
+
+function resetPromptStatus(){
+  var s=document.getElementById('promptStatus');
+  if(!s) return;
+  s.className='prompt-status sending';
+  s.innerHTML='<strong>&#x1F4F2; Sending prompt\u2026</strong><br>A GH\u20B3 <span id="promptAmtInline">\u2014</span> request is being sent to <strong id="promptPhone">your number</strong>. <strong>Approve it on your phone</strong> when it arrives (up to 2 minutes).';
 }
 
-// Scroll reveal
-const observer = new IntersectionObserver((entries) => {
-  entries.forEach(e => {
-    if (e.isIntersecting) { e.target.classList.add('visible'); }
+function selectTier(el){
+  document.querySelectorAll('.tier-pick').forEach(function(p){ p.style.boxShadow='none'; p.style.transform='scale(1)'; p.style.opacity='0.6'; });
+  el.style.boxShadow='0 0 0 3px var(--green)';
+  el.style.transform='scale(1.05)';
+  el.style.opacity='1';
+  selectedTier=el.dataset.tier;
+  selectedFee=el.dataset.fee;
+  var note=document.getElementById('tierFeeNote');
+  note.style.display='block';
+  note.textContent='\u2713 '+selectedTier+' tier selected \u2014 registration fee: GH\u20B3 '+selectedFee+'. A MoMo prompt will be sent after sign-up.';
+  document.getElementById('submitBtn').textContent='Create '+selectedTier+' Account \u2014 Pay GH\u20B3 '+selectedFee+' via MoMo \u2192';
+}
+
+function liveValidatePhone(input){
+  var v=input.value;
+  if(v.length===10){ var valid=/^0[2345679]\d{8}$/.test(v); input.style.borderColor=valid?'var(--green)':'#e53935'; }
+  else{ input.style.borderColor='var(--border)'; }
+}
+
+function maskPhone(phone){ if(phone.length<6) return phone; return phone.slice(0,3)+' ****'+phone.slice(-2)+'X'; }
+
+function submitRegister(){
+  var first =document.getElementById('firstName').value.trim();
+  var last  =document.getElementById('lastName').value.trim();
+  var email =document.getElementById('email').value.trim();
+  var region=document.getElementById('region').value;
+  var phone =document.getElementById('phone').value.trim();
+  var pass  =document.getElementById('password').value;
+  var age   =document.getElementById('age').value;
+
+  if(!first||!email){ alert('Please enter your name and email.'); return; }
+  if(!phone||phone.length<10){ alert('Please enter a valid 10-digit MoMo phone number.'); return; }
+  if(!/^0[2345679]\d{8}$/.test(phone)){ alert('The number does not appear to be a valid Ghanaian mobile number.'); return; }
+  if(!region){ alert('Please select your region.'); return; }
+  if(!pass||pass.length<6){ alert('Please create a password of at least 6 characters.'); return; }
+  if(!selectedTier){ alert('Please select a membership tier to continue.'); return; }
+
+  // Check duplicate phone
+  var members=getMembers();
+  if(members.find(function(m){ return m.phone===phone; })){ alert('A member with this phone number already exists.'); return; }
+
+  // Save new member
+  var newMember={
+    id:'M'+Date.now(),
+    firstName:first, lastName:last, email:email,
+    phone:phone, region:region, age:age||'N/A',
+    tier:selectedTier, fee:parseInt(selectedFee),
+    password:pass,
+    status:'pending_payment',
+    joinedDate:new Date().toLocaleDateString('en-GB'),
+    balance:5.00, // welcome bonus
+    notifications:['&#x1F389; Welcome to GhanaOpinionPay! Your GH\u20B3 5 welcome bonus has been credited.','&#x23F3; Your registration fee payment is pending. Please approve the MoMo prompt sent to your number.']
+  };
+  members.push(newMember);
+  saveMembers(members);
+
+  // Show prompt screen
+  document.getElementById('formState').style.display='none';
+  document.getElementById('successState').style.display='block';
+  document.getElementById('payAmount').textContent='GH\u20B3 '+selectedFee+'.00';
+  var ai=document.getElementById('promptAmtInline'); if(ai) ai.textContent=selectedFee+'.00';
+  var pi=document.getElementById('promptPhone'); if(pi) pi.textContent=maskPhone(phone);
+
+  setTimeout(function(){
+    var s=document.getElementById('promptStatus');
+    if(!s) return;
+    s.className='prompt-status sent';
+    s.innerHTML='<strong>&#x2705; Prompt sent!</strong><br>A GH\u20B3 '+selectedFee+'.00 Mobile Money request has been sent to your number. <strong>Open your MoMo app and approve it</strong> to activate your account.';
+  },2000);
+}
+
+// ─── MEMBER DASHBOARD ─────────────────────────
+function openMemberDashboard(member){
+  document.getElementById('memberDashboard').style.display='block';
+  document.body.style.overflow='auto';
+  // Header
+  var initials=(member.firstName.charAt(0)+(member.lastName||'').charAt(0)).toUpperCase();
+  document.getElementById('dashAvatar').textContent=initials;
+  document.getElementById('dashUserName').textContent=member.firstName+' '+member.lastName;
+  document.getElementById('dashGreeting').textContent='Welcome back, '+member.firstName+'!';
+  document.getElementById('dashSub').textContent='Tier: '+member.tier+' \u00B7 Phone: '+maskPhone(member.phone)+' \u00B7 Joined: '+member.joinedDate;
+  document.getElementById('dmBalance').textContent='GH\u20B3 '+(member.balance||0).toFixed(2);
+  document.getElementById('dmTier').textContent=member.tier;
+
+  // Announcement banner
+  var ann=getAnnouncement();
+  var annArea=document.getElementById('memberNotifs');
+  annArea.innerHTML='';
+  if(ann){
+    annArea.innerHTML='<div class="notif-banner"><div class="notif-banner-icon">&#x1F4E2;</div><div><strong>Admin Announcement:</strong> '+ann+'</div></div>';
+  }
+
+  // Notifications
+  var notifHtml='';
+  if(member.notifications && member.notifications.length>0){
+    member.notifications.slice().reverse().forEach(function(n){
+      notifHtml+='<div class="notif-banner" style="background:var(--gold-pale);border-color:var(--gold-dark);color:var(--gold-dark)"><div class="notif-banner-icon">&#x1F514;</div><div>'+n+'</div></div>';
+    });
+  }
+  annArea.innerHTML+= notifHtml;
+
+  renderWithdrawalHistory(member);
+}
+
+function renderWithdrawalHistory(member){
+  var withdrawals=getWithdrawals().filter(function(w){ return w.memberId===member.id; });
+  var el=document.getElementById('withdrawalHistoryTable');
+  if(!withdrawals.length){ el.innerHTML='<p style="font-size:14px;color:var(--text-muted);text-align:center;padding:20px">No withdrawal requests yet.</p>'; return; }
+  var html='<div style="overflow-x:auto"><table class="dash-table"><thead><tr><th>Date</th><th>Amount</th><th>Method</th><th>Account</th><th>Status</th></tr></thead><tbody>';
+  withdrawals.slice().reverse().forEach(function(w){
+    var badgeClass=w.phase==='Complete'?'phase-complete':w.phase==='Processing'?'phase-processing':'phase-pending';
+    html+='<tr><td>'+w.date+'</td><td style="font-weight:700;color:var(--green)">GH&#8373; '+parseFloat(w.amount).toFixed(2)+'</td><td>'+w.method+'</td><td>'+w.account+'</td><td><span class="phase-badge '+badgeClass+'">'+w.phase+'</span></td></tr>';
   });
-}, { threshold: 0.1 });
-document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+  html+='</tbody></table></div>';
+  el.innerHTML=html;
+}
+
+function submitWithdrawal(){
+  if(!currentUser||currentUser==='admin'){ alert('Please log in as a member to withdraw.'); return; }
+  var amount=parseFloat(document.getElementById('withdrawAmount').value)||0;
+  var method=document.getElementById('withdrawMethod').value;
+  var account=document.getElementById('withdrawAccount').value.trim();
+  var member=currentUser;
+
+  var minMap={Bronze:20,Silver:15,Gold:10};
+  var minAmount=minMap[member.tier]||20;
+  if(amount<minAmount){ alert('Minimum withdrawal for '+member.tier+' tier is GH\u20B3 '+minAmount+'.'); return; }
+  if(amount>member.balance){ alert('Insufficient balance. Your available balance is GH\u20B3 '+(member.balance||0).toFixed(2)+'.'); return; }
+  if(!account){ alert('Please enter your account or MoMo number.'); return; }
+
+  var withdrawals=getWithdrawals();
+  var newW={
+    id:'W'+Date.now(),
+    memberId:member.id,
+    memberName:member.firstName+' '+member.lastName,
+    phone:member.phone,
+    amount:amount,
+    method:method,
+    account:account,
+    date:new Date().toLocaleDateString('en-GB'),
+    phase:'Pending'
+  };
+  withdrawals.push(newW);
+  saveWithdrawals(withdrawals);
+
+  // Deduct balance & add notification
+  var members=getMembers();
+  var idx=members.findIndex(function(m){ return m.id===member.id; });
+  if(idx>=0){
+    members[idx].balance=(members[idx].balance||0)-amount;
+    members[idx].notifications=members[idx].notifications||[];
+    members[idx].notifications.push('&#x1F4B8; Withdrawal of GH\u20B3 '+amount.toFixed(2)+' via '+method+' submitted on '+newW.date+'. Status: Pending. Expected: at least 2 business days.');
+    saveMembers(members);
+    currentUser=members[idx];
+  }
+
+  document.getElementById('withdrawAmount').value='';
+  document.getElementById('withdrawAccount').value='';
+  document.getElementById('dmBalance').textContent='GH\u20B3 '+(currentUser.balance||0).toFixed(2);
+  renderWithdrawalHistory(currentUser);
+
+  alert('\u2705 Withdrawal request submitted!\n\nAmount: GH\u20B3 '+amount.toFixed(2)+'\nMethod: '+method+'\n\n\u23F1 IMPORTANT: Your withdrawal will go through 3 phases:\nPending \u2192 Processing \u2192 Complete\n\nThis process takes at least 2 business days. You will be notified at each phase change.');
+}
+
+// ─── ADMIN DASHBOARD ──────────────────────────
+function openAdminDashboard(){
+  document.getElementById('adminDashboard').style.display='block';
+  document.body.style.overflow='auto';
+  refreshAdminMetrics();
+  renderMembersTable();
+  renderWithdrawalsTable();
+}
+
+function refreshAdminMetrics(){
+  var members=getMembers();
+  var withdrawals=getWithdrawals();
+  document.getElementById('adminTotalMembers').textContent=members.length;
+  document.getElementById('adminActiveMembers').textContent=members.filter(function(m){ return m.status!=='pending_payment'; }).length;
+  document.getElementById('adminPendingWithdrawals').textContent=withdrawals.filter(function(w){ return w.phase==='Pending'||w.phase==='Processing'; }).length;
+  var totalPaid=withdrawals.filter(function(w){ return w.phase==='Complete'; }).reduce(function(s,w){ return s+parseFloat(w.amount); },0);
+  document.getElementById('adminTotalPaid').textContent='GH\u20B3 '+totalPaid.toFixed(2);
+}
+
+function switchAdminTab(name,btn){
+  document.querySelectorAll('.admin-section').forEach(function(s){ s.classList.remove('active'); });
+  document.querySelectorAll('.admin-tab').forEach(function(b){ b.classList.remove('active'); });
+  document.getElementById('tab-'+name).classList.add('active');
+  btn.classList.add('active');
+}
+
+function renderMembersTable(){
+  var members=getMembers();
+  var query=(document.getElementById('memberSearchInput')||{value:''}).value.toLowerCase();
+  if(query) members=members.filter(function(m){ return (m.firstName+' '+m.lastName).toLowerCase().includes(query)||m.phone.includes(query); });
+  var tbody=document.getElementById('adminMembersBody');
+  if(!members.length){ tbody.innerHTML='<tr><td colspan="8" class="empty-state">No members found.</td></tr>'; return; }
+  var html='';
+  members.forEach(function(m,i){
+    var statusBadge=m.status==='pending_payment'?'<span class="status-pending">Pending Payment</span>':'<span class="status-active">Active</span>';
+    html+='<tr><td>'+(i+1)+'</td><td><strong>'+m.firstName+' '+m.lastName+'</strong></td><td>'+m.phone+'</td><td>'+m.region+'</td><td>'+m.tier+' (GH\u20B3'+m.fee+')</td><td>'+statusBadge+'</td><td>'+m.joinedDate+'</td>';
+    html+='<td style="display:flex;gap:6px;flex-wrap:wrap">';
+    if(m.status==='pending_payment'){
+      html+='<button class="action-btn" onclick="activateMember(\''+m.id+'\')">&#x2705; Activate</button>';
+    } else {
+      html+='<button class="action-btn" onclick="suspendMember(\''+m.id+'\')">&#x26A0; Suspend</button>';
+    }
+    html+='<button class="action-btn danger" onclick="deleteMember(\''+m.id+'\')">&#x1F5D1; Delete</button>';
+    html+='</td></tr>';
+  });
+  tbody.innerHTML=html;
+}
+
+function activateMember(id){
+  var members=getMembers();
+  var idx=members.findIndex(function(m){ return m.id===id; });
+  if(idx<0) return;
+  members[idx].status='active';
+  members[idx].notifications=members[idx].notifications||[];
+  members[idx].notifications.push('\u2705 Your account has been activated! You can now access all surveys and start earning. Welcome aboard!');
+  saveMembers(members);
+  renderMembersTable();
+  refreshAdminMetrics();
+  adminAlert('Member activated successfully.');
+}
+
+function suspendMember(id){
+  var members=getMembers();
+  var idx=members.findIndex(function(m){ return m.id===id; });
+  if(idx<0) return;
+  members[idx].status='suspended';
+  members[idx].notifications=members[idx].notifications||[];
+  members[idx].notifications.push('\u26A0\uFE0F Your account has been suspended. Please contact support@ghanaopinionpay.com for assistance.');
+  saveMembers(members);
+  renderMembersTable();
+  adminAlert('Member suspended.');
+}
+
+function deleteMember(id){
+  if(!confirm('Delete this member permanently?')) return;
+  var members=getMembers().filter(function(m){ return m.id!==id; });
+  saveMembers(members);
+  renderMembersTable();
+  refreshAdminMetrics();
+}
+
+function renderWithdrawalsTable(){
+  var withdrawals=getWithdrawals();
+  var tbody=document.getElementById('adminWithdrawalsBody');
+  if(!withdrawals.length){ tbody.innerHTML='<tr><td colspan="8" class="empty-state">No withdrawal requests yet.</td></tr>'; return; }
+  var html='';
+  withdrawals.slice().reverse().forEach(function(w,i){
+    var badgeClass=w.phase==='Complete'?'phase-complete':w.phase==='Processing'?'phase-processing':'phase-pending';
+    html+='<tr>';
+    html+='<td>'+(withdrawals.length-i)+'</td>';
+    html+='<td><strong>'+w.memberName+'</strong><br><span style="font-size:11px;color:#9ca3af">'+w.phone+'</span></td>';
+    html+='<td style="font-weight:700;color:#0d1117">GH\u20B3 '+parseFloat(w.amount).toFixed(2)+'</td>';
+    html+='<td>'+w.method+'</td>';
+    html+='<td style="font-size:12px">'+w.account+'</td>';
+    html+='<td style="white-space:nowrap">'+w.date+'</td>';
+    html+='<td><span class="phase-badge '+badgeClass+'">'+w.phase+'</span></td>';
+    html+='<td><select class="phase-select" onchange="updateWithdrawalPhase(\''+w.id+'\',this.value)">';
+    ['Pending','Processing','Complete'].forEach(function(p){ html+='<option'+(w.phase===p?' selected':'')+'>'+p+'</option>'; });
+    html+='</select></td>';
+    html+='</tr>';
+  });
+  tbody.innerHTML=html;
+}
+
+function updateWithdrawalPhase(wid,newPhase){
+  var withdrawals=getWithdrawals();
+  var idx=withdrawals.findIndex(function(w){ return w.id===wid; });
+  if(idx<0) return;
+  var w=withdrawals[idx];
+  var oldPhase=w.phase;
+  w.phase=newPhase;
+  withdrawals[idx]=w;
+  saveWithdrawals(withdrawals);
+
+  // Notify member
+  var members=getMembers();
+  var mIdx=members.findIndex(function(m){ return m.id===w.memberId; });
+  if(mIdx>=0){
+    var phaseMsg='';
+    if(newPhase==='Processing') phaseMsg='&#x1F504; Your withdrawal of GH\u20B3 '+parseFloat(w.amount).toFixed(2)+' via '+w.method+' is now <strong>Processing</strong>. Expected completion: 1–2 more business days.';
+    else if(newPhase==='Complete') phaseMsg='&#x2705; Your withdrawal of GH\u20B3 '+parseFloat(w.amount).toFixed(2)+' via '+w.method+' is <strong>Complete</strong>! The funds have been sent to your account.';
+    else phaseMsg='&#x23F3; Your withdrawal of GH\u20B3 '+parseFloat(w.amount).toFixed(2)+' via '+w.method+' is <strong>Pending</strong>. It will be processed within 2 business days.';
+    members[mIdx].notifications=members[mIdx].notifications||[];
+    members[mIdx].notifications.push(phaseMsg);
+    saveMembers(members);
+  }
+
+  renderWithdrawalsTable();
+  refreshAdminMetrics();
+}
+
+function broadcastAnnouncement(){
+  var text=document.getElementById('announcementText').value.trim();
+  if(!text){ alert('Please enter an announcement message.'); return; }
+  saveAnnouncement(text);
+  document.getElementById('announcementStatus').textContent='\u2705 Announcement saved! All members will see it on their next login.';
+  setTimeout(function(){ document.getElementById('announcementStatus').textContent=''; },3000);
+}
+
+function adminAlert(msg){
+  alert('\u2705 Admin Action: '+msg);
+}
+
+// ─── LOGOUT ───────────────────────────────────
+function logout(){
+  currentUser=null;
+  document.getElementById('memberDashboard').style.display='none';
+  document.getElementById('adminDashboard').style.display='none';
+  document.body.style.overflow='auto';
+}
+
+// ─── FAQ ──────────────────────────────────────
+function toggleFaq(btn){
+  var item=btn.closest('.faq-item');
+  var isOpen=item.classList.contains('open');
+  document.querySelectorAll('.faq-item').forEach(function(i){ i.classList.remove('open'); });
+  if(!isOpen) item.classList.add('open');
+}
+
+// ─── SCROLL REVEAL ────────────────────────────
+var observer=new IntersectionObserver(function(entries){ entries.forEach(function(e){ if(e.isIntersecting) e.target.classList.add('visible'); }); },{threshold:0.1});
+document.querySelectorAll('.reveal').forEach(function(el){ observer.observe(el); });
 </script>
 </body>
 </html>
