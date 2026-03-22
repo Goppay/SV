@@ -2695,13 +2695,14 @@ function verifyPayment(id){
   var idx=members.findIndex(function(m){return m.id===id;});
   if(idx<0) return;
   members[idx].status='active';
-  members[idx].balance=5.00;
+  var bonus=members[idx].tier==='Free'?1.00:5.00;
+  members[idx].balance=bonus;
   members[idx].notifications=members[idx].notifications||[];
-  members[idx].notifications.push('\u2705 Payment verified! Your '+members[idx].tier+' account is now active with a GHS 5.00 welcome bonus. Complete the Ghana Affairs Survey for another GHS 3.00 instantly!');
+  members[idx].notifications.push('\u2705 Account activated! Your '+members[idx].tier+' account is now active with a GHS '+bonus.toFixed(2)+' welcome bonus. Complete the Ghana Affairs Survey for another GHS 1.00 instantly!');
   saveMembers(members);
   if(currentUser&&currentUser!=='admin'&&currentUser.id===id){currentUser=members[idx];saveSession();setTimeout(function(){openMemberDashboard(currentUser);},400);}
   renderPaymentsTable(); renderMembersTable(); refreshAdminMetrics();
-  adminAlert('Payment verified. Member activated with GHS 5 welcome bonus.');
+  adminAlert('Member activated with GHS '+bonus.toFixed(2)+' welcome bonus.');
 }
 
 function failPayment(id){
