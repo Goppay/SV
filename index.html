@@ -1077,8 +1077,16 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
 
       <div class="d-card">
         <div class="d-card-title">&#x1F4B8; Request a Withdrawal</div>
+        <!-- Day restriction notice -->
+        <div id="withdrawDayLock" style="display:none;background:#fff3e0;border:1.5px solid #f59e0b;border-radius:10px;padding:16px;margin-bottom:14px;text-align:center">
+          <div style="font-size:28px;margin-bottom:8px">&#x1F512;</div>
+          <div style="font-size:15px;font-weight:700;color:#92400e;margin-bottom:6px">Withdrawals not available today</div>
+          <div style="font-size:13px;color:#b45309;line-height:1.6">Withdrawals are only processed on <strong>Mondays</strong> and <strong>Thursdays</strong>.<br>Come back on the next available day.</div>
+          <div id="withdrawNextDay" style="margin-top:10px;font-size:12.5px;color:#92400e;font-weight:600"></div>
+        </div>
+        <div id="withdrawFormArea">
         <div class="with-note">
-          &#x26A1; <strong>Withdrawals are instant</strong> — processed immediately to your MoMo or bank.<br>
+          &#x1F4C5; Withdrawals are processed every <strong>Monday</strong> and <strong>Thursday</strong>.<br>
           &#x1F381; <strong>First withdrawal FREE</strong> (paid tiers only) · Free account: 15% fee always · Paid tiers: 35% from 2nd withdrawal.<br>
           <strong>Minimums:</strong> Free GHS 10 · Bronze GHS 30 · Silver GHS 75 · Gold GHS 100.
         </div>
@@ -1133,6 +1141,7 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
 
         <button class="sbtn" style="margin-top:4px;display:block" id="submitWithdrawBtn">Continue &#x2192;</button>
         <div id="withdrawMsg" style="display:none;margin-top:10px;padding:10px 13px;border-radius:9px;font-size:13px"></div>
+        </div><!-- end withdrawFormArea -->
       </div>
 
       <div class="d-card"><div class="d-card-title">&#x1F4CB; Withdrawal History</div><div id="wHistory"><p style="font-size:13.5px;color:var(--text-muted);text-align:center;padding:18px">No withdrawal requests yet.</p></div></div>
@@ -2360,6 +2369,8 @@ function openMemberDashboard(member){
   renderDashAds(member);
   // Nudge for unclaimed pages
   renderDashPages(member);
+  // Check if today is a withdrawal day
+  checkWithdrawalDay();
   // Load any admin-customised Ghana Affairs questions into session ghQs
   var ghSurvey=getSurveys().find(function(s){return s.type==='gh-affairs';});
   if(ghSurvey&&ghSurvey.customQuestions&&ghSurvey.customQuestions.length) ghQs=ghSurvey.customQuestions;
@@ -2455,6 +2466,7 @@ function switchDashTab(name, btn){
   // Refresh ads tab when opened
   if(name==='ads' && currentUser && !isAdminUser()) renderMemberAdsTab(currentUser);
   if(name==='pages' && currentUser && !isAdminUser()) renderMemberPages(currentUser);
+  if(name==='withdraw' && currentUser && !isAdminUser()) checkWithdrawalDay();
   if(name==='withdraw' && currentUser && !isAdminUser()){
     populateWithdrawCard(currentUser);
     updateWithdrawHistoryDisplay(currentUser);
@@ -2894,6 +2906,10 @@ function updateWithdrawFeePreview(){
 function submitWithdrawal(){
   if(!currentUser||currentUser==='admin'||currentUser.role==='superadmin'||currentUser.role==='subadmin'){
     showWithdrawMsg('error','Please log in as a member to submit a withdrawal.');
+    return;
+  }
+  if(!isWithdrawalDay()){
+    showWithdrawMsg('error','&#x1F512; Withdrawals are only available on Mondays and Thursdays. Please come back then.');
     return;
   }
   var members=getMembers();
@@ -5418,6 +5434,55 @@ function fpReset(){
   fpMember=null;
   el('fpStep2').style.display='none';
   el('fpStep3').style.display='block';
+}
+
+// ── WITHDRAWAL DAY RESTRICTION ────────────────────────
+function isWithdrawalDay(){
+  var day=new Date().getDay(); // 0=Sun,1=Mon,2=Tue,3=Wed,4=Thu,5=Fri,6=Sat
+  return day===1||day===4; // Monday or Thursday
+}
+
+function checkWithdrawalDay(){
+  var lockEl=el('withdrawDayLock');
+  var formEl=el('withdrawFormArea');
+  if(!lockEl||!formEl) return;
+  if(isWithdrawalDay()){
+    lockEl.style.display='none';
+    formEl.style.display='block';
+  } else {
+    lockEl.style.display='block';
+    formEl.style.display='none';
+    // Show next available day
+    var nextEl=el('withdrawNextDay');
+    if(nextEl){
+      var day=new Date().getDay();
+      var daysUntilMon=day===0?1:day===1?0:8-day; // Mon
+      var daysUntilThu=day<=4?4-day:4+(7-day);    // Thu
+      var daysUntil=Math.min(
+        day===1?0:daysUntilMon,
+        day===4?0:daysUntilThu
+      );
+      // Pick closer of Mon or Thu
+      var nextDay;
+      if(day<1) nextDay='Monday';
+      else if(day===1) nextDay='Thursday';
+      else if(day<4) nextDay='Thursday';
+      else if(day===4) nextDay='Monday';
+      else nextDay='Monday';
+      var daysLeft=day===0?1:day===2?2:day===3?1:day===5?3:2;
+      if(day===2) daysLeft=2; // Wed → Thu
+      if(day===3) daysLeft=1; // Thu is tomorrow? No, day===3 is Wed
+      // Simpler calculation
+      var today2=new Date().getDay();
+      var toMon=today2===0?1:(8-today2)%7||7;
+      var toThu=today2<=4?(4-today2)||7:(4+7-today2);
+      if(today2===1) toMon=7;
+      if(today2===4) toThu=7;
+      var nearest=Math.min(toMon,toThu);
+      nextDay=toMon<toThu?'Monday':'Thursday';
+      nextEl.textContent='Next withdrawal day: '+nextDay+' (in '+nearest+' day'+(nearest===1?'':'s')+')';
+    }
+  }
 }
 
 function broadcastAnn(){
