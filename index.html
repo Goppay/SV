@@ -4631,110 +4631,71 @@ function checkDailyStreakBonus(member){
 }
 
 </script>
-<!-- Paystack redirect approach - no inline script needed -->
+<!-- Paystack: inline v1 loaded synchronously -->
+<script src="https://js.paystack.co/v1/inline.js"></script>
 <script>
 function confirmPayment(){
-  if(!selectedTier){
-    adminAlert('Please select a membership tier before paying.');
-    return;
-  }
-  if(!pendingReg){
-    adminAlert('Registration details missing. Please register again.');
-    return;
-  }
+  if(!selectedTier){adminAlert('Please select a membership tier before paying.');return;}
+  if(!pendingReg){adminAlert('Registration details missing. Please register again.');return;}
 
   var btn=el('ppConfirmBtn');
-  if(btn){btn.disabled=true; btn.innerHTML='&#x23F3; Redirecting to Paystack...';}
+  if(btn){btn.disabled=true;btn.innerHTML='&#x23F3; Opening Paystack...';}
 
-  // Save pending registration to localStorage so we can restore after redirect
-  var ref='GOP-'+pendingReg.phone+'-'+Date.now();
-  var pendingPayment={
-    ref:ref,
-    reg:pendingReg,
-    tier:selectedTier
-  };
-  try{ localStorage.setItem('gop_pending_payment', JSON.stringify(pendingPayment)); }catch(e){}
+  function restoreBtn(){if(btn){btn.disabled=false;btn.innerHTML='&#x1F4B3; Pay Now with Paystack &#x2192;';}}
 
-  // Build Paystack hosted checkout URL
-  var params=new URLSearchParams({
-    key:'pk_live_170c23ed7e9bf70fbb05f058956c1c9e2b5696f1',
-    email:pendingReg.email,
-    amount:String(selectedTier.fee * 100),
-    currency:'GHS',
-    ref:ref,
-    'metadata[custom_fields][0][display_name]':'Member Name',
-    'metadata[custom_fields][0][variable_name]':'member_name',
-    'metadata[custom_fields][0][value]':pendingReg.firstName+' '+pendingReg.lastName,
-    'metadata[custom_fields][1][display_name]':'Phone',
-    'metadata[custom_fields][1][variable_name]':'phone',
-    'metadata[custom_fields][1][value]':pendingReg.phone,
-    'metadata[custom_fields][2][display_name]':'Tier',
-    'metadata[custom_fields][2][variable_name]':'tier',
-    'metadata[custom_fields][2][value]':selectedTier.tier,
-    callback_url:window.location.href.split('?')[0]
-  });
+  if(typeof PaystackPop==='undefined'||!PaystackPop.setup){
+    restoreBtn();
+    alert('Paystack did not load. Please check your internet connection and try again.');
+    return;
+  }
 
-  window.location.href='https://checkout.paystack.com/'+ref+'?'+params.toString();
+  try{
+    var handler=PaystackPop.setup({
+      key:'pk_live_170c23ed7e9bf70fbb05f058956c1c9e2b5696f1',
+      email:pendingReg.email,
+      amount:selectedTier.fee*100,
+      currency:'GHS',
+      ref:'GOP'+Date.now(),
+      channels:['card','mobile_money','bank','ussd'],
+      label:pendingReg.firstName+' '+pendingReg.lastName,
+      callback:function(response){
+        restoreBtn();
+        var existing=getMembers().find(function(x){return x.phone===pendingReg.phone;});
+        if(existing){currentUser=existing;saveSession();showPaymentWaiting(existing);return;}
+        var m={
+          id:'M'+Date.now(),
+          firstName:pendingReg.firstName,lastName:pendingReg.lastName,
+          email:pendingReg.email,phone:pendingReg.phone,
+          region:pendingReg.region,age:pendingReg.age,gender:pendingReg.gender||'N/A',
+          password:pendingReg.password,
+          tier:selectedTier.tier,fee:selectedTier.fee,
+          paystackRef:response.reference,
+          status:'awaiting_verification',
+          joinedDate:today(),
+          paymentSubmittedAt:new Date().toISOString(),
+          balance:0,monthEarned:0,referrals:0,referralEarnings:0,
+          ghSurveyDone:false,withdrawalCount:0,
+          streakBonusDate:'',streakDays:0,
+          dailySurveyDate:'',dailySurveyCount:0,
+          dailyPollDate:'',dailyPollCount:0,
+          dailyAdDate:'',dailyAdCount:0,
+          answeredPolls:[],completedSurveys:[],completedVideos:[],
+          notifications:['&#x2705; Payment of GHS '+selectedTier.fee+' received via Paystack (Ref: '+response.reference+'). Your account is awaiting admin activation — usually within 20 minutes.']
+        };
+        var members=getMembers();members.push(m);saveMembers(members);
+        currentUser=m;saveSession();showPaymentWaiting(m);
+      },
+      onClose:function(){restoreBtn();}
+    });
+    handler.openIframe();
+  }catch(err){
+    restoreBtn();
+    alert('Payment error: '+err.message);
+  }
 }
 
-// ── On page load: check if returning from Paystack redirect ──
 function checkPaystackReturn(){
-  var urlParams=new URLSearchParams(window.location.search);
-  var ref=urlParams.get('reference')||urlParams.get('trxref');
-  if(!ref) return;
-
-  // Clean URL
-  window.history.replaceState({},'',window.location.pathname);
-
-  // Restore pending payment data
-  var raw=null;
-  try{ raw=localStorage.getItem('gop_pending_payment'); }catch(e){}
-  if(!raw) return;
-
-  var pending=null;
-  try{ pending=JSON.parse(raw); }catch(e){}
-  if(!pending||!pending.reg||!pending.tier) return;
-
-  // Clear pending payment
-  try{ localStorage.removeItem('gop_pending_payment'); }catch(e){}
-
-  // Verify the reference matches
-  if(pending.ref!==ref){
-    // Reference mismatch — still create member but flag for admin
-  }
-
-  // Create member record awaiting admin activation
-  var m={
-    id:'M'+Date.now(),
-    firstName:pending.reg.firstName, lastName:pending.reg.lastName,
-    email:pending.reg.email, phone:pending.reg.phone,
-    region:pending.reg.region, age:pending.reg.age, gender:pending.reg.gender||'N/A',
-    password:pending.reg.password,
-    tier:pending.tier.tier, fee:pending.tier.fee,
-    paystackRef:ref,
-    status:'awaiting_verification',
-    joinedDate:today(),
-    paymentSubmittedAt:new Date().toISOString(),
-    balance:0, monthEarned:0, referrals:0, referralEarnings:0,
-    ghSurveyDone:false, withdrawalCount:0,
-    streakBonusDate:'', streakDays:0,
-    dailySurveyDate:'', dailySurveyCount:0,
-    dailyPollDate:'', dailyPollCount:0,
-    dailyAdDate:'', dailyAdCount:0,
-    answeredPolls:[], completedSurveys:[], completedVideos:[],
-    notifications:['&#x2705; Payment of GHS '+pending.tier.fee+' received via Paystack (Ref: '+ref+'). Your account is awaiting admin activation — usually within 20 minutes.']
-  };
-
-  // Check for duplicate
-  var existing=getMembers().find(function(x){return x.phone===m.phone;});
-  if(existing){
-    // Already registered — just show waiting screen
-    currentUser=existing; saveSession(); showPaymentWaiting(existing); return;
-  }
-
-  var members=getMembers(); members.push(m); saveMembers(members);
-  currentUser=m; saveSession();
-  showPaymentWaiting(m);
+  // No redirect used — this function is kept for compatibility
 }
 </script>
 </body>
