@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
+<script src="https://js.paystack.co/v1/inline.js"></script>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>GhanaOpinionPay — Earn GHS for Your Opinion</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"/>
@@ -441,7 +442,7 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
     <div class="reveal"><div class="section-label">Simple Process</div><h2 class="section-title">Start earning in 4 easy steps</h2><p class="section-sub">No experience needed. Just your honest opinions, paid in GHS.</p></div>
     <div class="steps-grid reveal">
       <div class="step-card"><div class="step-num">1</div><h3>Register for Free</h3><p>Sign up with your name, email, and MoMo number. Takes under 2 minutes.</p><div class="step-conn"></div></div>
-      <div class="step-card"><div class="step-num">2</div><h3>Pay via Mobile Money</h3><p>Choose your membership tier and send your registration fee using your phone number as reference.</p><div class="step-conn"></div></div>
+      <div class="step-card"><div class="step-num">2</div><h3>Pay via Paystack</h3><p>Choose your membership tier and complete your registration fee securely via Paystack — card, Mobile Money, or bank transfer accepted.</p><div class="step-conn"></div></div>
       <div class="step-card"><div class="step-num">3</div><h3>Wait for Verification</h3><p>Admin verifies your payment within 20 minutes. You'll be notified once your account is activated.</p><div class="step-conn"></div></div>
       <div class="step-card"><div class="step-num">4</div><h3>Earn &amp; Withdraw</h3><p>Complete surveys, watch videos, vote on polls — and cash out your GHS earnings twice weekly.</p></div>
     </div>
@@ -610,6 +611,7 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
     <div class="form-row">
       <div class="fg"><label>Region</label><select id="regRegion"><option value="">Select region</option><option>Greater Accra</option><option>Ashanti</option><option>Northern</option><option>Western</option><option>Eastern</option><option>Central</option><option>Volta</option><option>Upper East</option><option>Upper West</option><option>Brong-Ahafo</option><option>Oti</option><option>Bono East</option><option>Ahafo</option><option>North East</option><option>Savannah</option><option>Western North</option></select></div>
       <div class="fg"><label>Age Range</label><select id="regAge"><option value="">Select</option><option>18-24</option><option>25-34</option><option>35-44</option><option>45-54</option><option>55+</option></select></div>
+      <div class="fg"><label>Gender</label><select id="regGender"><option value="">Select</option><option>Male</option><option>Female</option><option>Prefer not to say</option></select></div>
     </div>
     <div class="fg"><label>Password</label><input type="password" id="regPassword" placeholder="Min. 6 characters"/></div>
     <div class="err-box" id="regError"></div>
@@ -658,12 +660,12 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
 <!-- PAYMENT PAGE -->
 <div id="paymentPage">
   <div class="pp-wrap">
-    <div class="pp-logo"><div class="pp-logo-text">GhanaOpinion<span>Pay</span></div><div style="font-size:12px;color:#6b7280;margin-top:3px">Secure Payment Checkout</div></div>
+    <div class="pp-logo"><div class="pp-logo-text">GhanaOpinion<span>Pay</span></div><div style="font-size:12px;color:#6b7280;margin-top:3px">Secure Checkout &mdash; Powered by Paystack</div></div>
     <div class="pp-box">
       <div class="pp-hdr">
-        <div class="pp-merch-label">Send Payment To</div>
-        <div class="pp-merch-num">0203 910 730</div>
-        <div class="pp-net-pill">&#x1F4F1; Telecel Cash (Vodafone Cash)</div>
+        <div class="pp-merch-label">Registration Fee</div>
+        <div class="pp-merch-num" id="ppAmtDisplay">GHS 0</div>
+        <div class="pp-net-pill">&#x1F4B3; Card &middot; Mobile Money &middot; Bank Transfer</div>
       </div>
       <div class="pp-body" id="ppFormArea">
         <div style="margin-bottom:14px">
@@ -678,31 +680,28 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
         <div class="pp-for-label">Payment For</div>
         <div class="pp-for-val" id="ppForDisplay">Select a tier above to continue</div>
         <div class="ref-box" id="ppRefBox" style="display:none">
-          <div class="ref-box-title">&#x1F4CB; Your Payment Reference</div>
-          <div class="ref-number" id="ppRefNumber">—</div>
-          <div class="ref-instructions">When making the Telecel Cash payment, enter your phone number (<span id="ppRefPhone">—</span>) as the <strong>reference / note</strong>. This is how admin matches your payment to your account.</div>
+          <div class="ref-box-title">&#x1F4CB; Payment Summary</div>
+          <div class="ref-number" id="ppRefNumber">GHS 0</div>
+          <div class="ref-instructions">You will be charged <strong id="ppForDisplay">—</strong>. Click <strong>Pay Now with Paystack</strong> to complete your payment securely. Paystack accepts MTN MoMo, Telecel Cash, AirtelTigo, Visa, Mastercard and bank transfers.</div>
         </div>
         <div class="pp-div"></div>
         <div class="ussd-box">
-          <div class="ussd-title">&#x1F4F2; How to Pay via Telecel Cash</div>
+          <div class="ussd-title">&#x1F4B3; Secure Payment via Paystack</div>
           <ul class="ussd-steps">
-            <li><div class="ussd-circle">1</div><span>Dial <span class="ussd-code">*110#</span> on your Telecel line</span></li>
-            <li><div class="ussd-circle">2</div><span>Select <strong>Send Money</strong> then <strong>To Mobile Number</strong></span></li>
-            <li><div class="ussd-circle">3</div><span>Enter merchant number: <span class="ussd-code">0203910730</span></span></li>
-            <li><div class="ussd-circle">4</div><span>Enter amount: <strong id="ppUssdAmt">your tier fee</strong></span></li>
-            <li><div class="ussd-circle">5</div><span>In the <strong>Reference/Note</strong> field, enter your phone number: <strong id="ppUssdRef">your number</strong></span></li>
-            <li><div class="ussd-circle">6</div><span>Enter your PIN and confirm</span></li>
-            <li><div class="ussd-circle">7</div><span>Click <strong>"I Have Paid"</strong> below once approved</span></li>
+            <li><div class="ussd-circle">1</div><span>Select your membership tier above</span></li>
+            <li><div class="ussd-circle">2</div><span>Click <strong>"Pay Now with Paystack"</strong> below</span></li>
+            <li><div class="ussd-circle">3</div><span>Complete payment securely via <strong>card, Mobile Money, or bank</strong> in the Paystack popup</span></li>
+            <li><div class="ussd-circle">4</div><span>Your account will be activated within <strong>20 minutes</strong> after admin verification</span></li>
           </ul>
-          <div style="margin-top:8px;font-size:11.5px;color:#9ca3af">You can also pay via the Telecel Cash app using number 0203910730</div>
+          <div style="margin-top:8px;font-size:11.5px;color:#9ca3af">&#x1F512; All payments are secured by Paystack — Ghana's trusted payment gateway</div>
         </div>
-        <button class="pp-confirm-btn" id="ppConfirmBtn">&#x2705; I Have Paid — Confirm &#x2192;</button>
-        <div class="pp-sec-note">&#x1F512; All payments verified by admin within 20 minutes</div>
+        <button class="pp-confirm-btn" id="ppConfirmBtn">&#x1F4B3; Pay Now with Paystack &#x2192;</button>
+        <div class="pp-sec-note">&#x1F512; Powered by Paystack &mdash; card, MoMo &amp; bank supported</div>
       </div>
       <div id="ppWaiting">
         <div class="pp-spinner"></div>
-        <h3>Payment Submitted — Awaiting Verification</h3>
-        <p>Your payment is being reviewed by our admin team. This usually takes <strong>up to 20 minutes</strong>.</p>
+        <h3>Payment Received — Awaiting Account Activation</h3>
+        <p>Your payment was processed by Paystack. Our admin team will verify and activate your account. This usually takes <strong>up to 20 minutes</strong>.</p>
         <div class="wait-timer">&#x23F0; Estimated wait: <span id="ppTimer">20:00</span></div>
         <p style="margin-top:14px;font-size:12.5px">You will be automatically redirected once verified. You can also log in later to check your status.</p>
         <button style="margin-top:18px;background:none;border:1.5px solid var(--border);border-radius:9px;padding:9px 20px;font-size:13px;cursor:pointer;color:var(--text-mid)" id="ppLogoutWait">I'll check back later</button>
@@ -972,6 +971,7 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
         <div class="s-card"><h3>&#x1F464; Profile Information</h3>
           <div class="form-row"><div class="fg"><label>First Name</label><input type="text" id="setFirst"/></div><div class="fg"><label>Last Name</label><input type="text" id="setLast"/></div></div>
           <div class="fg"><label>Email Address</label><input type="email" id="setEmail"/></div>
+          <div class="fg"><label>Gender</label><select id="setGender"><option value="">Select</option><option>Male</option><option>Female</option><option>Prefer not to say</option></select></div>
           <div class="fg"><label>Region</label><select id="setRegion"><option value="">Select</option><option>Greater Accra</option><option>Ashanti</option><option>Northern</option><option>Western</option><option>Eastern</option><option>Central</option><option>Volta</option><option>Upper East</option><option>Upper West</option><option>Brong-Ahafo</option><option>Oti</option><option>Bono East</option><option>Ahafo</option><option>North East</option><option>Savannah</option><option>Western North</option></select></div>
           <button class="sbtn" style="max-width:200px" id="saveProfileBtn">Save Changes &#x2192;</button>
         </div>
@@ -1017,6 +1017,7 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
     <div class="a-tabs">
       <button class="a-tab active" data-atab="payments">&#x1F4B3; Pending Payments</button>
       <button class="a-tab" data-atab="members">&#x1F465; Members</button>
+      <button class="a-tab" data-atab="profiles">&#x1F4C4; Profiles</button>
       <button class="a-tab" data-atab="duplicates">&#x26A0; Duplicates</button>
       <button class="a-tab" data-atab="withdrawals">&#x1F4B8; Withdrawals</button>
       <button class="a-tab" data-atab="content">&#x1F4CB; Content</button>
@@ -1052,6 +1053,32 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
           <thead><tr><th>#</th><th>Name</th><th>Phone</th><th>Region</th><th>Tier</th><th>Status</th><th>Balance</th><th>Total Earned</th><th>Surveys</th><th>Videos</th><th>Daily Polls</th><th>Joined</th><th>Actions</th></tr></thead>
           <tbody id="aMembersBody"><tr><td colspan="13" class="empty-row">No members yet.</td></tr></tbody>
         </table></div>
+      </div>
+    </div>
+    <!-- PROFILES TAB -->
+    <div class="a-section" id="atab-profiles">
+      <div class="a-card">
+        <div class="a-card-title">
+          <span>&#x1F4C4; Member Profiles</span>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <input type="text" id="profileSearch" placeholder="&#x1F50D; Search name, phone or email..." style="padding:6px 12px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;outline:none;width:220px"/>
+            <select id="profileGenderFilter" style="padding:6px 10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;outline:none;cursor:pointer">
+              <option value="all">All Genders</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+              <option value="Prefer not to say">Prefer not to say</option>
+              <option value="N/A">Not specified</option>
+            </select>
+            <select id="profileTierFilter" style="padding:6px 10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;outline:none;cursor:pointer">
+              <option value="all">All Tiers</option>
+              <option value="Bronze">Bronze</option>
+              <option value="Silver">Silver</option>
+              <option value="Gold">Gold</option>
+            </select>
+          </div>
+        </div>
+        <div id="profileStats" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px"></div>
+        <div id="profilesList"></div>
       </div>
     </div>
     <div class="a-section" id="atab-duplicates">
@@ -1406,7 +1433,7 @@ function restoreSession(){
     currentUser=m;
     if(m.status==='awaiting_verification'){showPaymentWaiting(m); startIdleTracking(); return;}
     if(m.status==='payment_failed'){
-      pendingReg={firstName:m.firstName,lastName:m.lastName,email:m.email,phone:m.phone,region:m.region,age:m.age,password:m.password};
+      pendingReg={firstName:m.firstName,lastName:m.lastName,email:m.email,phone:m.phone,region:m.region,age:m.age,gender:m.gender||'N/A',password:m.password};
       showPaymentFailed('Your previous payment was not verified. Please try again.'); startIdleTracking(); return;
     }
     if(m.status==='active'){openMemberDashboard(m); startIdleTracking(); return;}
@@ -1509,6 +1536,13 @@ document.addEventListener('DOMContentLoaded', function(){
   bindClick('refreshIssuesBtn', renderAdminIssues);
   var issueFilter=el('issueFilterStatus');
   if(issueFilter) issueFilter.addEventListener('change', renderAdminIssues);
+  // Profile tab filters
+  var profileSearchEl=el('profileSearch');
+  if(profileSearchEl) profileSearchEl.addEventListener('input', renderProfilesTab);
+  var profileGenderEl=el('profileGenderFilter');
+  if(profileGenderEl) profileGenderEl.addEventListener('change', renderProfilesTab);
+  var profileTierEl=el('profileTierFilter');
+  if(profileTierEl) profileTierEl.addEventListener('change', renderProfilesTab);
 
   // Admin dashboard
   bindClick('aLogoutBtn', logout);
@@ -1653,7 +1687,7 @@ function doLogin(){
   }
   if(m.status==='payment_failed'){
     closeLoginModal(); currentUser=m;
-    pendingReg={firstName:m.firstName,lastName:m.lastName,email:m.email,phone:m.phone,region:m.region,age:m.age,password:m.password};
+    pendingReg={firstName:m.firstName,lastName:m.lastName,email:m.email,phone:m.phone,region:m.region,age:m.age,gender:m.gender||'N/A',password:m.password};
     showPaymentFailed('Your previous payment was not verified. Please try again.'); return;
   }
   if(m.status==='suspended'){
@@ -1667,7 +1701,7 @@ function doLogin(){
 function doRegister(){
   var first=val('regFirst').trim(), last=val('regLast').trim();
   var email=val('regEmail').trim(), phone=val('regPhone').trim();
-  var region=val('regRegion'), age=val('regAge'), pass=val('regPassword');
+  var region=val('regRegion'), age=val('regAge'), gender=val('regGender'), pass=val('regPassword');
   hideErr('regError');
   if(!first||!last){showErr('regError','Please enter your full name.'); return;}
   if(!email){showErr('regError','Please enter your email address.'); return;}
@@ -1675,7 +1709,7 @@ function doRegister(){
   if(!region){showErr('regError','Please select your region.'); return;}
   if(!pass||pass.length<6){showErr('regError','Password must be at least 6 characters.'); return;}
   if(getMembers().find(function(m){return m.phone===phone;})){showErr('regError','A member with this phone number already exists. Please log in.'); return;}
-  pendingReg={firstName:first,lastName:last,email:email,phone:phone,region:region,age:age||'N/A',password:pass};
+  pendingReg={firstName:first,lastName:last,email:email,phone:phone,region:region,age:age||'N/A',gender:gender||'N/A',password:pass};
   closeRegisterModal();
   openPaymentPage();
 }
@@ -1703,39 +1737,9 @@ function selectTier(opt){
   opt.classList.add('selected');
   selectedTier={tier:opt.dataset.tier, fee:parseInt(opt.dataset.fee)};
   setText('ppAmtDisplay','GHS '+opt.dataset.fee+'.00');
-  setText('ppForDisplay', opt.dataset.tier+' Membership Registration — GhanaOpinionPay');
-  setText('ppUssdAmt','GHS '+opt.dataset.fee);
+  setText('ppForDisplay', opt.dataset.tier+' Membership — GHS '+opt.dataset.fee+'.00');
+  setText('ppRefNumber','GHS '+opt.dataset.fee+'.00');
   show('ppRefBox');
-  setText('ppRefNumber', pendingReg?pendingReg.phone:'—');
-}
-
-function confirmPayment(){
-  if(!selectedTier){alert('Please select a membership tier before confirming payment.'); return;}
-  var m={
-    id:'M'+Date.now(),
-    firstName:pendingReg.firstName, lastName:pendingReg.lastName,
-    email:pendingReg.email, phone:pendingReg.phone,
-    region:pendingReg.region, age:pendingReg.age,
-    password:pendingReg.password,
-    tier:selectedTier.tier, fee:selectedTier.fee,
-    status:'awaiting_verification',
-    joinedDate:today(),
-    paymentSubmittedAt:new Date().toISOString(),
-    balance:0, monthEarned:0, referrals:0, referralEarnings:0,
-    ghSurveyDone:false,
-    withdrawalCount:0,
-    streakBonusDate:'',
-    streakDays:0,
-    dailySurveyDate:'', dailySurveyCount:0,
-    dailyPollDate:'', dailyPollCount:0,
-    dailyAdDate:'', dailyAdCount:0,
-    answeredPolls:[], completedSurveys:[], completedVideos:[],
-    notifications:['&#x23F0; Your payment has been submitted and is awaiting admin verification. This usually takes up to 20 minutes.']
-  };
-  var members=getMembers(); members.push(m); saveMembers(members);
-  currentUser=m;
-  saveSession();
-  showPaymentWaiting(m);
 }
 
 function showSuspendedPage(member){
@@ -1859,6 +1863,7 @@ function openMemberDashboard(member){
   setVal('setLast', member.lastName||'');
   setVal('setEmail', member.email);
   setVal('setRegion', member.region||'');
+  setVal('setGender', member.gender||'');
   setText('setPhone', member.phone);
   setText('refLink','https://Goppay.github.io/SV/ref/'+member.id);
   // Reset daily ad viewed list if it's a new day
@@ -2422,6 +2427,7 @@ function saveProfile(){
   members[idx].lastName=val('setLast').trim()||members[idx].lastName;
   members[idx].email=val('setEmail').trim()||members[idx].email;
   members[idx].region=val('setRegion')||members[idx].region;
+  members[idx].gender=val('setGender')||members[idx].gender;
   saveMembers(members); currentUser=members[idx];
   setText('dGreeting','Akwaaba! 🇬🇭');
   alert('\u2705 Profile updated!');
@@ -2538,6 +2544,7 @@ function openAdminDashboard(){
   renderAdminIssues();
   renderAdminUpgradeRequests();
   renderSubAdminList();
+  renderProfilesTab();
 }
 
 function refreshAdminMetrics(){
@@ -2585,6 +2592,7 @@ function switchAdminTab(name, btn){
   if(name==='ads') renderAdminAds();
   if(name==='issues') renderAdminIssues();
   if(name==='asettings') renderSubAdminList();
+  if(name==='profiles') renderProfilesTab();
 }
 
 // ── ADMIN: PENDING PAYMENTS ───────────────────────────
@@ -4295,6 +4303,105 @@ function renderSuspendedReplies(member){
   list.innerHTML=html;
 }
 
+// ── ADMIN: PROFILES TAB ──────────────────────────────
+function renderProfilesTab(){
+  var members=getMembers();
+  // Apply search
+  var q=(el('profileSearch')||{value:''}).value.toLowerCase().trim();
+  var gf=(el('profileGenderFilter')||{value:'all'}).value;
+  var tf=(el('profileTierFilter')||{value:'all'}).value;
+  var filtered=members.filter(function(m){
+    if(q && !(
+      (m.firstName+' '+m.lastName).toLowerCase().includes(q)||
+      (m.phone||'').includes(q)||
+      (m.email||'').toLowerCase().includes(q)
+    )) return false;
+    if(gf!=='all' && (m.gender||'N/A')!==gf) return false;
+    if(tf!=='all' && m.tier!==tf) return false;
+    return true;
+  });
+
+  // ── Stats bar ────────────────────────────────────────
+  var total=members.length;
+  var males=members.filter(function(m){return m.gender==='Male';}).length;
+  var females=members.filter(function(m){return m.gender==='Female';}).length;
+  var pnts=members.filter(function(m){return m.gender==='Prefer not to say';}).length;
+  var noGender=members.filter(function(m){return !m.gender||m.gender==='N/A';}).length;
+  var statsEl=el('profileStats');
+  if(statsEl){
+    var statsHtml='';
+    var stats=[
+      {label:'Total Members',val:total,color:'var(--green)'},
+      {label:'Male',val:males,color:'var(--blue)'},
+      {label:'Female',val:females,color:'#e91e8c'},
+      {label:'Prefer not to say',val:pnts,color:'#9ca3af'},
+      {label:'Not specified',val:noGender,color:'#d1d5db'},
+    ];
+    stats.forEach(function(s){
+      statsHtml+='<div style="background:#fff;border:1px solid #e5e7eb;border-radius:9px;padding:10px 16px;text-align:center;min-width:100px">';
+      statsHtml+='<div style="font-size:20px;font-weight:700;color:'+s.color+'">'+s.val+'</div>';
+      statsHtml+='<div style="font-size:11px;color:#6b7280;margin-top:2px">'+s.label+'</div></div>';
+    });
+    statsEl.innerHTML=statsHtml;
+  }
+
+  // ── Profile cards ────────────────────────────────────
+  var listEl=el('profilesList');
+  if(!listEl) return;
+  if(!filtered.length){
+    listEl.innerHTML='<p class="empty-row">No members match your filters.</p>';
+    return;
+  }
+
+  var tierIcon=function(t){return t==='Bronze'?'🥉':t==='Silver'?'🥈':t==='Gold'?'🥇':'';};
+  var genderIcon=function(g){return g==='Male'?'👨':g==='Female'?'👩':'🧑';};
+  var stBadge=function(s){
+    var map={
+      active:'<span style="background:#d1fae5;color:#065f46;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:10px">Active</span>',
+      suspended:'<span style="background:#fee2e2;color:#991b1b;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:10px">Suspended</span>',
+      awaiting_verification:'<span style="background:#fff3e0;color:#e65100;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:10px">Awaiting</span>',
+      payment_failed:'<span style="background:#fce4ec;color:#c62828;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:10px">Pay Failed</span>'
+    };
+    return map[s]||'<span style="background:#f3f4f6;color:#374151;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:10px">'+s+'</span>';
+  };
+
+  var html='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px">';
+  filtered.forEach(function(m){
+    var initials=(m.firstName.charAt(0)+(m.lastName||'').charAt(0)).toUpperCase();
+    var tierC=m.tier==='Bronze'?'#f59e0b':m.tier==='Silver'?'#6b7280':'#d97706';
+    html+='<div style="background:#fff;border:1.5px solid #e5e7eb;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.05)">';
+    // Header strip
+    html+='<div style="background:linear-gradient(135deg,#0d4a22,var(--green));padding:16px;display:flex;align-items:center;gap:12px">';
+    html+='<div style="width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.25);color:#fff;font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">'+initials+'</div>';
+    html+='<div><div style="font-size:15px;font-weight:700;color:#fff">'+m.firstName+' '+m.lastName+'</div>';
+    html+='<div style="font-size:12px;color:rgba(255,255,255,.8);margin-top:2px">'+tierIcon(m.tier)+' '+m.tier+' &nbsp;'+stBadge(m.status)+'</div></div>';
+    html+='</div>';
+    // Body
+    html+='<div style="padding:14px 16px">';
+    var rows=[
+      ['&#x1F4DE; Phone', m.phone],
+      ['&#x1F4E7; Email', m.email||'—'],
+      ['&#x1F4CD; Region', m.region||'—'],
+      ['&#x1F9D1; Gender', genderIcon(m.gender||'')+ ' '+(m.gender||'Not specified')],
+      ['&#x1F382; Age', m.age||'—'],
+      ['&#x1F4C5; Joined', m.joinedDate||'—'],
+      ['&#x1F4B0; Balance', 'GHS '+(m.balance||0).toFixed(2)],
+      ['&#x1F4C8; Month Earned', 'GHS '+(m.monthEarned||0).toFixed(2)],
+      ['&#x1F4CB; Surveys', ((m.completedSurveys||[]).length+(m.dailySurveyCount||0))+' completed'],
+      ['&#x1F525; Streak', (m.streakDays||0)+' day'+(m.streakDays!==1?'s':'')],
+      ['&#x1F465; Referrals', (m.referrals||0)+' · Earned GHS '+(m.referralEarnings||0).toFixed(2)],
+    ];
+    rows.forEach(function(r){
+      html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #f3f4f6;font-size:12.5px">';
+      html+='<span style="color:#6b7280">'+r[0]+'</span>';
+      html+='<span style="font-weight:600;color:#0d1117;text-align:right;max-width:60%">'+r[1]+'</span></div>';
+    });
+    html+='</div></div>';
+  });
+  html+='</div>';
+  listEl.innerHTML=html;
+}
+
 function broadcastAnn(){
   var text=(val('annText')||'').trim();
   if(!text){alert('Please enter an announcement.'); return;}
@@ -4522,6 +4629,85 @@ function checkDailyStreakBonus(member){
   renderNotifications(currentUser);
 }
 
+</script>
+<!-- Paystack: also loaded in <head> for synchronous popup on click -->
+<script>
+function confirmPayment(){
+  if(!selectedTier){
+    adminAlert('Please select a membership tier before paying.');
+    return;
+  }
+  if(!pendingReg){
+    adminAlert('Registration details missing. Please register again.');
+    return;
+  }
+  if(typeof PaystackPop==='undefined'){
+    // Paystack script didn't load — show clear error on page
+    var btn2=el('ppConfirmBtn');
+    if(btn2){
+      btn2.style.background='var(--red)';
+      btn2.innerHTML='&#x26A0; Paystack not loaded — check internet connection';
+      setTimeout(function(){
+        btn2.style.background='';
+        btn2.innerHTML='&#x1F4B3; Pay Now with Paystack &#x2192;';
+      },4000);
+    }
+    return;
+  }
+
+  var btn=el('ppConfirmBtn');
+  if(btn){btn.disabled=true; btn.innerHTML='&#x23F3; Opening payment...';}
+
+  try{
+    var handler=PaystackPop.setup({
+      key:'pk_live_170c23ed7e9bf70fbb05f058956c1c9e2b5696f1',
+      email:pendingReg.email,
+      amount:selectedTier.fee * 100,
+      currency:'GHS',
+      ref:'GOP-'+pendingReg.phone+'-'+Date.now(),
+      metadata:{
+        custom_fields:[
+          {display_name:'Member Name',variable_name:'member_name',value:pendingReg.firstName+' '+pendingReg.lastName},
+          {display_name:'Phone',variable_name:'phone',value:pendingReg.phone},
+          {display_name:'Tier',variable_name:'tier',value:selectedTier.tier}
+        ]
+      },
+      callback:function(response){
+        if(btn){btn.disabled=false; btn.innerHTML='&#x1F4B3; Pay Now with Paystack &#x2192;';}
+        var m={
+          id:'M'+Date.now(),
+          firstName:pendingReg.firstName, lastName:pendingReg.lastName,
+          email:pendingReg.email, phone:pendingReg.phone,
+          region:pendingReg.region, age:pendingReg.age, gender:pendingReg.gender||'N/A',
+          password:pendingReg.password,
+          tier:selectedTier.tier, fee:selectedTier.fee,
+          paystackRef:response.reference,
+          status:'awaiting_verification',
+          joinedDate:today(),
+          paymentSubmittedAt:new Date().toISOString(),
+          balance:0, monthEarned:0, referrals:0, referralEarnings:0,
+          ghSurveyDone:false,
+          withdrawalCount:0,
+          streakBonusDate:'', streakDays:0,
+          dailySurveyDate:'', dailySurveyCount:0,
+          dailyPollDate:'', dailyPollCount:0,
+          dailyAdDate:'', dailyAdCount:0,
+          answeredPolls:[], completedSurveys:[], completedVideos:[],
+          notifications:['&#x2705; Payment of GHS '+selectedTier.fee+' received via Paystack (Ref: '+response.reference+'). Your account is awaiting admin activation — usually within 20 minutes.']
+        };
+        var members=getMembers(); members.push(m); saveMembers(members);
+        currentUser=m; saveSession(); showPaymentWaiting(m);
+      },
+      onClose:function(){
+        if(btn){btn.disabled=false; btn.innerHTML='&#x1F4B3; Pay Now with Paystack &#x2192;';}
+      }
+    });
+    handler.openModal();
+  }catch(err){
+    if(btn){btn.disabled=false; btn.innerHTML='&#x1F4B3; Pay Now with Paystack &#x2192;';}
+    alert('Payment error: '+err.message+'\n\nPlease ensure you have an internet connection and try again.');
+  }
+}
 </script>
 </body>
 </html>
