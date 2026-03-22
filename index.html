@@ -919,6 +919,7 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
     <div class="d-greeting" id="dGreeting">Akwaaba! 🇬🇭</div>
     <div class="d-sub" id="dSub"></div>
     <div id="dashAdsWrap"></div>
+    <div id="dashPagesWrap"></div>
     <div class="notif-list" id="notifList"></div>
     <div class="d-metrics">
       <div class="dm"><div class="dm-label">Balance</div><div class="dm-val" id="dmBal">GHS 0.00</div><div class="dm-sub">Available</div></div>
@@ -1034,7 +1035,7 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
           <span id="pagesEarnBadge" style="font-size:12px;color:var(--text-muted);font-weight:400"></span>
         </div>
         <div style="background:var(--green-pale);border:1px solid var(--green);border-radius:9px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:var(--green);line-height:1.6">
-          &#x1F4B0; Earn <strong>GHS 1.00</strong> for every page you follow or join. Click the link, follow the page, then click <strong>"Claim Reward"</strong>.
+          &#x1F4B0; Earn <strong>GHS 0.50</strong> for every page you follow or join. Click the link, follow the page, then click <strong>"Claim Reward"</strong>.
         </div>
         <div id="memberPagesList"></div>
       </div>
@@ -1174,13 +1175,14 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
   <div class="a-body">
     <div class="a-title">Admin Control Panel</div>
     <div class="a-sub">Full platform oversight — payments, members, content, and site control.</div>
-    <div class="a-metrics" style="grid-template-columns:repeat(7,1fr)">
+    <div class="a-metrics" style="grid-template-columns:repeat(8,1fr)">
       <div class="am"><div class="am-label">Total Members</div><div class="am-val" id="aTotalM">0</div><div class="am-sub">Registered</div></div>
       <div class="am"><div class="am-label">Pending Payments</div><div class="am-val" id="aPendP" style="color:var(--orange)">0</div><div class="am-sub">Awaiting verification</div></div>
       <div class="am"><div class="am-label">Open Withdrawals</div><div class="am-val" id="aPendW" style="color:var(--blue)">0</div><div class="am-sub">Need processing</div></div>
       <div class="am"><div class="am-label">Total Paid Out</div><div class="am-val" id="aTotalPaid">GHS 0</div><div class="am-sub">Completed</div></div>
       <div class="am"><div class="am-label">Flagged Duplicates</div><div class="am-val" id="aDupCount" style="color:var(--red)">0</div><div class="am-sub">Possible multi-accounts</div></div>
       <div class="am"><div class="am-label">Open Issues</div><div class="am-val" id="aOpenIssues" style="color:var(--orange)">0</div><div class="am-sub">Needs response</div></div>
+      <div class="am"><div class="am-label">Pages Followed</div><div class="am-val" id="aTotalPages" style="color:var(--blue)">0</div><div class="am-sub">All-time follows</div></div>
       <div class="am"><div class="am-label">Total Ads Viewed</div><div class="am-val" id="aTotalAds" style="color:var(--blue)">0</div><div class="am-sub">All-time by members</div></div>
     </div>
     <div class="a-tabs">
@@ -1323,7 +1325,7 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
           <span>&#x1F4F1; Social Media Pages</span>
           <button class="add-btn" id="addPageBtn">&#x2795; Add Page</button>
         </div>
-        <p style="font-size:13px;color:#6b7280;margin-bottom:16px;line-height:1.6">Add your social media pages. Members earn <strong style="color:var(--green)">GHS 1.00</strong> each time they follow or join a page. They click the link, then claim their reward.</p>
+        <p style="font-size:13px;color:#6b7280;margin-bottom:16px;line-height:1.6">Add your social media pages. Members earn <strong style="color:var(--green)">GHS 0.50</strong> each time they follow or join a page. They click the link, then claim their reward.</p>
         <div id="adminPagesList"><p class="empty-row">No pages added yet.</p></div>
       </div>
       <!-- Add page form -->
@@ -1345,7 +1347,7 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
           <div class="fg" style="margin:0"><label>Page URL / Link</label><input type="url" id="pgUrl" placeholder="https://facebook.com/ghanaopinionpay"/></div>
-          <div class="fg" style="margin:0"><label>Earn Amount (GHS)</label><input type="number" id="pgEarn" value="1.00" min="0.10" step="0.10"/></div>
+          <div class="fg" style="margin:0"><label>Earn Amount (GHS)</label><input type="number" id="pgEarn" value="0.50" min="0.10" step="0.10"/></div>
         </div>
         <div class="fg"><label>Description <span style="font-size:11px;color:#9ca3af">(optional)</span></label><input type="text" id="pgDesc" placeholder="e.g. Follow us for daily survey updates and bonuses"/></div>
         <div style="display:flex;gap:10px">
@@ -2165,6 +2167,8 @@ function openMemberDashboard(member){
     }
   }
   renderDashAds(member);
+  // Nudge for unclaimed pages
+  renderDashPages(member);
   // Load any admin-customised Ghana Affairs questions into session ghQs
   var ghSurvey=getSurveys().find(function(s){return s.type==='gh-affairs';});
   if(ghSurvey&&ghSurvey.customQuestions&&ghSurvey.customQuestions.length) ghQs=ghSurvey.customQuestions;
@@ -2844,7 +2848,7 @@ function openAdminDashboard(){
     logo.innerHTML='Ghana<span style="color:var(--gold)">OpinionPay</span><span class="a-badge">'+(isSubAdmin()?'Sub-Admin':'Admin')+'</span> <span style="font-size:11px;color:rgba(255,255,255,.55);font-weight:400">'+name+'</span>';
   }
   // Hide restricted tabs for sub-admins
-  var restrictedTabs=['content','ads','asettings'];
+  var restrictedTabs=['content','ads','pages','asettings'];
   document.querySelectorAll('.a-tab').forEach(function(btn){
     var tab=btn.dataset.atab;
     if(isSubAdmin() && restrictedTabs.indexOf(tab)>=0){
@@ -2888,6 +2892,8 @@ function refreshAdminMetrics(){
   });
   setText('aDupCount', cnt);
   setText('aOpenIssues', getIssues().filter(function(i){return i.status==='open';}).length);
+  var totalPagesFollowed=getMembers().reduce(function(s,m){return s+(m.completedPages||[]).length;},0);
+  var pgEl=el('aTotalPages'); if(pgEl) pgEl.textContent=totalPagesFollowed;
   // Total ads viewed = sum of all members' dailyAdCount is per-day only,
   // so we use the ad clicks counter stored on each ad object
   var totalAds=getAds().reduce(function(s,ad){return s+(ad.clicks||0);},0);
@@ -2897,7 +2903,7 @@ function refreshAdminMetrics(){
 }
 
 function switchAdminTab(name, btn){
-  var restricted=['content','ads','asettings'];
+  var restricted=['content','ads','pages','asettings'];
   if(isSubAdmin() && restricted.indexOf(name)>=0){
     adminAlert('Sub-admins do not have access to this section.');
     return;
@@ -4005,6 +4011,21 @@ function switchDashTabById(name){
   if(btn) switchDashTab(name, btn);
 }
 
+// Nudge strip for unclaimed pages on member dashboard
+function renderDashPages(member){
+  var el3=el('dashPagesWrap');
+  if(!el3) return;
+  var pages=getPages().filter(function(p){return p.active;});
+  var completed=member.completedPages||[];
+  var unclaimed=pages.filter(function(p){return completed.indexOf(p.id)<0;});
+  if(!unclaimed.length){el3.innerHTML='';return;}
+  var totalEarn=unclaimed.reduce(function(s,p){return s+p.earn;},0);
+  el3.innerHTML='<div style="background:var(--blue-pale,#eff6ff);border:1px solid #bfdbfe;border-radius:9px;padding:8px 14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:13px;color:#1e40af">'
+    +'<span>&#x1F4F1; <strong>'+unclaimed.length+' page'+(unclaimed.length>1?'s':'')+' to follow</strong> — earn up to <strong>GHS '+totalEarn.toFixed(2)+'</strong>!</span>'
+    +'<button class="c-btn" style="background:#1e40af;color:#fff;padding:5px 14px;font-size:12px" onclick="switchDashTabById(\'pages\')">Follow Pages &#x2192;</button>'
+    +'</div>';
+}
+
 // ── MEMBER ADS TAB ─────────────────────────────────────
 var activeAdTimer=null;
 var activeAdId=null;
@@ -4909,7 +4930,7 @@ function addPage(){
   var name=(val('pgName')||'').trim();
   var platform=val('pgPlatform');
   var url=(val('pgUrl')||'').trim();
-  var earn=parseFloat(val('pgEarn'))||1.00;
+  var earn=parseFloat(val('pgEarn'))||0.50;
   var desc=(val('pgDesc')||'').trim();
   if(!name){adminAlert('Please enter a page name.');return;}
   if(!url||!url.startsWith('http')){adminAlert('Please enter a valid URL starting with https://');return;}
@@ -4917,7 +4938,7 @@ function addPage(){
   pages.push({id:'PG'+Date.now(),name:name,platform:platform,url:url,earn:earn,desc:desc,active:true,created:today()});
   savePages(pages);
   // Reset form
-  setVal('pgName',''); setVal('pgUrl',''); setVal('pgDesc',''); setVal('pgEarn','1.00');
+  setVal('pgName',''); setVal('pgUrl',''); setVal('pgDesc',''); setVal('pgEarn','0.50');
   el('addPageForm').style.display='none';
   renderAdminPages();
   adminAlert('Page "'+name+'" added! Members can now follow and earn.');
