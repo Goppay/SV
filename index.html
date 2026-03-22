@@ -567,13 +567,162 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
     <div class="footer-brand"><h3>GhanaOpinionPay</h3><p>Ghana's premier paid survey platform. Earn real GHS for sharing your opinion on topics that matter.</p></div>
     <div class="footer-col"><h4>Earn</h4><ul><li><a href="#">Paid Surveys</a></li><li><a href="#">Ghana Affairs Survey</a></li><li><a href="#">Sponsored Videos</a></li><li><a href="#">Daily Polls</a></li><li><a href="#">Referral Programme</a></li></ul></div>
     <div class="footer-col"><h4>Account</h4><ul><li><a href="#" id="footerSignup">Sign Up</a></li><li><a href="#" id="footerLogin">Log In</a></li><li><a href="#">Tiers</a></li><li><a href="#">Withdrawals</a></li></ul></div>
-    <div class="footer-col"><h4>Company</h4><ul><li><a href="#">About Us</a></li><li><a href="#">Privacy Policy</a></li><li><a href="#">Terms of Service</a></li><li><a href="#">Contact</a></li></ul></div>
+    <div class="footer-col"><h4>Company</h4><ul><li><a href="#" id="footerAbout">About Us</a></li><li><a href="#" id="footerPrivacy">Privacy Policy</a></li><li><a href="#" id="footerTerms">Terms of Service</a></li><li><a href="#" id="footerContact">Contact</a></li></ul></div>
   </div>
   <div class="footer-bottom">
     <p>&#169; 2025 GhanaOpinionPay. Made with &#x1F1EC;&#x1F1ED; in Ghana.</p>
     <div style="display:flex;align-items:center;gap:7px"><div class="footer-flags"><div class="ff-r"></div><div class="ff-g"></div><div class="ff-b"></div></div><span style="font-size:11.5px">Payouts in GHS &middot; Act 843 Compliant</span></div>
   </div>
 </footer>
+
+<!-- ABOUT US MODAL -->
+<div class="modal-overlay" id="aboutModal">
+  <div class="modal" style="max-width:600px;max-height:80vh;overflow-y:auto">
+    <button class="modal-close" id="closeAboutBtn">&#x2715;</button>
+    <h2 style="color:var(--green)">&#x1F1EC;&#x1F1ED; About GhanaOpinionPay</h2>
+    <div style="font-size:13.5px;color:var(--text-mid);line-height:1.8">
+      <p style="margin-bottom:14px"><strong>GhanaOpinionPay</strong> is Ghana's premier paid survey and opinion platform — built by Ghanaians, for Ghanaians. We connect everyday citizens with brands, researchers, and organisations who need honest feedback on the products and services they deliver.</p>
+      <h3 style="color:var(--green);font-size:15px;margin-bottom:8px">Our Mission</h3>
+      <p style="margin-bottom:14px">To empower every Ghanaian with the opportunity to earn real money simply by sharing their voice. Whether you're a student, a professional, a trader, or a homemaker — your opinion has value, and we make sure you get paid for it.</p>
+      <h3 style="color:var(--green);font-size:15px;margin-bottom:8px">What We Offer</h3>
+      <ul style="margin-bottom:14px;padding-left:18px">
+        <li>Paid surveys on topics ranging from banking to food, health, elections, and more</li>
+        <li>Sponsored video views from Ghanaian and African brands</li>
+        <li>Daily polls and opinion questions</li>
+        <li>A referral programme that rewards you for bringing in others</li>
+        <li>Fast and reliable GHS payouts via Mobile Money and bank transfer</li>
+      </ul>
+      <h3 style="color:var(--green);font-size:15px;margin-bottom:8px">Our Values</h3>
+      <ul style="margin-bottom:14px;padding-left:18px">
+        <li><strong>Transparency</strong> — We are honest about how much you earn and when you get paid</li>
+        <li><strong>Integrity</strong> — We never sell your personal data without consent</li>
+        <li><strong>Inclusion</strong> — We serve all 16 regions of Ghana across all tiers</li>
+        <li><strong>Accountability</strong> — Every payment is tracked and verified by our admin team</li>
+      </ul>
+      <h3 style="color:var(--green);font-size:15px;margin-bottom:8px">Contact Us</h3>
+      <p>Email: <a href="/cdn-cgi/l/email-protection#e7a08f86898688978e898e888997869ea7808a868e8bc984888a" style="color:var(--green)"><span class="__cf_email__" data-cfemail="105778717e717f60797e797f7e60716950777d71797c3e737f7d">[email&#160;protected]</span></a></p>
+    </div>
+  </div>
+</div>
+
+<!-- TERMS OF SERVICE MODAL -->
+<div class="modal-overlay" id="termsModal">
+  <div class="modal" style="max-width:620px;max-height:80vh;overflow-y:auto">
+    <button class="modal-close" id="closeTermsBtn">&#x2715;</button>
+    <h2 style="color:var(--green)">&#x1F4DC; Terms of Service</h2>
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Last updated: January 2025</p>
+    <div style="font-size:13px;color:var(--text-mid);line-height:1.8">
+      <h3 style="font-size:14px;color:#0d1117;margin-bottom:6px">1. Eligibility</h3>
+      <p style="margin-bottom:12px">GhanaOpinionPay is open to Ghanaian residents aged 18 and above. By registering, you confirm that you are at least 18 years old and that the information you provide is accurate and truthful.</p>
+      <h3 style="font-size:14px;color:#0d1117;margin-bottom:6px">2. Account Registration</h3>
+      <p style="margin-bottom:12px">Each person may hold only one account. Creating multiple accounts to earn additional rewards is strictly prohibited and will result in permanent banning of all associated accounts. Your registered Mobile Money number is permanent and cannot be changed.</p>
+      <h3 style="font-size:14px;color:#0d1117;margin-bottom:6px">3. Earning & Surveys</h3>
+      <p style="margin-bottom:12px">You must answer all survey questions honestly and thoughtfully. Providing random, inconsistent, or dishonest answers to complete surveys faster may result in earnings being withheld and your account being suspended. GhanaOpinionPay reserves the right to review survey responses for quality.</p>
+      <h3 style="font-size:14px;color:#0d1117;margin-bottom:6px">4. Withdrawals</h3>
+      <p style="margin-bottom:12px">Withdrawals are processed every Monday and Thursday. Minimum withdrawal amounts apply per tier. A processing fee applies from the second withdrawal onwards (or on every withdrawal for Free tier accounts). GhanaOpinionPay is not responsible for delays caused by Mobile Money networks or banks.</p>
+      <h3 style="font-size:14px;color:#0d1117;margin-bottom:6px">5. Account Suspension & Termination</h3>
+      <p style="margin-bottom:12px">GhanaOpinionPay reserves the right to suspend or permanently terminate any account found to be in violation of these terms, including but not limited to: fraudulent activity, multiple accounts, fake survey responses, abuse of the referral programme, or any conduct deemed harmful to the platform.</p>
+      <h3 style="font-size:14px;color:#0d1117;margin-bottom:6px">6. Changes to Terms</h3>
+      <p style="margin-bottom:12px">GhanaOpinionPay may update these terms at any time. Continued use of the platform after changes constitutes acceptance of the new terms. Major changes will be communicated to members via in-platform notifications.</p>
+      <h3 style="font-size:14px;color:#0d1117;margin-bottom:6px">7. Limitation of Liability</h3>
+      <p style="margin-bottom:12px">GhanaOpinionPay provides the platform on an "as is" basis. We are not liable for any indirect, incidental, or consequential damages arising from your use of the platform. Our total liability to any member shall not exceed the total earnings accumulated in their account.</p>
+      <h3 style="font-size:14px;color:#0d1117;margin-bottom:6px">8. Contact</h3>
+      <p>For questions about these terms, email us at <a href="/cdn-cgi/l/email-protection#4b0c232a252a243b22252224253b2a320b2c262a222765282426" style="color:var(--green)"><span class="__cf_email__" data-cfemail="feb9969f909f918e97909791908e9f87be99939f9792d09d9193">[email&#160;protected]</span></a>.</p>
+    </div>
+  </div>
+</div>
+
+<!-- PRIVACY POLICY MODAL -->
+<div class="modal-overlay" id="privacyModal">
+  <div class="modal" style="max-width:620px;max-height:80vh;overflow-y:auto">
+    <button class="modal-close" id="closePrivacyBtn">&#x2715;</button>
+    <h2 style="color:var(--green)">&#x1F512; Privacy Policy</h2>
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Last updated: January 2025</p>
+    <div style="font-size:13px;color:var(--text-mid);line-height:1.8">
+      <h3 style="font-size:14px;color:#0d1117;margin-bottom:6px">1. Information We Collect</h3>
+      <p style="margin-bottom:12px">We collect the following information when you register: full name, email address, Mobile Money number, region, age range, and gender. We also collect survey responses, activity data (surveys completed, videos watched, polls answered), and transaction records.</p>
+      <h3 style="font-size:14px;color:#0d1117;margin-bottom:6px">2. How We Use Your Information</h3>
+      <ul style="margin-bottom:12px;padding-left:18px">
+        <li>To operate and manage your GhanaOpinionPay account</li>
+        <li>To process your earnings and withdrawals</li>
+        <li>To match you with relevant surveys and content</li>
+        <li>To detect and prevent fraud and multiple accounts</li>
+        <li>To communicate platform updates and notifications</li>
+        <li>To provide anonymised, aggregated research data to clients</li>
+      </ul>
+      <h3 style="font-size:14px;color:#0d1117;margin-bottom:6px">3. Data Sharing</h3>
+      <p style="margin-bottom:12px">We do not sell your personal data to third parties. Survey responses may be shared with research clients in aggregated, anonymised form only — your name, phone number, and personal details are never disclosed. We may share information with payment processors (such as Paystack) solely to facilitate withdrawals.</p>
+      <h3 style="font-size:14px;color:#0d1117;margin-bottom:6px">4. Data Storage</h3>
+      <p style="margin-bottom:12px">Your account data is currently stored locally in your browser's localStorage. This means your data remains on your device. GhanaOpinionPay does not operate a central server that stores your personal information at this time.</p>
+      <h3 style="font-size:14px;color:#0d1117;margin-bottom:6px">5. Your Rights</h3>
+      <p style="margin-bottom:12px">You have the right to request access to, correction of, or deletion of your personal data. To exercise these rights, contact us at <a href="/cdn-cgi/l/email-protection#37705f56595658475e595e585947564e77505a565e5b1954585a" style="color:var(--green)"><span class="__cf_email__" data-cfemail="db9cb3bab5bab4abb2b5b2b4b5abbaa29bbcb6bab2b7f5b8b4b6">[email&#160;protected]</span></a>. Account deletion requests will be processed within 7 business days.</p>
+      <h3 style="font-size:14px;color:#0d1117;margin-bottom:6px">6. Security</h3>
+      <p style="margin-bottom:12px">We take reasonable measures to protect your information. However, no online platform can guarantee 100% security. Please use a strong, unique password for your account and do not share your login details with anyone.</p>
+      <h3 style="font-size:14px;color:#0d1117;margin-bottom:6px">7. Contact</h3>
+      <p>Privacy concerns? Email us at <a href="/cdn-cgi/l/email-protection#c483aca5aaa5abb4adaaadabaab4a5bd84a3a9a5ada8eaa7aba9" style="color:var(--green)"><span class="__cf_email__" data-cfemail="54133c353a353b243d3a3d3b3a24352d143339353d387a373b39">[email&#160;protected]</span></a>.</p>
+    </div>
+  </div>
+</div>
+
+<!-- MEMBER DELETE CONFIRMATION MODAL -->
+<div class="modal-overlay" id="memberDeleteModal">
+  <div class="modal modal-sm">
+    <button class="modal-close" id="closeMemberDeleteBtn">&#x2715;</button>
+    <h2 style="color:var(--red)">&#x26A0; Delete Your Account?</h2>
+    <p style="font-size:13.5px;color:var(--text-muted);margin-bottom:16px;line-height:1.7">Are you sure you want to delete your account? Your account will be <strong>permanently deleted after 7 days</strong>. You can log back in at any time within 7 days to cancel and reactivate it.</p>
+    <div style="background:var(--red-pale);border:1px solid var(--red);border-radius:9px;padding:12px 14px;margin-bottom:16px;font-size:13px;color:var(--red);line-height:1.6">
+      &#x26A0; Your balance of <strong id="deleteBalanceWarning">GHS 0.00</strong> will be forfeited if you do not withdraw before deletion.
+    </div>
+    <div class="fg"><label>Type <strong>DELETE</strong> to confirm</label><input type="text" id="deleteConfirmInput" placeholder="Type DELETE here"/></div>
+    <div class="err-box" id="memberDeleteError"></div>
+    <button class="sbtn" style="background:var(--red)" id="confirmMemberDeleteBtn">Yes, Delete My Account</button>
+  </div>
+</div>
+
+<!-- PENDING DELETION SCREEN -->
+<div id="pendingDeletionPage" style="display:none;position:fixed;inset:0;z-index:600;background:#f0f2f5;overflow-y:auto">
+  <div style="max-width:500px;margin:0 auto;padding:40px 20px">
+    <div style="text-align:center;margin-bottom:28px">
+      <div style="font-size:28px;font-weight:800;color:#0d1117;font-family:Georgia,serif">Ghana<span style="color:var(--green)">OpinionPay</span></div>
+    </div>
+    <div style="background:#fff;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,.08);overflow:hidden">
+      <div style="background:var(--red);padding:24px;text-align:center">
+        <div style="font-size:40px;margin-bottom:8px">&#x1F5D1;</div>
+        <div style="font-size:20px;font-weight:700;color:#fff">Account Deletion Scheduled</div>
+        <div style="font-size:13.5px;color:rgba(255,255,255,.85);margin-top:6px" id="deletionUserName">Your account is scheduled for deletion.</div>
+      </div>
+      <div style="padding:24px">
+        <div style="background:var(--warm-gray);border-radius:10px;padding:16px;text-align:center;margin-bottom:20px">
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;font-weight:600">Permanent deletion in</div>
+          <div id="deletionCountdown" style="font-size:28px;font-weight:700;color:var(--red)">7 days</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:4px" id="deletionDate">Scheduled for: —</div>
+        </div>
+        <p style="font-size:13.5px;color:var(--text-muted);margin-bottom:20px;line-height:1.7;text-align:center">Changed your mind? Click below to cancel the deletion and reactivate your account instantly.</p>
+        <button class="sbtn" style="background:var(--green);margin-bottom:10px" id="reactivateFromDeletionBtn">&#x2705; Cancel Deletion &amp; Reactivate</button>
+        <button style="width:100%;padding:11px;background:none;border:1.5px solid #e5e7eb;border-radius:9px;font-size:13.5px;cursor:pointer;color:var(--text-muted);font-family:var(--font-body)" id="logoutFromDeletionBtn">Log Out</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CONTACT MODAL -->
+<div class="modal-overlay" id="contactModal">
+  <div class="modal modal-sm">
+    <button class="modal-close" id="closeContactBtn">&#x2715;</button>
+    <h2 style="color:var(--green)">&#x1F4E7; Contact Us</h2>
+    <p style="font-size:13.5px;color:var(--text-muted);margin-bottom:20px;line-height:1.7">We'd love to hear from you. Whether you have a question, a complaint, or a suggestion — reach out and we'll respond within 24 hours.</p>
+    <div style="background:var(--green-pale);border:1.5px solid var(--green);border-radius:12px;padding:20px;text-align:center;margin-bottom:16px">
+      <div style="font-size:32px;margin-bottom:8px">&#x1F4E8;</div>
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">Email us at</div>
+      <a href="/cdn-cgi/l/email-protection#703718111e111f00191e191f1e00110930171d11191c5e131f1d" style="font-size:16px;font-weight:700;color:var(--green);text-decoration:none"><span class="__cf_email__" data-cfemail="64230c050a050b140d0a0d0b0a14051d240309050d084a070b09">[email&#160;protected]</span></a>
+    </div>
+    <div style="font-size:13px;color:var(--text-muted);line-height:1.7">
+      <strong>Support hours:</strong> Monday – Saturday, 8am – 6pm GMT<br>
+      <strong>Response time:</strong> Within 24 hours on business days<br><br>
+      For urgent payment issues or account problems, please include your registered phone number and a brief description of the issue in your email.
+    </div>
+  </div>
+</div>
 
 <!-- LOGIN MODAL -->
 <div class="modal-overlay" id="loginModal">
@@ -616,7 +765,7 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
     <div class="fg"><label>Password</label><input type="password" id="regPassword" placeholder="Min. 6 characters"/></div>
     <div class="err-box" id="regError"></div>
     <button class="sbtn" id="doRegisterBtn">Continue to Payment &#x2192;</button>
-    <p class="modal-terms">By signing up you agree to our <a href="#">Terms</a> &amp; <a href="#">Privacy Policy</a>. Ghana residents 18+ only.</p>
+    <p class="modal-terms">By signing up you agree to our <a href="#" id="regTermsLink">Terms</a> &amp; <a href="#" id="regPrivacyLink">Privacy Policy</a>. Ghana residents 18+ only.</p>
   </div>
 </div>
 
@@ -783,6 +932,7 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
       <button class="d-tab" data-tab="polls">&#x26A1; Polls</button>
       <button class="d-tab" data-tab="videos">&#x25B6; Videos</button>
       <button class="d-tab" data-tab="ads">&#x1F4E2; View Ads</button>
+      <button class="d-tab" data-tab="pages">&#x1F4F1; Pages</button>
       <button class="d-tab" data-tab="withdraw">&#x1F4B8; Withdraw</button>
       <button class="d-tab" data-tab="referral">&#x1F4E4; Referral</button>
       <button class="d-tab" data-tab="upgrade">&#x2B06; Upgrade</button>
@@ -876,6 +1026,18 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
         <button class="sbtn" style="margin-top:4px" id="submitWithdrawBtn">Submit Withdrawal &#x2192;</button>
       </div>
       <div class="d-card"><div class="d-card-title">&#x1F4CB; Withdrawal History</div><div id="wHistory"><p style="font-size:13.5px;color:var(--text-muted);text-align:center;padding:18px">No withdrawal requests yet.</p></div></div>
+    </div>
+    <div class="d-tab-sec" id="tab-pages">
+      <div class="d-card">
+        <div class="d-card-title">
+          <span>&#x1F4F1; Follow Pages &amp; Earn</span>
+          <span id="pagesEarnBadge" style="font-size:12px;color:var(--text-muted);font-weight:400"></span>
+        </div>
+        <div style="background:var(--green-pale);border:1px solid var(--green);border-radius:9px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:var(--green);line-height:1.6">
+          &#x1F4B0; Earn <strong>GHS 1.00</strong> for every page you follow or join. Click the link, follow the page, then click <strong>"Claim Reward"</strong>.
+        </div>
+        <div id="memberPagesList"></div>
+      </div>
     </div>
     <div class="d-tab-sec" id="tab-referral">
       <div class="d-card">
@@ -993,6 +1155,11 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
           </div>
           <p style="font-size:12px;color:var(--text-muted);margin-top:6px">Earn GHS 3 for every friend who registers and makes their first cashout.</p>
         </div>
+        <div class="s-card" style="border-color:var(--red)">
+          <h3 style="color:var(--red)">&#x26A0; Delete My Account</h3>
+          <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px;line-height:1.6">Deleting your account will stop all earning activity. Your account will be <strong>permanently deleted after 7 days</strong>. You can cancel the deletion and reactivate your account within that time frame.</p>
+          <button class="sbtn" style="background:var(--red);max-width:220px" id="requestDeleteAccountBtn">&#x1F5D1; Delete My Account</button>
+        </div>
       </div>
     </div>
   </div>
@@ -1024,6 +1191,7 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
       <button class="a-tab" data-atab="withdrawals">&#x1F4B8; Withdrawals</button>
       <button class="a-tab" data-atab="content">&#x1F4CB; Content</button>
       <button class="a-tab" data-atab="issues">&#x1F6A8; Issues</button>
+      <button class="a-tab" data-atab="pages">&#x1F4F1; Pages</button>
       <button class="a-tab" data-atab="ads">&#x1F4E2; Ads</button>
       <button class="a-tab" data-atab="asettings">&#x2699; Settings</button>
     </div>
@@ -1148,6 +1316,44 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
         <div id="adminIssuesList"><p class="empty-row">No issues reported yet.</p></div>
       </div>
     </div>
+    <!-- PAGES TAB -->
+    <div class="a-section" id="atab-pages">
+      <div class="a-card">
+        <div class="a-card-title">
+          <span>&#x1F4F1; Social Media Pages</span>
+          <button class="add-btn" id="addPageBtn">&#x2795; Add Page</button>
+        </div>
+        <p style="font-size:13px;color:#6b7280;margin-bottom:16px;line-height:1.6">Add your social media pages. Members earn <strong style="color:var(--green)">GHS 1.00</strong> each time they follow or join a page. They click the link, then claim their reward.</p>
+        <div id="adminPagesList"><p class="empty-row">No pages added yet.</p></div>
+      </div>
+      <!-- Add page form -->
+      <div class="a-card" id="addPageForm" style="display:none">
+        <div class="a-card-title">&#x2795; Add New Page</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+          <div class="fg" style="margin:0"><label>Page Name</label><input type="text" id="pgName" placeholder="e.g. GhanaOpinionPay Official"/></div>
+          <div class="fg" style="margin:0"><label>Platform</label>
+            <select id="pgPlatform">
+              <option value="Facebook">&#x1F7E6; Facebook</option>
+              <option value="Twitter">&#x1D54F; X (Twitter)</option>
+              <option value="WhatsApp">&#x1F4AC; WhatsApp</option>
+              <option value="Instagram">&#x1F4F7; Instagram</option>
+              <option value="TikTok">&#x25FC; TikTok</option>
+              <option value="YouTube">&#x25B6; YouTube</option>
+              <option value="Telegram">&#x2708; Telegram</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+          <div class="fg" style="margin:0"><label>Page URL / Link</label><input type="url" id="pgUrl" placeholder="https://facebook.com/ghanaopinionpay"/></div>
+          <div class="fg" style="margin:0"><label>Earn Amount (GHS)</label><input type="number" id="pgEarn" value="1.00" min="0.10" step="0.10"/></div>
+        </div>
+        <div class="fg"><label>Description <span style="font-size:11px;color:#9ca3af">(optional)</span></label><input type="text" id="pgDesc" placeholder="e.g. Follow us for daily survey updates and bonuses"/></div>
+        <div style="display:flex;gap:10px">
+          <button class="add-btn" id="savePageBtn">&#x1F4BE; Save Page</button>
+          <button class="abtn" id="cancelAddPageBtn">Cancel</button>
+        </div>
+      </div>
+    </div>
     <!-- ADS MANAGEMENT TAB -->
     <div class="a-section" id="atab-ads">
       <div class="a-card">
@@ -1240,7 +1446,7 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
   </div>
 </div>
 
-<script>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
 // ═══════════════════════════════════════════════════════
 //  GhanaOpinionPay — All JavaScript
 //  Clean single script block — no external dependencies
@@ -1443,6 +1649,7 @@ function restoreSession(){
     }
     if(m.status==='active'){openMemberDashboard(m); startIdleTracking(); return;}
     if(m.status==='suspended'){currentUser=m; showSuspendedPage(m); return;}
+    if(m.status==='pending_deletion'){currentUser=m; showPendingDeletionPage(m); startIdleTracking(); return;}
     // Other inactive states — clear session
     localStorage.removeItem('gop_session');
   }catch(e){
@@ -1525,6 +1732,23 @@ document.addEventListener('DOMContentLoaded', function(){
   if(wAmtEl) wAmtEl.addEventListener('input', updateWithdrawFeePreview);
   bindClick('saveProfileBtn', saveProfile);
   bindClick('changePwBtn', changePassword);
+  bindClick('closeAboutBtn',   function(){el('aboutModal').classList.remove('open');});
+  bindClick('closeTermsBtn',   function(){el('termsModal').classList.remove('open');});
+  bindClick('closePrivacyBtn', function(){el('privacyModal').classList.remove('open');});
+  bindClick('closeContactBtn', function(){el('contactModal').classList.remove('open');});
+  // Footer links
+  bindClick('footerAbout',   function(e){e.preventDefault();el('aboutModal').classList.add('open');});
+  bindClick('footerTerms',   function(e){e.preventDefault();el('termsModal').classList.add('open');});
+  bindClick('footerPrivacy', function(e){e.preventDefault();el('privacyModal').classList.add('open');});
+  bindClick('footerContact', function(e){e.preventDefault();el('contactModal').classList.add('open');});
+  // Reg modal links
+  bindClick('regTermsLink',   function(e){e.preventDefault();el('termsModal').classList.add('open');});
+  bindClick('regPrivacyLink', function(e){e.preventDefault();el('privacyModal').classList.add('open');});
+  bindClick('requestDeleteAccountBtn', openMemberDeleteModal);
+  bindClick('closeMemberDeleteBtn', closeMemberDeleteModal);
+  bindClick('confirmMemberDeleteBtn', confirmMemberDelete);
+  bindClick('reactivateFromDeletionBtn', reactivateFromDeletion);
+  bindClick('logoutFromDeletionBtn', logout);
   bindClick('copyRefBtn', copyRefLink);
   bindClick('suspendedSendBtn', submitSuspendedMessage);
   bindClick('suspendedLogoutBtn', logout);
@@ -1586,6 +1810,12 @@ document.addEventListener('DOMContentLoaded', function(){
       renderMembersTable();
     });
   });
+  bindClick('addPageBtn', function(){
+    el('addPageForm').style.display='block';
+    el('addPageForm').scrollIntoView({behavior:'smooth',block:'nearest'});
+  });
+  bindClick('savePageBtn', addPage);
+  bindClick('cancelAddPageBtn', function(){el('addPageForm').style.display='none';});
   bindClick('addSurveyBtn', function(){
     expandContentCard('surveyCardBody');
     openAddContent('survey');
@@ -1638,6 +1868,8 @@ document.addEventListener('DOMContentLoaded', function(){
     });
   });
 
+  // Check and purge accounts past 7-day deletion window
+  checkScheduledDeletions();
   // Restore session after refresh — must be last so all DOM elements are ready
   restoreSession();
   // Paystack payment callback check
@@ -1651,6 +1883,9 @@ function bindClose(id, fn){var b=el(id);if(b) b.addEventListener('click',functio
 document.addEventListener('click',function(e){
   if(e.target.classList.contains('modal-overlay')) {
     closeLoginModal(); closeRegisterModal(); closeDeleteModal(); closeAddContentModal();
+    ['aboutModal','termsModal','privacyModal','contactModal','penaltyModal','memberDeleteModal'].forEach(function(id){
+      var m=el(id); if(m) m.classList.remove('open');
+    });
     var sm=el('surveyModal');
     if(sm && e.target===sm) closeSurveyModal();
   }
@@ -1715,6 +1950,9 @@ function doLogin(){
   }
   if(m.status==='suspended'){
     closeLoginModal(); currentUser=m; saveSession(); showSuspendedPage(m); return;
+  }
+  if(m.status==='pending_deletion'){
+    closeLoginModal(); currentUser=m; saveSession(); showPendingDeletionPage(m); startIdleTracking(); return;
   }
   if(m.status!=='active'){showErr('loginError','Your account is not active. Contact support.'); return;}
   currentUser=m; saveSession(); closeLoginModal(); openMemberDashboard(m); startIdleTracking();
@@ -1938,6 +2176,7 @@ function openMemberDashboard(member){
   renderMyIssues(member);
   renderReferralTab(member);
   renderUpgradeTab(member);
+  renderMemberPages(member);
   renderMemberAdsTab(member);
   checkDailyStreakBonus(member);
 }
@@ -2018,6 +2257,7 @@ function switchDashTab(name, btn){
   if(btn) btn.classList.add('active');
   // Refresh ads tab when opened
   if(name==='ads' && currentUser && !isAdminUser()) renderMemberAdsTab(currentUser);
+  if(name==='pages' && currentUser && !isAdminUser()) renderMemberPages(currentUser);
 }
 
 // ── SURVEYS ───────────────────────────────────────────
@@ -2553,13 +2793,16 @@ function startIdleTracking(){
     if(!fresh){logout(); return;}
     if(fresh.status==='suspended'){
       currentUser=fresh; saveSession();
-      // Only redirect if not already on the suspended page
       if(el('suspendedPage').style.display==='none'){
         showSuspendedPage(fresh);
       } else {
-        // Already on page — just refresh replies silently
         renderSuspendedReplies(fresh);
       }
+      return;
+    }
+    if(fresh.status==='pending_deletion'){
+      currentUser=fresh; saveSession();
+      if(el('pendingDeletionPage').style.display==='none') showPendingDeletionPage(fresh);
       return;
     }
     if(fresh.status==='payment_failed'){logout();}
@@ -2581,6 +2824,7 @@ function logout(){
   hide('adminDashboard');
   hide('paymentPage');
   hide('suspendedPage');
+  hide('pendingDeletionPage');
   document.body.style.overflow='auto';
   window.scrollTo(0,0);
 }
@@ -2619,6 +2863,7 @@ function openAdminDashboard(){
   renderAdminUpgradeRequests();
   renderSubAdminList();
   renderProfilesTab();
+  renderAdminPages();
 }
 
 function refreshAdminMetrics(){
@@ -2667,6 +2912,7 @@ function switchAdminTab(name, btn){
   if(name==='issues') renderAdminIssues();
   if(name==='asettings') renderSubAdminList();
   if(name==='profiles') renderProfilesTab();
+  if(name==='pages') renderAdminPages();
 }
 
 // ── ADMIN: PENDING PAYMENTS ───────────────────────────
@@ -2807,6 +3053,7 @@ function renderMembersTable(){
       var sb=m.status==='active'?'<span class="s-active">Active</span>':
              m.status==='awaiting_verification'?'<span class="s-awaiting">Awaiting</span>':
              m.status==='payment_failed'?'<span class="s-failed">Pay Failed</span>':
+             m.status==='pending_deletion'?'<span style="background:#fff3e0;color:#b45309;font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:9px">&#x1F5D1; Deleting</span>':
              '<span class="s-suspended">Suspended</span>';
 
       // Poll limit: base tier default + any admin override
@@ -4495,6 +4742,253 @@ function renderProfilesTab(){
   });
 }
 
+// ── MEMBER SELF-DELETION ─────────────────────────────
+function openMemberDeleteModal(){
+  if(!currentUser||isAdminUser()) return;
+  var bal=(currentUser.balance||0).toFixed(2);
+  setText('deleteBalanceWarning','GHS '+bal);
+  setVal('deleteConfirmInput','');
+  hideErr('memberDeleteError');
+  el('memberDeleteModal').classList.add('open');
+}
+
+function closeMemberDeleteModal(){
+  el('memberDeleteModal').classList.remove('open');
+}
+
+function confirmMemberDelete(){
+  var input=(val('deleteConfirmInput')||'').trim().toUpperCase();
+  if(input!=='DELETE'){
+    showErr('memberDeleteError','Please type DELETE to confirm.');
+    return;
+  }
+  var members=getMembers();
+  var idx=members.findIndex(function(m){return m.id===currentUser.id;});
+  if(idx<0) return;
+  // Schedule deletion — 7 days from now
+  var deletionDate=new Date();
+  deletionDate.setDate(deletionDate.getDate()+7);
+  members[idx].status='pending_deletion';
+  members[idx].deletionScheduledAt=new Date().toISOString();
+  members[idx].deletionDueAt=deletionDate.toISOString();
+  members[idx].notifications=members[idx].notifications||[];
+  members[idx].notifications.push('&#x1F5D1; Your account deletion has been scheduled. Your account will be permanently deleted on <strong>'+deletionDate.toLocaleDateString('en-GB')+'</strong>. Log back in before then to cancel and reactivate.');
+  saveMembers(members);
+  currentUser=members[idx];
+  saveSession();
+  closeMemberDeleteModal();
+  hide('memberDashboard');
+  showPendingDeletionPage(currentUser);
+}
+
+function showPendingDeletionPage(member){
+  hide('memberDashboard'); hide('adminDashboard'); hide('paymentPage'); hide('suspendedPage');
+  show('pendingDeletionPage');
+  document.body.style.overflow='auto';
+  setText('deletionUserName','Hello '+member.firstName+' — your account is scheduled for deletion.');
+  // Calculate days remaining
+  var dueAt=member.deletionDueAt?new Date(member.deletionDueAt):new Date(Date.now()+7*24*60*60*1000);
+  var now=new Date();
+  var msLeft=dueAt-now;
+  var daysLeft=Math.max(0,Math.ceil(msLeft/(1000*60*60*24)));
+  var hoursLeft=Math.max(0,Math.ceil(msLeft/(1000*60*60)));
+  var display=daysLeft>1?daysLeft+' days':daysLeft===1?'1 day':hoursLeft>0?hoursLeft+' hours':'Less than 1 hour';
+  setText('deletionCountdown',display);
+  setText('deletionDate','Permanent deletion on: '+dueAt.toLocaleDateString('en-GB'));
+  startIdleTracking();
+}
+
+function reactivateFromDeletion(){
+  if(!currentUser||isAdminUser()) return;
+  var members=getMembers();
+  var idx=members.findIndex(function(m){return m.id===currentUser.id;});
+  if(idx<0) return;
+  members[idx].status='active';
+  delete members[idx].deletionScheduledAt;
+  delete members[idx].deletionDueAt;
+  members[idx].notifications=members[idx].notifications||[];
+  members[idx].notifications.push('&#x2705; Account deletion cancelled. Your account has been fully reactivated. Welcome back!');
+  saveMembers(members);
+  currentUser=members[idx];
+  saveSession();
+  hide('pendingDeletionPage');
+  openMemberDashboard(currentUser);
+}
+
+function checkScheduledDeletions(){
+  // Run on every page load — purge accounts past their 7-day window
+  var members=getMembers();
+  var now=new Date();
+  var changed=false;
+  var toDelete=[];
+  members.forEach(function(m){
+    if(m.status==='pending_deletion'&&m.deletionDueAt){
+      var due=new Date(m.deletionDueAt);
+      if(now>=due) toDelete.push(m.id);
+    }
+  });
+  if(!toDelete.length) return;
+  // Add to blacklist and remove from members
+  try{
+    var bl=JSON.parse(localStorage.getItem('gop_deleted')||'[]');
+    toDelete.forEach(function(id){if(bl.indexOf(id)<0) bl.push(id);});
+    localStorage.setItem('gop_deleted',JSON.stringify(bl));
+  }catch(e){}
+  var remaining=members.filter(function(m){return toDelete.indexOf(m.id)<0;});
+  if(remaining.length<members.length){saveMembers(remaining);}
+  // If current user was in the deletion list, log them out
+  if(currentUser&&!isAdminUser()&&toDelete.indexOf(currentUser.id)>=0){
+    logout();
+  }
+}
+
+// ── PAGES ─────────────────────────────────────────────
+function getPages(){return ld('gop_pages',[]);}
+function savePages(v){sv('gop_pages',v);}
+
+function renderAdminPages(){
+  var pages=getPages();
+  var el2=el('adminPagesList');
+  if(!el2) return;
+  if(!pages.length){el2.innerHTML='<p class="empty-row">No pages added yet. Click "+ Add Page" to get started.</p>';return;}
+  var html='';
+  var platformIcons={Facebook:'&#x1F7E6;',Twitter:'&#x1D54F;',WhatsApp:'&#x1F4AC;',Instagram:'&#x1F4F7;',TikTok:'&#x25FC;',YouTube:'&#x25B6;',Telegram:'&#x2708;'};
+  var platformColors={Facebook:'#1877f2',Twitter:'#000',WhatsApp:'#25d366',Instagram:'#e1306c',TikTok:'#000',YouTube:'#ff0000',Telegram:'#0088cc'};
+  pages.forEach(function(p,i){
+    var icon=platformIcons[p.platform]||'&#x1F517;';
+    var color=platformColors[p.platform]||'#374151';
+    var members=getMembers();
+    var claimedCount=members.filter(function(m){return (m.completedPages||[]).indexOf(p.id)>=0;}).length;
+    html+='<div style="border:1.5px solid #e5e7eb;border-radius:10px;padding:14px 16px;margin-bottom:10px;background:#fff">';
+    html+='<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">';
+    html+='<div style="display:flex;align-items:center;gap:10px">';
+    html+='<div style="width:40px;height:40px;border-radius:10px;background:'+color+';display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff;flex-shrink:0">'+icon+'</div>';
+    html+='<div><div style="font-size:14px;font-weight:700;color:#0d1117">'+p.name+'</div>';
+    html+='<div style="font-size:12px;color:#6b7280;margin-top:2px">'+p.platform+' &middot; <a href="'+p.url+'" target="_blank" rel="noopener" style="color:'+color+'">'+p.url.substring(0,40)+(p.url.length>40?'...':'')+'</a></div>';
+    if(p.desc) html+='<div style="font-size:12px;color:#9ca3af;margin-top:2px">'+p.desc+'</div>';
+    html+='</div></div>';
+    html+='<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">';
+    html+='<span style="font-size:13px;font-weight:700;color:var(--green)">GHS '+p.earn.toFixed(2)+'/follow</span>';
+    html+='<span style="font-size:11.5px;background:#f3f4f6;color:#374151;padding:3px 9px;border-radius:20px">'+claimedCount+' claimed</span>';
+    html+='<span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;background:'+(p.active?'#d1fae5':'#fee2e2')+';color:'+(p.active?'#065f46':'#991b1b')+'">'+(p.active?'Active':'Inactive')+'</span>';
+    html+='<button class="abtn" data-pgtoggle="'+i+'">'+(p.active?'Deactivate':'Activate')+'</button>';
+    // Edit earn
+    html+='<input type="number" data-pgearnidx="'+i+'" value="'+p.earn.toFixed(2)+'" min="0.10" step="0.10" style="width:75px;padding:5px 8px;border:1.5px solid #e5e7eb;border-radius:7px;font-size:12.5px;outline:none"/>';
+    html+='<button class="abtn" data-pgsaveearn="'+i+'" style="white-space:nowrap">&#x1F4BE;</button>';
+    html+='<button class="abtn danger" data-pgremove="'+i+'">&#x1F5D1;</button>';
+    html+='</div></div></div>';
+  });
+  el2.innerHTML=html;
+  // Bindings
+  el2.querySelectorAll('[data-pgtoggle]').forEach(function(b){
+    b.addEventListener('click',function(){
+      var p=getPages(); p[parseInt(b.dataset.pgtoggle)].active=!p[parseInt(b.dataset.pgtoggle)].active;
+      savePages(p); renderAdminPages();
+    });
+  });
+  el2.querySelectorAll('[data-pgsaveearn]').forEach(function(b){
+    b.addEventListener('click',function(){
+      var idx=parseInt(b.dataset.pgsaveearn);
+      var inp=el2.querySelectorAll('[data-pgearnidx="'+idx+'"]')[0];
+      var earn=inp?parseFloat(inp.value):0;
+      if(!earn||earn<0.10){adminAlert('Earn must be at least GHS 0.10');return;}
+      var p=getPages(); p[idx].earn=earn; savePages(p); renderAdminPages();
+      adminAlert('Page earn updated to GHS '+earn.toFixed(2));
+    });
+  });
+  el2.querySelectorAll('[data-pgremove]').forEach(function(b){
+    b.addEventListener('click',function(){
+      if(confirm('Remove this page?')){
+        var p=getPages(); p.splice(parseInt(b.dataset.pgremove),1); savePages(p); renderAdminPages();
+      }
+    });
+  });
+}
+
+function addPage(){
+  var name=(val('pgName')||'').trim();
+  var platform=val('pgPlatform');
+  var url=(val('pgUrl')||'').trim();
+  var earn=parseFloat(val('pgEarn'))||1.00;
+  var desc=(val('pgDesc')||'').trim();
+  if(!name){adminAlert('Please enter a page name.');return;}
+  if(!url||!url.startsWith('http')){adminAlert('Please enter a valid URL starting with https://');return;}
+  var pages=getPages();
+  pages.push({id:'PG'+Date.now(),name:name,platform:platform,url:url,earn:earn,desc:desc,active:true,created:today()});
+  savePages(pages);
+  // Reset form
+  setVal('pgName',''); setVal('pgUrl',''); setVal('pgDesc',''); setVal('pgEarn','1.00');
+  el('addPageForm').style.display='none';
+  renderAdminPages();
+  adminAlert('Page "'+name+'" added! Members can now follow and earn.');
+}
+
+// ── MEMBER: FOLLOW PAGES & EARN ──────────────────────
+function renderMemberPages(member){
+  var pages=getPages().filter(function(p){return p.active;});
+  var el2=el('memberPagesList');
+  if(!el2) return;
+  var completed=member.completedPages||[];
+  var badge=el('pagesEarnBadge');
+  if(badge) setText('pagesEarnBadge',completed.length+' followed &middot; '+pages.length+' available');
+  if(!pages.length){
+    el2.innerHTML='<p style="font-size:13.5px;color:var(--text-muted);text-align:center;padding:24px">No pages available right now. Check back soon!</p>';
+    return;
+  }
+  var platformIcons={Facebook:'&#x1F7E6;',Twitter:'&#x1D54F;',WhatsApp:'&#x1F4AC;',Instagram:'&#x1F4F7;',TikTok:'&#x25FC;',YouTube:'&#x25B6;',Telegram:'&#x2708;'};
+  var platformColors={Facebook:'#1877f2',Twitter:'#000000',WhatsApp:'#25d366',Instagram:'#e1306c',TikTok:'#000000',YouTube:'#ff0000',Telegram:'#0088cc'};
+  var html='';
+  pages.forEach(function(p){
+    var done=completed.indexOf(p.id)>=0;
+    var icon=platformIcons[p.platform]||'&#x1F517;';
+    var color=platformColors[p.platform]||'var(--green)';
+    html+='<div style="border:1.5px solid '+(done?'#e5e7eb':'var(--border)')+';border-radius:12px;padding:14px 16px;margin-bottom:12px;background:'+(done?'#f9fafb':'#fff')+';transition:all .2s">';
+    html+='<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">';
+    html+='<div style="width:46px;height:46px;border-radius:12px;background:'+color+';display:flex;align-items:center;justify-content:center;font-size:22px;color:#fff;flex-shrink:0">'+icon+'</div>';
+    html+='<div style="flex:1;min-width:0">';
+    html+='<div style="font-size:14px;font-weight:700;color:#0d1117">'+p.name+'</div>';
+    html+='<div style="font-size:12px;color:#6b7280;margin-top:2px">'+p.platform+(p.desc?' &middot; '+p.desc:'')+'</div>';
+    html+='</div>';
+    html+='<div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">';
+    html+='<span style="font-size:18px;font-weight:700;color:var(--green)">GHS '+p.earn.toFixed(2)+'</span>';
+    if(done){
+      html+='<span style="background:#d1fae5;color:var(--green);font-size:12px;font-weight:700;padding:5px 14px;border-radius:9px">&#x2714; Followed</span>';
+    } else {
+      html+='<a href="'+p.url+'" target="_blank" rel="noopener" class="c-btn" style="background:'+color+';color:#fff;text-decoration:none;text-align:center;white-space:nowrap">&#x1F517; Follow / Join</a>';
+      html+='<button class="c-btn" data-claimpage="'+p.id+'" style="background:var(--green);color:#fff;white-space:nowrap">&#x2705; Claim GHS '+p.earn.toFixed(2)+'</button>';
+    }
+    html+='</div></div></div>';
+  });
+  el2.innerHTML=html;
+  el2.querySelectorAll('[data-claimpage]').forEach(function(b){
+    b.addEventListener('click',function(){claimPageReward(b.dataset.claimpage);});
+  });
+}
+
+function claimPageReward(pageId){
+  if(!currentUser||isAdminUser()) return;
+  var pages=getPages();
+  var page=pages.find(function(p){return p.id===pageId;});
+  if(!page||!page.active) return;
+  var members=getMembers();
+  var idx=members.findIndex(function(m){return m.id===currentUser.id;});
+  if(idx<0) return;
+  members[idx].completedPages=members[idx].completedPages||[];
+  if(members[idx].completedPages.indexOf(pageId)>=0) return; // already claimed
+  members[idx].completedPages.push(pageId);
+  members[idx].balance=parseFloat(((members[idx].balance||0)+page.earn).toFixed(2));
+  members[idx].monthEarned=parseFloat(((members[idx].monthEarned||0)+page.earn).toFixed(2));
+  members[idx].notifications=members[idx].notifications||[];
+  members[idx].notifications.push('&#x1F4F1; <strong>GHS '+page.earn.toFixed(2)+'</strong> earned for following <strong>'+page.name+'</strong> on '+page.platform+'!');
+  saveMembers(members);
+  currentUser=members[idx];
+  setText('dmBal','GHS '+(currentUser.balance||0).toFixed(2));
+  setText('dmMonth','GHS '+(currentUser.monthEarned||0).toFixed(2));
+  renderMemberPages(currentUser);
+  renderNotifications(currentUser);
+  checkDailyStreakBonus(currentUser);
+}
+
 function broadcastAnn(){
   var text=(val('annText')||'').trim();
   if(!text){alert('Please enter an announcement.'); return;}
@@ -4774,7 +5268,7 @@ function confirmPayment(){
       balance:0,monthEarned:0,referrals:0,referralEarnings:0,
       ghSurveyDone:false,withdrawalCount:0,streakBonusDate:'',streakDays:0,
       dailySurveyDate:'',dailySurveyCount:0,dailyPollDate:'',dailyPollCount:0,
-      dailyAdDate:'',dailyAdCount:0,viewedAdsToday:[],answeredPolls:[],completedSurveys:[],completedVideos:[],
+      dailyAdDate:'',dailyAdCount:0,viewedAdsToday:[],answeredPolls:[],completedSurveys:[],completedVideos:[],completedPages:[],
       notifications:['&#x1F193; Welcome to GhanaOpinionPay Free tier! Your account is awaiting admin activation.']
     };
     var mems=getMembers();mems.push(mFree);saveMembers(mems);
@@ -4869,7 +5363,7 @@ function createMemberAccount(reg, tier, ref){
     dailySurveyDate:'', dailySurveyCount:0,
     dailyPollDate:'', dailyPollCount:0,
     dailyAdDate:'', dailyAdCount:0,
-    viewedAdsToday:[], answeredPolls:[], completedSurveys:[], completedVideos:[],
+    viewedAdsToday:[], answeredPolls:[], completedSurveys:[], completedVideos:[], completedPages:[],
     notifications:['&#x2705; Payment of GHS '+tier.fee+' received via Paystack (Ref: '+ref+'). Your account is awaiting admin activation — usually within 20 minutes.']
   };
   members.push(m);
@@ -4892,6 +5386,5 @@ function showManualActivation(ref){
   document.body.appendChild(div);
 }
 </script>
-
 </body>
 </html>
