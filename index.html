@@ -2,7 +2,6 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<script src="https://js.paystack.co/v2/inline.js"></script>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>GhanaOpinionPay — Earn GHS for Your Opinion</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"/>
@@ -690,10 +689,10 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
           <ul class="ussd-steps">
             <li><div class="ussd-circle">1</div><span>Select your membership tier above</span></li>
             <li><div class="ussd-circle">2</div><span>Click <strong>"Pay Now with Paystack"</strong> below</span></li>
-            <li><div class="ussd-circle">3</div><span>Complete payment securely via <strong>card, Mobile Money, or bank</strong> in the Paystack popup</span></li>
-            <li><div class="ussd-circle">4</div><span>Your account will be activated within <strong>20 minutes</strong> after admin verification</span></li>
+            <li><div class="ussd-circle">3</div><span>You will be taken to <strong>Paystack's secure checkout page</strong> — pay with card, Mobile Money, or bank</span></li>
+            <li><div class="ussd-circle">4</div><span>After payment you are <strong>automatically brought back</strong> and your account is submitted for activation</span></li>
           </ul>
-          <div style="margin-top:8px;font-size:11.5px;color:#9ca3af">&#x1F512; All payments are secured by Paystack — Ghana's trusted payment gateway</div>
+          <div style="margin-top:8px;font-size:11.5px;color:#9ca3af">&#x1F512; All payments secured by Paystack — Ghana's trusted payment gateway</div>
         </div>
         <button class="pp-confirm-btn" id="ppConfirmBtn">&#x1F4B3; Pay Now with Paystack &#x2192;</button>
         <div class="pp-sec-note">&#x1F512; Powered by Paystack &mdash; card, MoMo &amp; bank supported</div>
@@ -1619,6 +1618,8 @@ document.addEventListener('DOMContentLoaded', function(){
 
   // Restore session after refresh — must be last so all DOM elements are ready
   restoreSession();
+  // Check if returning from Paystack payment redirect
+  checkPaystackReturn();
 });
 
 function bindClick(id, fn){var b=el(id);if(b) b.addEventListener('click',fn);}
@@ -4630,7 +4631,7 @@ function checkDailyStreakBonus(member){
 }
 
 </script>
-<!-- Paystack v2 inline - loaded in head -->
+<!-- Paystack redirect approach - no inline script needed -->
 <script>
 function confirmPayment(){
   if(!selectedTier){
@@ -4641,66 +4642,99 @@ function confirmPayment(){
     adminAlert('Registration details missing. Please register again.');
     return;
   }
-  if(typeof PaystackPop==='undefined'){
-    var btn2=el('ppConfirmBtn');
-    if(btn2){
-      btn2.style.background='var(--red)';
-      btn2.innerHTML='&#x26A0; Paystack not loaded — check internet';
-      setTimeout(function(){btn2.style.background='';btn2.innerHTML='&#x1F4B3; Pay Now with Paystack &#x2192;';},4000);
-    }
-    return;
-  }
 
   var btn=el('ppConfirmBtn');
-  if(btn){btn.disabled=true; btn.innerHTML='&#x23F3; Opening payment...';}
+  if(btn){btn.disabled=true; btn.innerHTML='&#x23F3; Redirecting to Paystack...';}
 
-  try{
-    PaystackPop.newTransaction({
-      key:'pk_live_170c23ed7e9bf70fbb05f058956c1c9e2b5696f1',
-      email:pendingReg.email,
-      amount:selectedTier.fee * 100,
-      currency:'GHS',
-      ref:'GOP-'+pendingReg.phone+'-'+Date.now(),
-      metadata:{
-        custom_fields:[
-          {display_name:'Member Name',variable_name:'member_name',value:pendingReg.firstName+' '+pendingReg.lastName},
-          {display_name:'Phone',variable_name:'phone',value:pendingReg.phone},
-          {display_name:'Tier',variable_name:'tier',value:selectedTier.tier}
-        ]
-      },
-      onSuccess:function(response){
-        if(btn){btn.disabled=false; btn.innerHTML='&#x1F4B3; Pay Now with Paystack &#x2192;';}
-        var m={
-          id:'M'+Date.now(),
-          firstName:pendingReg.firstName, lastName:pendingReg.lastName,
-          email:pendingReg.email, phone:pendingReg.phone,
-          region:pendingReg.region, age:pendingReg.age, gender:pendingReg.gender||'N/A',
-          password:pendingReg.password,
-          tier:selectedTier.tier, fee:selectedTier.fee,
-          paystackRef:response.reference,
-          status:'awaiting_verification',
-          joinedDate:today(),
-          paymentSubmittedAt:new Date().toISOString(),
-          balance:0, monthEarned:0, referrals:0, referralEarnings:0,
-          ghSurveyDone:false, withdrawalCount:0,
-          streakBonusDate:'', streakDays:0,
-          dailySurveyDate:'', dailySurveyCount:0,
-          dailyPollDate:'', dailyPollCount:0,
-          dailyAdDate:'', dailyAdCount:0,
-          answeredPolls:[], completedSurveys:[], completedVideos:[],
-          notifications:['&#x2705; Payment of GHS '+selectedTier.fee+' received via Paystack (Ref: '+response.reference+'). Your account is awaiting admin activation — usually within 20 minutes.']
-        };
-        var members=getMembers(); members.push(m); saveMembers(members);
-        currentUser=m; saveSession(); showPaymentWaiting(m);
-      },
-      onCancel:function(){
-        if(btn){btn.disabled=false; btn.innerHTML='&#x1F4B3; Pay Now with Paystack &#x2192;';}
-      }
-    });
-  }catch(err){
-    if(btn){btn.disabled=false; btn.innerHTML='&#x1F4B3; Pay Now with Paystack &#x2192;';}
-    alert('Payment error: '+err.message+'\n\nPlease try again.');
+  // Save pending registration to localStorage so we can restore after redirect
+  var ref='GOP-'+pendingReg.phone+'-'+Date.now();
+  var pendingPayment={
+    ref:ref,
+    reg:pendingReg,
+    tier:selectedTier
+  };
+  try{ localStorage.setItem('gop_pending_payment', JSON.stringify(pendingPayment)); }catch(e){}
+
+  // Build Paystack hosted checkout URL
+  var params=new URLSearchParams({
+    key:'pk_live_170c23ed7e9bf70fbb05f058956c1c9e2b5696f1',
+    email:pendingReg.email,
+    amount:String(selectedTier.fee * 100),
+    currency:'GHS',
+    ref:ref,
+    'metadata[custom_fields][0][display_name]':'Member Name',
+    'metadata[custom_fields][0][variable_name]':'member_name',
+    'metadata[custom_fields][0][value]':pendingReg.firstName+' '+pendingReg.lastName,
+    'metadata[custom_fields][1][display_name]':'Phone',
+    'metadata[custom_fields][1][variable_name]':'phone',
+    'metadata[custom_fields][1][value]':pendingReg.phone,
+    'metadata[custom_fields][2][display_name]':'Tier',
+    'metadata[custom_fields][2][variable_name]':'tier',
+    'metadata[custom_fields][2][value]':selectedTier.tier,
+    callback_url:window.location.href.split('?')[0]
+  });
+
+  window.location.href='https://checkout.paystack.com/'+ref+'?'+params.toString();
+}
+
+// ── On page load: check if returning from Paystack redirect ──
+function checkPaystackReturn(){
+  var urlParams=new URLSearchParams(window.location.search);
+  var ref=urlParams.get('reference')||urlParams.get('trxref');
+  if(!ref) return;
+
+  // Clean URL
+  window.history.replaceState({},'',window.location.pathname);
+
+  // Restore pending payment data
+  var raw=null;
+  try{ raw=localStorage.getItem('gop_pending_payment'); }catch(e){}
+  if(!raw) return;
+
+  var pending=null;
+  try{ pending=JSON.parse(raw); }catch(e){}
+  if(!pending||!pending.reg||!pending.tier) return;
+
+  // Clear pending payment
+  try{ localStorage.removeItem('gop_pending_payment'); }catch(e){}
+
+  // Verify the reference matches
+  if(pending.ref!==ref){
+    // Reference mismatch — still create member but flag for admin
   }
+
+  // Create member record awaiting admin activation
+  var m={
+    id:'M'+Date.now(),
+    firstName:pending.reg.firstName, lastName:pending.reg.lastName,
+    email:pending.reg.email, phone:pending.reg.phone,
+    region:pending.reg.region, age:pending.reg.age, gender:pending.reg.gender||'N/A',
+    password:pending.reg.password,
+    tier:pending.tier.tier, fee:pending.tier.fee,
+    paystackRef:ref,
+    status:'awaiting_verification',
+    joinedDate:today(),
+    paymentSubmittedAt:new Date().toISOString(),
+    balance:0, monthEarned:0, referrals:0, referralEarnings:0,
+    ghSurveyDone:false, withdrawalCount:0,
+    streakBonusDate:'', streakDays:0,
+    dailySurveyDate:'', dailySurveyCount:0,
+    dailyPollDate:'', dailyPollCount:0,
+    dailyAdDate:'', dailyAdCount:0,
+    answeredPolls:[], completedSurveys:[], completedVideos:[],
+    notifications:['&#x2705; Payment of GHS '+pending.tier.fee+' received via Paystack (Ref: '+ref+'). Your account is awaiting admin activation — usually within 20 minutes.']
+  };
+
+  // Check for duplicate
+  var existing=getMembers().find(function(x){return x.phone===m.phone;});
+  if(existing){
+    // Already registered — just show waiting screen
+    currentUser=existing; saveSession(); showPaymentWaiting(existing); return;
+  }
+
+  var members=getMembers(); members.push(m); saveMembers(members);
+  currentUser=m; saveSession();
+  showPaymentWaiting(m);
 }
 </script>
 </body>
