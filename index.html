@@ -1206,14 +1206,13 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
         <div id="upgradeTiersWrap"></div>
         <div id="upgradeFormWrap" style="display:none;margin-top:16px;background:var(--warm-gray);border-radius:10px;padding:16px">
           <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:12px" id="upgradeFormTitle">Upgrade to Silver</div>
-          <div style="background:var(--gold-pale);border:1px solid var(--gold-dark);border-radius:9px;padding:12px 14px;margin-bottom:14px;font-size:13px;color:#6b5200;line-height:1.6">
-            &#x1F4B3; Send the upgrade fee to <strong>0203910730</strong> (Telecel Cash) with your phone number as reference, then fill in your payment details below.
+          <div style="background:var(--green-pale);border:1px solid var(--green);border-radius:9px;padding:12px 14px;margin-bottom:14px;font-size:13px;color:#1a5c1a;line-height:1.6">
+            &#x26A1; Pay securely via <strong>Paystack</strong> — card, Mobile Money or bank accepted. Your upgrade will be activated within <strong>20 minutes</strong> of payment confirmation.
           </div>
           <div class="fg"><label>Upgrade To</label><div style="padding:9px 12px;background:#fff;border-radius:9px;font-size:13.5px;font-weight:600;border:1.5px solid var(--border)" id="upgradeTargetDisplay">—</div></div>
           <div class="fg"><label>Upgrade Fee (GHS)</label><div style="padding:9px 12px;background:#fff;border-radius:9px;font-size:13.5px;font-weight:700;color:var(--green);border:1.5px solid var(--border)" id="upgradeFeeDisplay">—</div></div>
-          <div class="fg"><label>Your MoMo Number (used as reference)</label><div style="padding:9px 12px;background:var(--green-pale);border-radius:9px;font-size:13.5px;font-weight:700;color:var(--green);border:1.5px solid var(--green)" id="upgradeRefDisplay">—</div></div>
-          <div class="fg"><label>Transaction Notes (optional)</label><input type="text" id="upgradeNotes" placeholder="e.g. Paid at 3:15pm on Monday"/></div>
-          <button class="sbtn" id="submitUpgradeBtn">Submit Upgrade Request &#x2192;</button>
+          <div class="fg"><label>Transaction Notes (optional)</label><input type="text" id="upgradeNotes" placeholder="e.g. Upgrading from Free to Bronze"/></div>
+          <button class="sbtn" id="submitUpgradeBtn">&#x1F4B3; Pay &amp; Upgrade via Paystack &#x2192;</button>
           <div id="upgradeMsg" style="display:none;margin-top:10px;padding:10px 13px;border-radius:9px;font-size:13.5px;font-weight:500"></div>
         </div>
       </div>
@@ -4853,9 +4852,14 @@ function submitUpgradeRequest(){
     msgEl.innerHTML=txt;
   }
   if(!targetTier){showUMsg('error','Please select a tier to upgrade to.');return;}
+
+  // Check no duplicate pending upgrade
   var reqs=getUpgradeReqs();
   var pending=reqs.find(function(r){return r.memberId===currentUser.id&&r.status==='pending';});
   if(pending){showUMsg('error','You already have a pending upgrade request. Please wait for admin to process it.');return;}
+
+  // Save pending upgrade request before opening Paystack
+  var upgradeRef='GOPUP-'+currentUser.id+'-'+Date.now();
   var req={
     id:'U'+Date.now(),
     memberId:currentUser.id,
@@ -4866,22 +4870,68 @@ function submitUpgradeRequest(){
     fee:fee,
     notes:notes,
     status:'pending',
+    paystackRef:'',
     date:today()
   };
   reqs.push(req); saveUpgradeReqs(reqs);
+
+  // Save to localStorage for recovery after Paystack redirect
+  try{localStorage.setItem('gop_pending_upgrade',JSON.stringify({reqId:req.id,ref:upgradeRef}));}catch(e){}
+
+  // Notify member
   var members=getMembers();
   var idx=members.findIndex(function(m){return m.id===currentUser.id;});
   if(idx>=0){
     members[idx].notifications=members[idx].notifications||[];
-    members[idx].notifications.push('&#x2B06; Upgrade request to <strong>'+targetTier+'</strong> submitted on '+today()+'. Please send GHS '+fee+' to 0203910730 with your phone number as reference. Admin will process within 24 hours.');
+    members[idx].notifications.push('&#x23F3; Your upgrade to <strong>'+targetTier+'</strong> is pending payment confirmation. Once payment is verified, your account will be upgraded within <strong>20 minutes</strong>.');
     saveMembers(members); currentUser=members[idx];
     renderNotifications(currentUser);
   }
-  setVal('upgradeNotes','');
-  el('upgradeFormWrap').style.display='none';
-  showUMsg('success','&#x2705; Upgrade request submitted! Remember to send GHS '+fee+' to 0203910730. Admin will verify and upgrade your account within 24 hours.');
-  renderUpgradeHistory(currentUser);
-  setTimeout(function(){if(msgEl) msgEl.style.display='none';},7000);
+
+  // Open Paystack payment page in popup
+  var slug=PAYSTACK_PAGES[targetTier]||PAYSTACK_PAGES['Bronze']||'goppay';
+  var url='https://paystack.com/pay/'+slug
+    +'?email='+encodeURIComponent(currentUser.email)
+    +'&name='+encodeURIComponent(currentUser.firstName+' '+currentUser.lastName)
+    +'&amount='+(fee*100);
+
+  var btn=el('submitUpgradeBtn');
+  if(btn){btn.disabled=true;btn.innerHTML='&#x23F3; Opening Paystack...';}
+
+  var pw=600,ph=700;
+  var pleft=(screen.width/2)-(pw/2);
+  var ptop=(screen.height/2)-(ph/2);
+  var payWin=window.open(url,'PaystackUpgrade','width='+pw+',height='+ph+',top='+ptop+',left='+pleft+',scrollbars=yes');
+
+  if(!payWin||payWin.closed){
+    // Popup blocked — redirect same tab
+    window.location.href=url;
+    return;
+  }
+
+  // Poll for popup close
+  var pollInterval=setInterval(function(){
+    if(!payWin||payWin.closed){
+      clearInterval(pollInterval);
+      if(btn){btn.disabled=false;btn.innerHTML='&#x1F4B3; Pay &amp; Upgrade via Paystack &#x2192;';}
+      // Mark upgrade ref from localStorage
+      try{
+        var upData=JSON.parse(localStorage.getItem('gop_pending_upgrade')||'null');
+        if(upData&&upData.reqId===req.id){
+          var allReqs=getUpgradeReqs();
+          var ri=allReqs.findIndex(function(r){return r.id===req.id;});
+          if(ri>=0&&!allReqs[ri].paystackRef){allReqs[ri].paystackRef=upData.ref;saveUpgradeReqs(allReqs);}
+          localStorage.removeItem('gop_pending_upgrade');
+        }
+      }catch(e){}
+      setVal('upgradeNotes','');
+      el('upgradeFormWrap').style.display='none';
+      showUMsg('success','&#x2705; Payment submitted! Your upgrade to <strong>'+targetTier+'</strong> is pending admin verification and will be completed within <strong>20 minutes</strong>.');
+      renderUpgradeHistory(currentUser);
+      refreshAdminMetrics();
+      setTimeout(function(){if(msgEl) msgEl.style.display='none';},8000);
+    }
+  },500);
 }
 
 function renderUpgradeHistory(member){
@@ -4915,6 +4965,7 @@ function renderAdminUpgradeRequests(){
     html+='<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border:1.5px solid #e5e7eb;border-radius:9px;margin-bottom:8px;background:#fff;flex-wrap:wrap">';
     html+='<div><div style="font-size:13.5px;font-weight:700;color:#0d1117">'+r.memberName+' &mdash; '+r.memberPhone+'</div>';
     html+='<div style="font-size:12.5px;color:#6b7280">Upgrade: <strong>'+r.currentTier+' &#x2192; '+r.targetTier+'</strong> &middot; Fee: GHS '+r.fee+' &middot; Submitted: '+r.date+'</div>';
+    if(r.paystackRef) html+='<div style="font-size:12px;color:#059669;margin-top:2px">&#x1F4B3; Paystack Ref: <strong>'+r.paystackRef+'</strong></div>';
     if(r.notes) html+='<div style="font-size:12px;color:#9ca3af;margin-top:2px">Notes: '+r.notes+'</div>';
     html+='</div>';
     html+='<div style="display:flex;gap:7px">';
@@ -4945,7 +4996,7 @@ function processUpgrade(reqId, action){
       members[mi].tier=req.targetTier;
       members[mi].fee=TIER_FEES[req.targetTier];
       members[mi].notifications=members[mi].notifications||[];
-      members[mi].notifications.push('&#x1F389; Your upgrade to <strong>'+req.targetTier+'</strong> has been approved! You now have access to '+( req.targetTier==='Silver'?'6 surveys/day and 2 polls/day':'10 surveys/day and 3 polls/day')+'. Enjoy the benefits!');
+      members[mi].notifications.push('&#x1F389; Your upgrade to <strong>'+req.targetTier+'</strong> has been approved and is now active! You now have access to '+(req.targetTier==='Silver'?'6 surveys/day and 2 polls/day':req.targetTier==='Gold'?'10 surveys/day and 3 polls/day':'3 surveys/day and 1 poll/day')+'. Enjoy your new tier!');
       saveMembers(members);
       if(currentUser&&!isAdminUser()&&currentUser.id===req.memberId){currentUser=members[mi];openMemberDashboard(currentUser);}
     }
