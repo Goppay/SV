@@ -5313,7 +5313,49 @@ function addPage(){
 
 // ── MEMBER: FOLLOW PAGES & EARN ──────────────────────
 // Track which page links have been opened this session
-var openedPageLinks={};
+var openedPageLinks={};    // pageId -> true if link was opened
+var verifiedPageLinks={};  // pageId -> true if spent >=10s on external page
+var _pendingPageReturn=null;
+var _pageOpenTime=null;
+var _pageTimerInterval=null;
+
+function openPageLink(pageId, url){
+  window.open(url,'_blank','noopener,noreferrer');
+  // Record when link was opened
+  openedPageLinks[pageId]=true;
+  verifiedPageLinks[pageId]=false;
+  _pendingPageReturn=pageId;
+  _pageOpenTime=Date.now();
+
+  // Clear any existing timer
+  if(_pageTimerInterval) clearInterval(_pageTimerInterval);
+
+  // Silently track 10 seconds — no countdown shown to member
+  _pageTimerInterval=setInterval(function(){
+    var elapsed=Math.floor((Date.now()-_pageOpenTime)/1000);
+    if(elapsed>=10){
+      clearInterval(_pageTimerInterval);
+      _pageTimerInterval=null;
+      verifiedPageLinks[pageId]=true;
+      if(currentUser&&!isAdminUser()) renderMemberPages(currentUser);
+    }
+  },1000);
+
+  // Listen for user returning to tab
+  function onReturn(){
+    if(document.visibilityState==='visible'&&_pendingPageReturn===pageId){
+      _pendingPageReturn=null;
+      document.removeEventListener('visibilitychange',onReturn);
+      var elapsed=Math.floor((Date.now()-_pageOpenTime)/1000);
+      if(elapsed>=10){
+        verifiedPageLinks[pageId]=true;
+        if(_pageTimerInterval){clearInterval(_pageTimerInterval);_pageTimerInterval=null;}
+      }
+      if(currentUser&&!isAdminUser()) renderMemberPages(currentUser);
+    }
+  }
+  document.addEventListener('visibilitychange',onReturn);
+}
 
 function renderMemberPages(member){
   var pages=getPages().filter(function(p){return p.active;});
@@ -5332,9 +5374,10 @@ function renderMemberPages(member){
   pages.forEach(function(p){
     var done=completed.indexOf(p.id)>=0;
     var opened=!!openedPageLinks[p.id];
+    var verified=!!verifiedPageLinks[p.id];
     var icon=platformIcons[p.platform]||'&#x1F517;';
     var color=platformColors[p.platform]||'var(--green)';
-    html+='<div style="border:1.5px solid '+(done?'#e5e7eb':'var(--border)')+';border-radius:12px;padding:14px 16px;margin-bottom:12px;background:'+(done?'#f9fafb':'#fff')+';transition:all .2s">';
+    html+='<div style="border:1.5px solid '+(done?'#e5e7eb':'var(--border)')+';border-radius:12px;padding:14px 16px;margin-bottom:12px;background:'+(done?'#f9fafb':'#fff')+'">';
     html+='<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">';
     html+='<div style="width:46px;height:46px;border-radius:12px;background:'+color+';display:flex;align-items:center;justify-content:center;font-size:22px;color:#fff;flex-shrink:0">'+icon+'</div>';
     html+='<div style="flex:1;min-width:0">';
@@ -5345,30 +5388,27 @@ function renderMemberPages(member){
     html+='<span style="font-size:18px;font-weight:700;color:var(--green)">GHS '+p.earn.toFixed(2)+'</span>';
     if(done){
       html+='<span style="background:#d1fae5;color:var(--green);font-size:12px;font-weight:700;padding:5px 14px;border-radius:9px">&#x2714; Followed</span>';
+    } else if(!opened){
+      // Not yet opened
+      html+='<button class="c-btn" data-openpage="'+p.id+'" data-pageurl="'+p.url.replace(/"/g,'&quot;')+'" style="background:'+color+';color:#fff;white-space:nowrap">&#x1F517; Follow / Join</button>';
+      html+='<button disabled class="c-btn" style="background:#e5e7eb;color:#9ca3af;cursor:not-allowed;opacity:0.6;white-space:nowrap">&#x1F512; Claim GHS '+p.earn.toFixed(2)+'</button>';
+      html+='<div style="font-size:11px;color:#9ca3af;text-align:right">Click Follow/Join first, then stay for 10s</div>';
+    } else if(opened && !verified){
+      // Opened but timer not done yet
+      html+='<button class="c-btn" data-openpage="'+p.id+'" data-pageurl="'+p.url.replace(/"/g,'&quot;')+'" style="background:'+color+';color:#fff;white-space:nowrap;opacity:0.85">&#x1F517; Opened</button>';
+      html+='<button disabled class="c-btn" style="background:#e5e7eb;color:#9ca3af;cursor:not-allowed;opacity:0.6;white-space:nowrap">&#x23F3; Claim GHS '+p.earn.toFixed(2)+'</button>';
+
     } else {
-      // Follow/Join link — marks page as opened when clicked
-      html+='<a href="'+p.url+'" target="_blank" rel="noopener" data-openpage="'+p.id+'" class="c-btn" style="background:'+color+';color:#fff;text-decoration:none;text-align:center;white-space:nowrap">&#x1F517; Follow / Join</a>';
-      // Claim button — greyed out until link is opened
-      if(opened){
-        html+='<button class="c-btn" data-claimpage="'+p.id+'" style="background:var(--green);color:#fff;white-space:nowrap">&#x2705; Claim GHS '+p.earn.toFixed(2)+'</button>';
-      } else {
-        html+='<button class="c-btn" data-claimpage="'+p.id+'" style="background:#d1d5db;color:#6b7280;white-space:nowrap;cursor:not-allowed" title="Open the Follow/Join link first">&#x1F512; Claim GHS '+p.earn.toFixed(2)+'</button>';
-      }
+      // Verified — claim unlocked
+      html+='<button class="c-btn" data-openpage="'+p.id+'" data-pageurl="'+p.url.replace(/"/g,'&quot;')+'" style="background:'+color+';color:#fff;white-space:nowrap;opacity:0.75">&#x2713; Ready to claim</button>';
+      html+='<button class="c-btn" data-claimpage="'+p.id+'" style="background:var(--green);color:#fff;white-space:nowrap;font-weight:700">&#x2705; Claim GHS '+p.earn.toFixed(2)+'</button>';
     }
     html+='</div></div></div>';
   });
   el2.innerHTML=html;
-
-  // Wire Follow/Join links — mark as opened
-  el2.querySelectorAll('[data-openpage]').forEach(function(a){
-    a.addEventListener('click',function(){
-      openedPageLinks[a.dataset.openpage]=true;
-      // After a short delay re-render to enable the claim button
-      setTimeout(function(){renderMemberPages(currentUser);},800);
-    });
+  el2.querySelectorAll('[data-openpage]').forEach(function(b){
+    b.addEventListener('click',function(){openPageLink(b.dataset.openpage, b.dataset.pageurl);});
   });
-
-  // Wire Claim buttons
   el2.querySelectorAll('[data-claimpage]').forEach(function(b){
     b.addEventListener('click',function(){claimPageReward(b.dataset.claimpage);});
   });
@@ -5376,16 +5416,16 @@ function renderMemberPages(member){
 
 function claimPageReward(pageId){
   if(!currentUser||isAdminUser()) return;
-  // Guard: link must have been opened first
-  if(!openedPageLinks[pageId]){
-    // Show error on the card
-    var claimBtn=el('memberPagesList').querySelector('[data-claimpage="'+pageId+'"]');
+  // Guard: link must have been opened AND member must have stayed 10 seconds
+  if(!verifiedPageLinks[pageId]){
+    var claimBtn=el('memberPagesList') && el('memberPagesList').querySelector('[data-claimpage="'+pageId+'"]');
     if(claimBtn){
       var orig=claimBtn.innerHTML;
       claimBtn.style.background='var(--red)';
-      claimBtn.innerHTML='&#x26A0; Open the link first!';
+      claimBtn.innerHTML=openedPageLinks[pageId]?'&#x26A0; Stay 10s on the page first!':'&#x26A0; Open the link first!';
       setTimeout(function(){
-        claimBtn.style.background='#d1d5db';
+        claimBtn.style.background='#e5e7eb';
+        claimBtn.style.color='#9ca3af';
         claimBtn.innerHTML=orig;
       },2500);
     }
