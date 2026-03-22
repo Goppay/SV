@@ -510,7 +510,7 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
       <div class="pay-card"><div class="pay-card-logo">&#x1F3E6;</div><h3>Bank Transfer</h3><p>GCB, Ecobank, Absa, Fidelity, Cal Bank, and more.</p></div>
       <div class="pay-card"><div class="pay-card-logo">&#x1F381;</div><h3>Gift Vouchers</h3><p>Redeem as Melcom or e-commerce vouchers at a 5% bonus.</p></div>
     </div>
-    <div class="info-note reveal"><div class="info-note-icon">&#x23F1;</div><p><strong style="color:#fff">&#x1F381; First withdrawal FREE for all tiers.</strong> From the 2nd withdrawal onwards, a <strong style="color:var(--gold)">35% processing fee</strong> is deducted. Withdrawals pass through <strong style="color:var(--gold)">3 phases: Pending &#x2192; Processing &#x2192; Complete</strong> — at least 2 business days. Processed every Monday &amp; Thursday. Min withdrawal: Free GHS 10 · Bronze GHS 30 · Silver GHS 75 · Gold GHS 100.</p></div>
+    <div class="info-note reveal"><div class="info-note-icon">&#x23F1;</div><p><strong style="color:#fff">&#x1F381; First withdrawal FREE for all tiers.</strong> From the 2nd withdrawal onwards, a <strong style="color:var(--gold)">35% processing fee</strong> is deducted. <strong style="color:var(--gold)">Withdrawals are processed instantly</strong> to your Mobile Money or bank account. Min withdrawal: Free GHS 10 · Bronze GHS 30 · Silver GHS 75 · Gold GHS 100.</p></div>
   </div>
 </section>
 
@@ -546,7 +546,7 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
     <div class="faq-list reveal">
       <div class="faq-item"><button class="faq-q">How long does payment verification take?<span class="faq-chev">&#x25BE;</span></button><div class="faq-a">After paying your registration fee via Telecel Cash to 0203910730, admin verifies your payment within 20 minutes. Once verified, your dashboard opens automatically. If verification fails, you receive a prompt to try again.</div></div>
       <div class="faq-item"><button class="faq-q">What should I use as payment reference?<span class="faq-chev">&#x25BE;</span></button><div class="faq-a">Use your registered mobile phone number as the reference or note when making the Telecel Cash payment. This is shown clearly on the payment page to help admin match your payment quickly.</div></div>
-      <div class="faq-item"><button class="faq-q">What are the minimum withdrawal amounts?<span class="faq-chev">&#x25BE;</span></button><div class="faq-a">Your <strong>first withdrawal is completely FREE</strong> — no fee deducted for all tiers. From the 2nd withdrawal onwards, a <strong>35% processing fee</strong> is automatically deducted. Minimum cashout: Free GHS 10 · Bronze GHS 30 · Silver GHS 75 · Gold GHS 100. Maximum monthly withdrawal GHS 2,000. Withdrawals take at least 2 business days.</div></div>
+      <div class="faq-item"><button class="faq-q">What are the minimum withdrawal amounts?<span class="faq-chev">&#x25BE;</span></button><div class="faq-a">Your <strong>first withdrawal is completely FREE</strong> — no fee deducted for all tiers. From the 2nd withdrawal onwards, a <strong>35% processing fee</strong> is automatically deducted. Minimum cashout: Free GHS 10 · Bronze GHS 30 · Silver GHS 75 · Gold GHS 100. Maximum monthly withdrawal GHS 2,000. Withdrawals are processed instantly.</div></div>
       <div class="faq-item"><button class="faq-q">How many surveys and polls per day?<span class="faq-chev">&#x25BE;</span></button><div class="faq-a">Daily limits — Free: 1 survey, 0 polls, 1 video, 1 ad. Bronze: 3 surveys, 1 poll, 5 ads. Silver: 6 surveys, 2 polls, 10 ads. Gold: 10 surveys, 3 polls, 15 ads.</div></div>
       <div class="faq-item"><button class="faq-q">Can I change my registered phone number?<span class="faq-chev">&#x25BE;</span></button><div class="faq-a">No. The phone number used at registration is permanently linked to your account and cannot be changed under any circumstances. Please use an active MoMo number (MTN, Telecel, or AirtelTigo).</div></div>
       <div class="faq-item"><button class="faq-q">What is the Ghana Affairs Survey?<span class="faq-chev">&#x25BE;</span></button><div class="faq-a">A short 5-question survey about current affairs in Ghana, available immediately on activation. It earns GHS 3.00 instantly and takes about 3 minutes.</div></div>
@@ -619,7 +619,7 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
       <h3 style="font-size:14px;color:#0d1117;margin-bottom:6px">3. Earning & Surveys</h3>
       <p style="margin-bottom:12px">You must answer all survey questions honestly and thoughtfully. Providing random, inconsistent, or dishonest answers to complete surveys faster may result in earnings being withheld and your account being suspended. GhanaOpinionPay reserves the right to review survey responses for quality.</p>
       <h3 style="font-size:14px;color:#0d1117;margin-bottom:6px">4. Withdrawals</h3>
-      <p style="margin-bottom:12px">Withdrawals are processed every Monday and Thursday. Minimum withdrawal amounts apply per tier. A processing fee applies from the second withdrawal onwards (or on every withdrawal for Free tier accounts). GhanaOpinionPay is not responsible for delays caused by Mobile Money networks or banks.</p>
+      <p style="margin-bottom:12px">Withdrawals are processed instantly. Minimum withdrawal amounts apply per tier. A processing fee applies from the second withdrawal onwards (or on every withdrawal for Free tier accounts). GhanaOpinionPay is not responsible for delays caused by Mobile Money networks or banks.</p>
       <h3 style="font-size:14px;color:#0d1117;margin-bottom:6px">5. Account Suspension & Termination</h3>
       <p style="margin-bottom:12px">GhanaOpinionPay reserves the right to suspend or permanently terminate any account found to be in violation of these terms, including but not limited to: fraudulent activity, multiple accounts, fake survey responses, abuse of the referral programme, or any conduct deemed harmful to the platform.</p>
       <h3 style="font-size:14px;color:#0d1117;margin-bottom:6px">6. Changes to Terms</h3>
@@ -1009,23 +1009,84 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
       </div>
     </div>
     <div class="d-tab-sec" id="tab-withdraw">
+      <!-- Balance & minimum summary -->
+      <div class="d-card" id="withdrawBalanceCard" style="margin-bottom:14px">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;text-align:center">
+          <div style="background:var(--green-pale);border:1px solid var(--green);border-radius:10px;padding:14px">
+            <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600;margin-bottom:4px">Available Balance</div>
+            <div id="wBalDisplay" style="font-size:22px;font-weight:700;color:var(--green)">GHS 0.00</div>
+          </div>
+          <div style="background:var(--warm-gray);border:1px solid var(--border);border-radius:10px;padding:14px">
+            <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600;margin-bottom:4px">Minimum Cashout</div>
+            <div id="wMinDisplay" style="font-size:22px;font-weight:700;color:var(--text)">GHS —</div>
+          </div>
+          <div style="background:var(--warm-gray);border:1px solid var(--border);border-radius:10px;padding:14px">
+            <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600;margin-bottom:4px">Withdrawals Made</div>
+            <div id="wCountDisplay" style="font-size:22px;font-weight:700;color:var(--text)">0</div>
+          </div>
+        </div>
+      </div>
+
       <div class="d-card">
         <div class="d-card-title">&#x1F4B8; Request a Withdrawal</div>
         <div class="with-note">
-          &#x1F381; <strong>Your first withdrawal is FREE — no fees deducted.</strong> (Paid tiers only)<br>
-          &#x26A0;&#xFE0F; <strong>Free account:</strong> 15% processing fee on every withdrawal.<br>
-          &#x26A0;&#xFE0F; From your 2nd withdrawal onwards (paid tiers), a <strong>35% processing fee</strong> is deducted from the amount you request.<br>
-          &#x23F1; All withdrawals pass through <strong>3 phases: Pending &#x2192; Processing &#x2192; Complete</strong> — at least 2 business days. Processed Mon &amp; Thu only.<br>
+          &#x26A1; <strong>Withdrawals are instant</strong> — processed immediately to your MoMo or bank.<br>
+          &#x1F381; <strong>First withdrawal FREE</strong> (paid tiers only) · Free account: 15% fee always · Paid tiers: 35% from 2nd withdrawal.<br>
           <strong>Minimums:</strong> Free GHS 10 · Bronze GHS 30 · Silver GHS 75 · Gold GHS 100.
         </div>
-        <div id="withdrawFeePreview" style="display:none;margin-bottom:12px;padding:10px 13px;border-radius:9px;border:1.5px solid #e5e7eb;background:#f9fafb;font-size:13px;line-height:1.7"></div>
-        <div class="w-row">
-          <div class="fg" style="margin:0"><label>Amount (GHS)</label><input type="number" id="wAmt" placeholder="e.g. 50" min="10"/></div>
-          <div class="fg" style="margin:0"><label>Method</label><select id="wMethod"><option>MTN Mobile Money</option><option>Telecel Cash</option><option>AirtelTigo Money</option><option>Bank Transfer</option><option>Gift Voucher</option></select></div>
+
+        <!-- Quick withdraw buttons -->
+        <div style="margin-bottom:14px">
+          <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:8px">Quick amounts:</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap" id="quickWithdrawBtns">
+            <button class="abtn" data-qamt="10">GHS 10</button>
+            <button class="abtn" data-qamt="20">GHS 20</button>
+            <button class="abtn" data-qamt="50">GHS 50</button>
+            <button class="abtn" data-qamt="100">GHS 100</button>
+            <button class="abtn" id="wMaxBtn">Max</button>
+          </div>
         </div>
-        <div class="fg"><label>Account / MoMo Number</label><input type="text" id="wAccount" placeholder="Your MoMo or bank account number"/></div>
-        <button class="sbtn" style="margin-top:4px" id="submitWithdrawBtn">Submit Withdrawal &#x2192;</button>
+
+        <div class="w-row">
+          <div class="fg" style="margin:0"><label>Amount (GHS)</label><input type="number" id="wAmt" placeholder="e.g. 50" min="1"/></div>
+          <div class="fg" style="margin:0">
+            <label>Payment Method</label>
+            <select id="wMethod">
+              <option value="MTN Mobile Money">📱 MTN Mobile Money</option>
+              <option value="Telecel Cash">📱 Telecel Cash</option>
+              <option value="AirtelTigo Money">📱 AirtelTigo Money</option>
+              <option value="Bank Transfer">🏦 Bank Transfer</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Dynamic account label -->
+        <div class="fg" style="margin-top:12px">
+          <label id="wAccountLabel">MoMo Number</label>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input type="text" id="wAccount" placeholder="Your MoMo number" style="flex:1"/>
+            <button class="abtn" id="wAutoFillBtn" style="white-space:nowrap;font-size:12px">&#x1F4F1; Use registered</button>
+          </div>
+          <div style="font-size:11.5px;color:var(--text-muted);margin-top:5px" id="wAccountHint">Enter your MTN MoMo number</div>
+        </div>
+
+        <!-- Live fee preview -->
+        <div id="withdrawFeePreview" style="display:none;margin:12px 0;padding:12px 14px;border-radius:10px;border:1.5px solid #e5e7eb;background:#f9fafb;font-size:13px;line-height:1.8"></div>
+
+        <!-- Confirm step -->
+        <div id="wConfirmBox" style="display:none;background:#fff3e0;border:1.5px solid #e8c800;border-radius:10px;padding:14px;margin-bottom:12px;font-size:13px;line-height:1.7">
+          <div style="font-weight:700;color:#6b5200;margin-bottom:6px">&#x26A0; Confirm your withdrawal</div>
+          <div id="wConfirmSummary"></div>
+          <div style="display:flex;gap:10px;margin-top:12px">
+            <button class="sbtn" style="flex:1;margin:0" id="wFinalSubmitBtn">&#x2705; Confirm &amp; Submit</button>
+            <button class="abtn" style="flex:1" id="wCancelConfirmBtn">Cancel</button>
+          </div>
+        </div>
+
+        <button class="sbtn" style="margin-top:4px;display:block" id="submitWithdrawBtn">Continue &#x2192;</button>
+        <div id="withdrawMsg" style="display:none;margin-top:10px;padding:10px 13px;border-radius:9px;font-size:13px"></div>
       </div>
+
       <div class="d-card"><div class="d-card-title">&#x1F4CB; Withdrawal History</div><div id="wHistory"><p style="font-size:13.5px;color:var(--text-muted);text-align:center;padding:18px">No withdrawal requests yet.</p></div></div>
     </div>
     <div class="d-tab-sec" id="tab-pages">
@@ -1458,6 +1519,9 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
 var ADMIN_PHONE = '0551152894';
 var ADMIN_PASS  = '123Akati@';
 var MERCHANT    = '0203910730';
+// ── RENDER BACKEND URL ───────────────────────────────────
+var MAKE_WEBHOOK_URL = 'https://goppay-backend.onrender.com';
+
 var TIER_DAILY  = {Free:1, Bronze:3, Silver:6, Gold:10};
 var TIER_MINW   = {Free:10, Bronze:30, Silver:75, Gold:100};
 var TIER_POLLS  = {Free:0, Bronze:1, Silver:2, Gold:3};
@@ -1728,8 +1792,33 @@ document.addEventListener('DOMContentLoaded', function(){
   document.querySelectorAll('.d-tab').forEach(function(tab){
     tab.addEventListener('click',function(){switchDashTab(tab.dataset.tab, tab);});
   });
-  bindClick('submitWithdrawBtn', submitWithdrawal);
-  // Live fee preview when typing withdrawal amount
+  bindClick('submitWithdrawBtn', showWithdrawConfirm);
+  bindClick('wFinalSubmitBtn', submitWithdrawal);
+  bindClick('wCancelConfirmBtn', function(){
+    hide('wConfirmBox');
+    show('submitWithdrawBtn');
+  });
+  bindClick('wAutoFillBtn', function(){
+    if(currentUser && !isAdminUser()) setVal('wAccount', currentUser.phone||'');
+  });
+  bindClick('wMaxBtn', function(){
+    if(currentUser && !isAdminUser()){
+      var bal=currentUser.balance||0;
+      var minW=TIER_MINW[currentUser.tier]||10;
+      if(bal>=minW) setVal('wAmt', bal.toFixed(2));
+      updateWithdrawFeePreview();
+    }
+  });
+  // Quick amount buttons
+  document.querySelectorAll('[data-qamt]').forEach(function(b){
+    b.addEventListener('click',function(){
+      setVal('wAmt', b.dataset.qamt);
+      updateWithdrawFeePreview();
+    });
+  });
+  // Method change updates account label/hint
+  var wMethodEl=el('wMethod');
+  if(wMethodEl) wMethodEl.addEventListener('change', updateWithdrawMethodLabel);
   var wAmtEl=el('wAmt');
   if(wAmtEl) wAmtEl.addEventListener('input', updateWithdrawFeePreview);
   bindClick('saveProfileBtn', saveProfile);
@@ -2185,6 +2274,8 @@ function openMemberDashboard(member){
   renderReferralTab(member);
   renderUpgradeTab(member);
   renderMemberPages(member);
+  populateWithdrawCard(member);
+  updateWithdrawHistoryDisplay(member);
   renderMemberAdsTab(member);
   checkDailyStreakBonus(member);
 }
@@ -2266,6 +2357,11 @@ function switchDashTab(name, btn){
   // Refresh ads tab when opened
   if(name==='ads' && currentUser && !isAdminUser()) renderMemberAdsTab(currentUser);
   if(name==='pages' && currentUser && !isAdminUser()) renderMemberPages(currentUser);
+  if(name==='withdraw' && currentUser && !isAdminUser()){
+    populateWithdrawCard(currentUser);
+    updateWithdrawHistoryDisplay(currentUser);
+    updateWithdrawMethodLabel();
+  }
 }
 
 // ── SURVEYS ───────────────────────────────────────────
@@ -2558,6 +2654,106 @@ function claimVideoEarn(vid){
 }
 
 // ── WITHDRAW ──────────────────────────────────────────
+function updateWithdrawMethodLabel(){
+  var method=val('wMethod')||'MTN Mobile Money';
+  var labelEl=el('wAccountLabel');
+  var hintEl=el('wAccountHint');
+  var inputEl=el('wAccount');
+  if(method==='Bank Transfer'){
+    if(labelEl) labelEl.textContent='Bank Account Number';
+    if(hintEl) hintEl.textContent='Enter your bank account number (10 digits)';
+    if(inputEl) inputEl.placeholder='e.g. 1234567890';
+  } else {
+    if(labelEl) labelEl.textContent='MoMo Number';
+    if(hintEl) hintEl.textContent='Enter your '+method+' number (e.g. 0241234567)';
+    if(inputEl) inputEl.placeholder='e.g. 0241234567';
+  }
+}
+
+function populateWithdrawCard(member){
+  if(!member||isAdminUser()) return;
+  setText('wBalDisplay','GHS '+(member.balance||0).toFixed(2));
+  setText('wMinDisplay','GHS '+(TIER_MINW[member.tier]||10));
+  setText('wCountDisplay',(member.withdrawalCount||0));
+  // Auto-fill account with registered number
+  setVal('wAccount', member.phone||'');
+  // Reset confirm box
+  hide('wConfirmBox');
+  show('submitWithdrawBtn');
+}
+
+function showWithdrawConfirm(){
+  if(!currentUser||isAdminUser()) return;
+  var members=getMembers();
+  var fresh=members.find(function(m){return m.id===currentUser.id;});
+  if(!fresh){showWithdrawMsg('error','Session error. Please log out and log back in.'); return;}
+  currentUser=fresh;
+
+  var amountRaw=val('wAmt');
+  var amount=parseFloat(amountRaw)||0;
+  var method=val('wMethod');
+  var account=(val('wAccount')||'').trim();
+  var minW=TIER_MINW[currentUser.tier]||10;
+
+  hideWithdrawMsg();
+  if(!amountRaw||amount<=0){showWithdrawMsg('error','Please enter a valid withdrawal amount.'); return;}
+  if(amount<minW){showWithdrawMsg('error','Minimum withdrawal for '+currentUser.tier+' tier is GHS '+minW+'.'); return;}
+  if(amount>(currentUser.balance||0)){showWithdrawMsg('error','Insufficient balance. Available: GHS '+(currentUser.balance||0).toFixed(2)+'.'); return;}
+  if(!account){showWithdrawMsg('error','Please enter your account number.'); return;}
+
+  var isFreeAcct=currentUser.tier==='Free';
+  var isFirst=(currentUser.withdrawalCount||0)===0;
+  var fee,youGet,feeDesc;
+  if(isFreeAcct){
+    fee=parseFloat((amount*0.15).toFixed(2));
+    youGet=parseFloat((amount-fee).toFixed(2));
+    feeDesc='15% fee (Free account)';
+  } else if(isFirst){
+    fee=0; youGet=amount; feeDesc='No fee (first withdrawal)';
+  } else {
+    fee=parseFloat((amount*0.35).toFixed(2));
+    youGet=parseFloat((amount-fee).toFixed(2));
+    feeDesc='35% processing fee';
+  }
+
+  var summary='<table style="width:100%;border-collapse:collapse;font-size:13px">'
+    +'<tr><td style="padding:3px 0;color:#6b7280">Amount requested</td><td style="text-align:right;font-weight:600">GHS '+amount.toFixed(2)+'</td></tr>'
+    +'<tr><td style="padding:3px 0;color:#6b7280">Fee ('+feeDesc+')</td><td style="text-align:right;font-weight:600;color:var(--red)">− GHS '+fee.toFixed(2)+'</td></tr>'
+    +'<tr style="border-top:1px solid #e5e7eb"><td style="padding:6px 0 3px;font-weight:700">You will receive</td><td style="text-align:right;font-size:16px;font-weight:700;color:var(--green)">GHS '+youGet.toFixed(2)+'</td></tr>'
+    +'<tr><td style="padding:3px 0;color:#6b7280">Method</td><td style="text-align:right">'+method+'</td></tr>'
+    +'<tr><td style="padding:3px 0;color:#6b7280">Account</td><td style="text-align:right">'+account+'</td></tr>'
+    +'</table>';
+
+  setText('wConfirmSummary',summary);
+  el('wConfirmSummary').innerHTML=summary;
+  show('wConfirmBox');
+  hide('submitWithdrawBtn');
+}
+
+function hideWithdrawMsg(){var m=el('withdrawMsg');if(m){m.style.display='none';m.textContent='';}}
+
+function updateWithdrawHistoryDisplay(member){
+  var ws=getWithdrawals().filter(function(w){return w.memberId===member.id;}).reverse();
+  var el2=el('wHistory');
+  if(!el2) return;
+  if(!ws.length){el2.innerHTML='<p style="font-size:13.5px;color:var(--text-muted);text-align:center;padding:18px">No withdrawal requests yet.</p>';return;}
+  var phaseColor={Pending:'#f59e0b',Processing:'#3b82f6',Complete:'#22c55e'};
+  var html='';
+  ws.forEach(function(w){
+    var col=phaseColor[w.phase]||'#9ca3af';
+    html+='<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:10px 0;border-bottom:1px solid #f3f4f6;font-size:13px">';
+    html+='<div>';
+    html+='<div style="font-weight:600;color:#0d1117">GHS '+w.amount.toFixed(2)+' via '+w.method+'</div>';
+    html+='<div style="font-size:12px;color:#6b7280;margin-top:2px">'+w.date+' &middot; Acct: '+w.account+'</div>';
+    if(w.fee>0) html+='<div style="font-size:12px;color:#9ca3af">Fee: GHS '+w.fee.toFixed(2)+' · You receive: GHS '+w.amountAfterFee.toFixed(2)+'</div>';
+    else html+='<div style="font-size:12px;color:var(--green)">&#x1F381; No fee — you receive the full GHS '+w.amountAfterFee.toFixed(2)+'</div>';
+    html+='</div>';
+    html+='<span style="font-size:11.5px;font-weight:700;padding:4px 12px;border-radius:20px;background:'+col+'22;color:'+col+'">'+w.phase+'</span>';
+    html+='</div>';
+  });
+  el2.innerHTML=html;
+}
+
 function updateWithdrawFeePreview(){
   var preview=el('withdrawFeePreview');
   if(!preview) return;
@@ -2602,7 +2798,6 @@ function submitWithdrawal(){
     showWithdrawMsg('error','Please log in as a member to submit a withdrawal.');
     return;
   }
-  // Re-read fresh from storage
   var members=getMembers();
   var fresh=members.find(function(m){return m.id===currentUser.id;});
   if(!fresh){showWithdrawMsg('error','Session error. Please log out and log back in.'); return;}
@@ -2618,8 +2813,9 @@ function submitWithdrawal(){
   if(amount<minW){showWithdrawMsg('error','Minimum withdrawal for '+currentUser.tier+' tier is GHS '+minW+'.'); return;}
   if(amount>(currentUser.balance||0)){showWithdrawMsg('error','Insufficient balance. Your available balance is GHS '+(currentUser.balance||0).toFixed(2)+'.'); return;}
   if(!account){showWithdrawMsg('error','Please enter your MoMo or bank account number.'); return;}
+  if(method==='Bank Transfer'){showWithdrawMsg('error','Bank transfers are not yet supported for instant payouts. Please use Mobile Money.'); return;}
 
-  // Calculate fee — Free tier: 15% on every withdrawal; others: 0% first, 35% thereafter
+  // Calculate fee
   var isFreeAcct=currentUser.tier==='Free';
   var isFirst=(currentUser.withdrawalCount||0)===0;
   var fee, amountAfterFee, feeLabel;
@@ -2628,68 +2824,121 @@ function submitWithdrawal(){
     amountAfterFee=parseFloat((amount-fee).toFixed(2));
     feeLabel='15% (Free account)';
   } else if(isFirst){
-    fee=0;
-    amountAfterFee=amount;
-    feeLabel='Free (first withdrawal)';
+    fee=0; amountAfterFee=amount; feeLabel='Free (first withdrawal)';
   } else {
     fee=parseFloat((amount*0.35).toFixed(2));
     amountAfterFee=parseFloat((amount-fee).toFixed(2));
     feeLabel='35% processing fee';
   }
 
+  // Disable button while processing
+  var btn=el('submitWithdrawBtn');
+  if(btn){btn.disabled=true; btn.textContent='Processing...';}
+  showWithdrawMsg('info','&#x23F3; Sending GHS '+amountAfterFee.toFixed(2)+' to '+account+' via '+method+' — please wait...');
+
+  // Deduct balance optimistically
+  var idx=members.findIndex(function(m){return m.id===currentUser.id;});
+  if(idx<0){if(btn){btn.disabled=false;btn.textContent='Withdraw Now';}return;}
+  members[idx].balance=parseFloat(((members[idx].balance||0)-amount).toFixed(2));
+  members[idx].withdrawalCount=(members[idx].withdrawalCount||0)+1;
+  saveMembers(members);
+  currentUser=members[idx];
+  setText('dmBal','GHS '+(currentUser.balance||0).toFixed(2));
+
+  // Save withdrawal record as Processing
+  var wId='W'+Date.now();
+  var wRef='GOPW-'+currentUser.id+'-'+Date.now();
   var ws=getWithdrawals();
   var w={
-    id:'W'+Date.now(),
-    memberId:currentUser.id,
+    id:wId, memberId:currentUser.id,
     memberName:currentUser.firstName+' '+currentUser.lastName,
-    phone:currentUser.phone,
-    amount:amount,
-    fee:fee,
-    amountAfterFee:amountAfterFee,
-    isFree:(!isFreeAcct && isFirst),
-    method:method,
-    account:account,
-    date:today(),
-    phase:'Pending'
+    phone:currentUser.phone, amount:amount, fee:fee,
+    amountAfterFee:amountAfterFee, isFree:(!isFreeAcct&&isFirst),
+    method:method, account:account, date:today(), phase:'Processing', reference:wRef
   };
-  ws.push(w);
-  saveWithdrawals(ws);
+  ws.push(w); saveWithdrawals(ws);
 
-  var idx=members.findIndex(function(m){return m.id===currentUser.id;});
-  if(idx>=0){
-    members[idx].balance=parseFloat(((members[idx].balance||0)-amount).toFixed(2));
-    members[idx].withdrawalCount=(members[idx].withdrawalCount||0)+1;
-    members[idx].notifications=members[idx].notifications||[];
-    var notifMsg='&#x1F4B8; Withdrawal request of GHS '+amount.toFixed(2)+' via '+method+' submitted on '+w.date+'.';
-    if(!isFreeAcct && isFirst){
-      notifMsg+=' &#x1F381; <strong>First withdrawal — no fee charged.</strong> You will receive GHS '+amountAfterFee.toFixed(2)+'. Status: Pending. At least 2 business days.';
-    } else {
-      notifMsg+=' '+feeLabel+' applied. Fee: GHS '+fee.toFixed(2)+'. <strong>You will receive GHS '+amountAfterFee.toFixed(2)+'.</strong> Status: Pending. At least 2 business days.';
+  // Call Make webhook
+  fetch(MAKE_WEBHOOK_URL+'/withdraw', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      memberId:currentUser.id,
+      memberName:currentUser.firstName+' '+currentUser.lastName,
+      phone:currentUser.phone,
+      amount:amount,
+      amountAfterFee:amountAfterFee,
+      fee:fee,
+      feeLabel:feeLabel,
+      method:method,
+      account:account,
+      reference:wRef
+    })
+  })
+  .then(function(r){
+    // Make can return plain text or JSON — handle both
+    var contentType=r.headers.get('content-type')||'';
+    if(contentType.indexOf('application/json')>=0){
+      return r.json();
     }
-    members[idx].notifications.push(notifMsg);
-    saveMembers(members);
-    currentUser=members[idx];
-  }
-
-  setVal('wAmt','');
-  setVal('wAccount','');
-  var preview=el('withdrawFeePreview');
-  if(preview) preview.style.display='none';
-  setText('dmBal','GHS '+(currentUser.balance||0).toFixed(2));
-  renderWithdrawalHistory(currentUser);
-  renderNotifications(currentUser);
-
-  var successMsg='&#x2705; Withdrawal submitted!<br>'
-    +'Amount: <strong>GHS '+amount.toFixed(2)+'</strong> via '+method+'<br>';
-  if(isFirst){
-    successMsg+='&#x1F381; <strong>First withdrawal — FREE! No fee deducted.</strong><br>You will receive the full GHS '+amountAfterFee.toFixed(2)+'.';
-  } else {
-    successMsg+='35% processing fee: <strong>GHS '+fee.toFixed(2)+'</strong><br>You will receive: <strong>GHS '+amountAfterFee.toFixed(2)+'</strong><br>';
-  }
-  successMsg+='<br>Phases: Pending &rarr; Processing &rarr; Complete &nbsp;|&nbsp; At least 2 business days.';
-  showWithdrawMsg('success', successMsg);
+    return r.text().then(function(t){
+      // Make returns "Accepted" on success if no response module is set
+      var lower=t.toLowerCase().trim();
+      if(lower==='accepted'||lower==='"accepted"'||r.ok){
+        return {success:true, reference:wRef, message:'Transfer sent via Make.'};
+      }
+      return {success:false, error:t||'Webhook error'};
+    });
+  })
+  .then(function(data){
+    if(btn){btn.disabled=false; btn.textContent='Withdraw Now';}
+    var allWs=getWithdrawals();
+    var wIdx=allWs.findIndex(function(x){return x.id===wId;});
+    if(data.success){
+      if(wIdx>=0){allWs[wIdx].phase='Complete'; allWs[wIdx].reference=data.reference||wRef; saveWithdrawals(allWs);}
+      var allM=getMembers(); var mIdx=allM.findIndex(function(m){return m.id===currentUser.id;});
+      if(mIdx>=0){
+        allM[mIdx].notifications=allM[mIdx].notifications||[];
+        allM[mIdx].notifications.push('&#x26A1; GHS '+amountAfterFee.toFixed(2)+' sent to '+account+' via '+method+'. Ref: '+(data.reference||wRef)+'.');
+        saveMembers(allM); currentUser=allM[mIdx];
+      }
+      setVal('wAmt',''); setVal('wAccount','');
+      var preview=el('withdrawFeePreview'); if(preview) preview.style.display='none';
+      renderWithdrawalHistory(currentUser); renderNotifications(currentUser);
+      showWithdrawMsg('success','&#x26A1; <strong>GHS '+amountAfterFee.toFixed(2)+' sent successfully!</strong><br>'
+        +'Sent to: <strong>'+account+'</strong> via '+method+'<br>'
+        +'Fee: GHS '+fee.toFixed(2)+' ('+feeLabel+')<br>'
+        +'Reference: '+(data.reference||wRef));
+    } else {
+      // Refund on failure
+      if(wIdx>=0){allWs[wIdx].phase='Failed'; saveWithdrawals(allWs);}
+      var allM2=getMembers(); var mIdx2=allM2.findIndex(function(m){return m.id===currentUser.id;});
+      if(mIdx2>=0){
+        allM2[mIdx2].balance=parseFloat(((allM2[mIdx2].balance||0)+amount).toFixed(2));
+        allM2[mIdx2].withdrawalCount=Math.max(0,(allM2[mIdx2].withdrawalCount||1)-1);
+        saveMembers(allM2); currentUser=allM2[mIdx2];
+        setText('dmBal','GHS '+(currentUser.balance||0).toFixed(2));
+      }
+      renderWithdrawalHistory(currentUser);
+      showWithdrawMsg('error','&#x274C; Transfer failed: '+(data.error||'Unknown error')+'. Your balance has been refunded.');
+    }
+  })
+  .catch(function(err){
+    if(btn){btn.disabled=false; btn.textContent='Withdraw Now';}
+    // Refund on network error
+    var allWs2=getWithdrawals(); var wIdx2=allWs2.findIndex(function(x){return x.id===wId;});
+    if(wIdx2>=0){allWs2[wIdx2].phase='Failed'; saveWithdrawals(allWs2);}
+    var allM3=getMembers(); var mIdx3=allM3.findIndex(function(m){return m.id===currentUser.id;});
+    if(mIdx3>=0){
+      allM3[mIdx3].balance=parseFloat(((allM3[mIdx3].balance||0)+amount).toFixed(2));
+      allM3[mIdx3].withdrawalCount=Math.max(0,(allM3[mIdx3].withdrawalCount||1)-1);
+      saveMembers(allM3); currentUser=allM3[mIdx3];
+      setText('dmBal','GHS '+(currentUser.balance||0).toFixed(2));
+    }
+    renderWithdrawalHistory(currentUser);
+    showWithdrawMsg('error','&#x274C; Could not reach payment server. Your balance has been refunded. Please try again.');
+  });
 }
-
 function showWithdrawMsg(type, msg){
   var el2=document.getElementById('withdrawMsg');
   if(!el2){
@@ -3269,7 +3518,7 @@ function updateWithdrawalPhase(wid, newPhase){
     var msg='';
     if(newPhase==='Processing') msg='&#x1F504; Your withdrawal of GHS '+parseFloat(w.amount).toFixed(2)+' via '+w.method+' is now <strong>Processing</strong>. You will receive <strong>GHS '+(w.amountAfterFee||w.amount).toFixed(2)+'</strong>. Expected: 1-2 more business days.';
     else if(newPhase==='Complete') msg='&#x2705; Your withdrawal is <strong>Complete</strong>! <strong>GHS '+(w.amountAfterFee||w.amount).toFixed(2)+'</strong> has been sent to your '+w.method+' account.';
-    else msg='&#x23F3; Your withdrawal of GHS '+parseFloat(w.amount).toFixed(2)+' is <strong>Pending</strong>. Will process within 2 business days.';
+    else msg='&#x26A1; Your withdrawal of GHS '+parseFloat(w.amount).toFixed(2)+' has been <strong>processed instantly</strong>. Check your '+w.method+'.';
     members[mIdx].notifications=members[mIdx].notifications||[];
     members[mIdx].notifications.push(msg);
     saveMembers(members);
