@@ -734,7 +734,7 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
     <div class="fg"><label>Password</label><input type="password" id="loginPassword" placeholder="Your password"/></div>
     <div class="err-box" id="loginError"></div>
     <button class="sbtn" id="doLoginBtn">Log In &#x2192;</button>
-    <p class="modal-terms" style="margin-top:12px">No account? <a href="#" id="switchToRegister">Sign up free</a></p>
+    <p class="modal-terms" style="margin-top:12px">No account? <a href="#" id="switchToRegister">Sign up free</a> &nbsp;·&nbsp; <a href="#" id="forgotPwLink" style="color:var(--red)">Forgot password?</a></p>
   </div>
 </div>
 
@@ -763,9 +763,57 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
       <div class="fg"><label>Gender</label><select id="regGender"><option value="">Select</option><option>Male</option><option>Female</option><option>Prefer not to say</option></select></div>
     </div>
     <div class="fg"><label>Password</label><input type="password" id="regPassword" placeholder="Min. 6 characters"/></div>
+    <div class="fg"><label>Security Question</label>
+      <select id="regSecQuestion">
+        <option value="">Select a security question</option>
+        <option>What is the name of your first pet?</option>
+        <option>What is your mother's maiden name?</option>
+        <option>What was the name of your first school?</option>
+        <option>What is the name of the town where you were born?</option>
+        <option>What was the name of your childhood best friend?</option>
+        <option>What is your oldest sibling's middle name?</option>
+        <option>What street did you grow up on?</option>
+        <option>What was the make of your first car?</option>
+      </select>
+    </div>
+    <div class="fg"><label>Security Answer</label><input type="text" id="regSecAnswer" placeholder="Your answer (case-insensitive)"/></div>
     <div class="err-box" id="regError"></div>
     <button class="sbtn" id="doRegisterBtn">Continue to Payment &#x2192;</button>
     <p class="modal-terms">By signing up you agree to our <a href="#" id="regTermsLink">Terms</a> &amp; <a href="#" id="regPrivacyLink">Privacy Policy</a>. Ghana residents 18+ only.</p>
+  </div>
+</div>
+
+<!-- FORGOT PASSWORD MODAL -->
+<div class="modal-overlay" id="forgotPwModal">
+  <div class="modal modal-sm">
+    <button class="modal-close" id="closeForgotPwBtn">&#x2715;</button>
+    <h2>&#x1F511; Reset Password</h2>
+    <p style="font-size:13.5px;color:var(--text-muted);margin-bottom:18px;line-height:1.6">Enter your registered phone number, answer your security question, and set a new password.</p>
+    <!-- Step 1: Phone -->
+    <div id="fpStep1">
+      <div class="fg"><label>Mobile Money Number</label><input type="tel" id="fpPhone" placeholder="e.g. 0241234567" inputmode="numeric" maxlength="10"/></div>
+      <div class="err-box" id="fpError1"></div>
+      <button class="sbtn" id="fpNextBtn">Next &#x2192;</button>
+    </div>
+    <!-- Step 2: Security question & new password -->
+    <div id="fpStep2" style="display:none">
+      <div class="fg">
+        <label id="fpQuestionLabel" style="font-weight:600;color:var(--text)">Security question</label>
+      </div>
+      <div class="fg"><label>Your Answer</label><input type="text" id="fpAnswer" placeholder="Enter your security answer"/></div>
+      <div class="fg"><label>New Password</label><input type="password" id="fpNewPass" placeholder="Min. 6 characters"/></div>
+      <div class="fg"><label>Confirm New Password</label><input type="password" id="fpConfirmPass" placeholder="Repeat new password"/></div>
+      <div class="err-box" id="fpError2"></div>
+      <button class="sbtn" id="fpResetBtn">Reset Password &#x2192;</button>
+      <p style="font-size:12px;color:var(--text-muted);margin-top:10px;cursor:pointer" id="fpBackBtn">&#x2190; Back</p>
+    </div>
+    <!-- Step 3: Success -->
+    <div id="fpStep3" style="display:none;text-align:center;padding:16px 0">
+      <div style="font-size:40px;margin-bottom:12px">&#x2705;</div>
+      <div style="font-size:16px;font-weight:700;color:var(--green);margin-bottom:8px">Password Reset!</div>
+      <p style="font-size:13.5px;color:var(--text-muted);margin-bottom:18px">Your password has been updated. You can now log in with your new password.</p>
+      <button class="sbtn" id="fpDoneBtn">Log In Now &#x2192;</button>
+    </div>
   </div>
 </div>
 
@@ -1200,6 +1248,24 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
           <div class="fg"><label>Gender</label><select id="setGender"><option value="">Select</option><option>Male</option><option>Female</option><option>Prefer not to say</option></select></div>
           <div class="fg"><label>Region</label><select id="setRegion"><option value="">Select</option><option>Greater Accra</option><option>Ashanti</option><option>Northern</option><option>Western</option><option>Eastern</option><option>Central</option><option>Volta</option><option>Upper East</option><option>Upper West</option><option>Brong-Ahafo</option><option>Oti</option><option>Bono East</option><option>Ahafo</option><option>North East</option><option>Savannah</option><option>Western North</option></select></div>
           <button class="sbtn" style="max-width:200px" id="saveProfileBtn">Save Changes &#x2192;</button>
+        </div>
+        <div class="s-card"><h3>&#x1F511; Security Question</h3>
+          <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px">Used to recover your account if you forget your password.</p>
+          <div class="fg"><label>Security Question</label>
+            <select id="setSecQuestion">
+              <option value="">Select a question</option>
+              <option>What is the name of your first pet?</option>
+              <option>What is your mother's maiden name?</option>
+              <option>What was the name of your first school?</option>
+              <option>What is the name of the town where you were born?</option>
+              <option>What was the name of your childhood best friend?</option>
+              <option>What is your oldest sibling's middle name?</option>
+              <option>What street did you grow up on?</option>
+              <option>What was the make of your first car?</option>
+            </select>
+          </div>
+          <div class="fg"><label>Your Answer</label><input type="text" id="setSecAnswer" placeholder="Your answer"/></div>
+          <button class="sbtn" style="max-width:220px" id="saveSecQBtn">Save Security Question &#x2192;</button>
         </div>
         <div class="s-card"><h3>&#x1F512; Locked — Phone Number</h3>
           <div class="fg"><label>Registered Phone Number <span style="font-size:10.5px;color:var(--red)">(cannot be changed)</span></label><div class="locked-field"><span id="setPhone">—</span><span class="locked-badge">&#x1F512; Permanent</span></div></div>
@@ -1710,7 +1776,7 @@ function restoreSession(){
     currentUser=m;
     if(m.status==='awaiting_verification'){showPaymentWaiting(m); startIdleTracking(); return;}
     if(m.status==='payment_failed'){
-      pendingReg={firstName:m.firstName,lastName:m.lastName,email:m.email,phone:m.phone,region:m.region,age:m.age,gender:m.gender||'N/A',password:m.password};
+      pendingReg={firstName:m.firstName,lastName:m.lastName,email:m.email,phone:m.phone,region:m.region,age:m.age,gender:m.gender||'N/A',secQuestion:m.secQuestion||'',secAnswer:m.secAnswer||'',password:m.password};
       showPaymentFailed('Your previous payment was not verified. Please try again.'); startIdleTracking(); return;
     }
     if(m.status==='active'){openMemberDashboard(m); startIdleTracking(); return;}
@@ -1821,8 +1887,35 @@ document.addEventListener('DOMContentLoaded', function(){
   if(wMethodEl) wMethodEl.addEventListener('change', updateWithdrawMethodLabel);
   var wAmtEl=el('wAmt');
   if(wAmtEl) wAmtEl.addEventListener('input', updateWithdrawFeePreview);
+  bindClick('saveSecQBtn', function(){
+    var q=val('setSecQuestion'), a=(val('setSecAnswer')||'').trim().toLowerCase();
+    if(!q){adminAlert('Please select a security question.'); return;}
+    if(!a){adminAlert('Please enter an answer.'); return;}
+    var members=getMembers();
+    var idx=members.findIndex(function(m){return m.id===currentUser.id;});
+    if(idx<0) return;
+    members[idx].secQuestion=q;
+    members[idx].secAnswer=a;
+    saveMembers(members);
+    currentUser=members[idx];
+    saveSession();
+    adminAlert('Security question saved successfully!');
+  });
   bindClick('saveProfileBtn', saveProfile);
   bindClick('changePwBtn', changePassword);
+  bindClick('forgotPwLink', function(e){e.preventDefault(); openForgotPwModal();});
+  bindClick('closeForgotPwBtn', closeForgotPwModal);
+  bindClick('fpNextBtn', fpNext);
+  bindClick('fpResetBtn', fpReset);
+  bindClick('fpBackBtn', function(){
+    el('fpStep2').style.display='none';
+    el('fpStep1').style.display='block';
+    hideErr('fpError2');
+  });
+  bindClick('fpDoneBtn', function(){
+    closeForgotPwModal();
+    openLoginModal();
+  });
   bindClick('closeAboutBtn',   function(){el('aboutModal').classList.remove('open');});
   bindClick('closeTermsBtn',   function(){el('termsModal').classList.remove('open');});
   bindClick('closePrivacyBtn', function(){el('privacyModal').classList.remove('open');});
@@ -1978,7 +2071,7 @@ function bindClose(id, fn){var b=el(id);if(b) b.addEventListener('click',functio
 document.addEventListener('click',function(e){
   if(e.target.classList.contains('modal-overlay')) {
     closeLoginModal(); closeRegisterModal(); closeDeleteModal(); closeAddContentModal();
-    ['aboutModal','termsModal','privacyModal','contactModal','penaltyModal','memberDeleteModal'].forEach(function(id){
+    ['aboutModal','termsModal','privacyModal','contactModal','penaltyModal','memberDeleteModal','forgotPwModal'].forEach(function(id){
       var m=el(id); if(m) m.classList.remove('open');
     });
     var sm=el('surveyModal');
@@ -2040,7 +2133,7 @@ function doLogin(){
   }
   if(m.status==='payment_failed'){
     closeLoginModal(); currentUser=m;
-    pendingReg={firstName:m.firstName,lastName:m.lastName,email:m.email,phone:m.phone,region:m.region,age:m.age,gender:m.gender||'N/A',password:m.password};
+    pendingReg={firstName:m.firstName,lastName:m.lastName,email:m.email,phone:m.phone,region:m.region,age:m.age,gender:m.gender||'N/A',secQuestion:m.secQuestion||'',secAnswer:m.secAnswer||'',password:m.password};
     showPaymentFailed('Your previous payment was not verified. Please try again.'); return;
   }
   if(m.status==='suspended'){
@@ -2058,12 +2151,15 @@ function doRegister(){
   var first=val('regFirst').trim(), last=val('regLast').trim();
   var email=val('regEmail').trim(), phone=val('regPhone').trim();
   var region=val('regRegion'), age=val('regAge'), gender=val('regGender'), pass=val('regPassword');
+  var secQuestion=val('regSecQuestion'), secAnswer=(val('regSecAnswer')||'').trim().toLowerCase();
   hideErr('regError');
   if(!first||!last){showErr('regError','Please enter your full name.'); return;}
   if(!email){showErr('regError','Please enter your email address.'); return;}
   if(!phone||phone.length<10||!/^0[2345679]\d{8}$/.test(phone)){showErr('regError','Please enter a valid Ghanaian MoMo phone number.'); return;}
   if(!region){showErr('regError','Please select your region.'); return;}
   if(!pass||pass.length<6){showErr('regError','Password must be at least 6 characters.'); return;}
+  if(!secQuestion){showErr('regError','Please select a security question.'); return;}
+  if(!secAnswer){showErr('regError','Please provide an answer to your security question.'); return;}
 
   var members=getMembers();
 
@@ -2079,7 +2175,7 @@ function doRegister(){
     return;
   }
 
-  // Check duplicate full name (both first AND last match, case-insensitive)
+  // Check duplicate full name
   var dupName=members.find(function(m){
     return m.firstName.toLowerCase()===first.toLowerCase() &&
            m.lastName.toLowerCase()===last.toLowerCase();
@@ -2089,7 +2185,7 @@ function doRegister(){
     return;
   }
 
-  pendingReg={firstName:first,lastName:last,email:email,phone:phone,region:region,age:age||'N/A',gender:gender||'N/A',password:pass};
+  pendingReg={firstName:first,lastName:last,email:email,phone:phone,region:region,age:age||'N/A',gender:gender||'N/A',password:pass,secQuestion:secQuestion,secAnswer:secAnswer};
   closeRegisterModal();
   openPaymentPage();
 }
@@ -2244,6 +2340,8 @@ function openMemberDashboard(member){
   setVal('setEmail', member.email);
   setVal('setRegion', member.region||'');
   setVal('setGender', member.gender||'');
+  setVal('setSecQuestion', member.secQuestion||'');
+  setVal('setSecAnswer', member.secAnswer||'');
   setText('setPhone', member.phone);
   setText('refLink','https://Goppay.github.io/SV/ref/'+member.id);
   // Reset daily ad viewed list if it's a new day
@@ -5263,6 +5361,65 @@ function claimPageReward(pageId){
   checkDailyStreakBonus(currentUser);
 }
 
+// ── FORGOT PASSWORD ───────────────────────────────────
+var fpMember=null;
+
+function openForgotPwModal(){
+  closeLoginModal();
+  fpMember=null;
+  el('fpStep1').style.display='block';
+  el('fpStep2').style.display='none';
+  el('fpStep3').style.display='none';
+  setVal('fpPhone',''); setVal('fpAnswer',''); setVal('fpNewPass',''); setVal('fpConfirmPass','');
+  hideErr('fpError1'); hideErr('fpError2');
+  el('forgotPwModal').classList.add('open');
+}
+
+function closeForgotPwModal(){
+  el('forgotPwModal').classList.remove('open');
+}
+
+function fpNext(){
+  var phone=(val('fpPhone')||'').trim();
+  hideErr('fpError1');
+  if(!phone||phone.length<10){showErr('fpError1','Please enter your registered phone number.'); return;}
+  var members=getMembers();
+  var m=members.find(function(x){return x.phone===phone;});
+  if(!m){showErr('fpError1','No account found with this phone number.'); return;}
+  if(!m.secQuestion){showErr('fpError1','This account has no security question set. Please contact support at Ghanaopinionpay@gmail.com.'); return;}
+  fpMember=m;
+  // Show question
+  setText('fpQuestionLabel', m.secQuestion);
+  el('fpStep1').style.display='none';
+  el('fpStep2').style.display='block';
+}
+
+function fpReset(){
+  hideErr('fpError2');
+  if(!fpMember){showErr('fpError2','Session expired. Please start again.'); return;}
+  var answer=(val('fpAnswer')||'').trim().toLowerCase();
+  var newPass=(val('fpNewPass')||'');
+  var confirmPass=(val('fpConfirmPass')||'');
+  if(!answer){showErr('fpError2','Please enter your security answer.'); return;}
+  if(answer!==(fpMember.secAnswer||'').toLowerCase()){
+    showErr('fpError2','Incorrect answer. Please try again.');
+    return;
+  }
+  if(!newPass||newPass.length<6){showErr('fpError2','New password must be at least 6 characters.'); return;}
+  if(newPass!==confirmPass){showErr('fpError2','Passwords do not match.'); return;}
+  // Update password
+  var members=getMembers();
+  var idx=members.findIndex(function(m){return m.id===fpMember.id;});
+  if(idx<0){showErr('fpError2','Account not found. Please contact support.'); return;}
+  members[idx].password=newPass;
+  members[idx].notifications=members[idx].notifications||[];
+  members[idx].notifications.push('&#x1F511; Your password was reset successfully on '+today()+'. If you did not do this, contact support immediately.');
+  saveMembers(members);
+  fpMember=null;
+  el('fpStep2').style.display='none';
+  el('fpStep3').style.display='block';
+}
+
 function broadcastAnn(){
   var text=(val('annText')||'').trim();
   if(!text){alert('Please enter an announcement.'); return;}
@@ -5521,7 +5678,7 @@ function confirmPayment(){
     firstName:pendingReg.firstName, lastName:pendingReg.lastName,
     email:pendingReg.email, phone:pendingReg.phone,
     region:pendingReg.region, age:pendingReg.age,
-    gender:pendingReg.gender||'N/A', password:pendingReg.password
+    gender:pendingReg.gender||'N/A', secQuestion:pendingReg.secQuestion||'', secAnswer:pendingReg.secAnswer||'', password:pendingReg.password
   };
   var tier={tier:selectedTier.tier, fee:selectedTier.fee};
 
@@ -5537,7 +5694,7 @@ function confirmPayment(){
     var mFree={
       id:'M'+Date.now(),firstName:reg.firstName,lastName:reg.lastName,
       email:reg.email,phone:reg.phone,region:reg.region,age:reg.age,gender:reg.gender||'N/A',
-      password:reg.password,tier:'Free',fee:0,paystackRef:'FREE-'+Date.now(),
+      secQuestion:reg.secQuestion||'',secAnswer:reg.secAnswer||'',password:reg.password,tier:'Free',fee:0,paystackRef:'FREE-'+Date.now(),
       status:'awaiting_verification',joinedDate:today(),paymentSubmittedAt:new Date().toISOString(),
       balance:0,monthEarned:0,referrals:0,referralEarnings:0,
       ghSurveyDone:false,withdrawalCount:0,streakBonusDate:'',streakDays:0,
@@ -5625,7 +5782,7 @@ function createMemberAccount(reg, tier, ref){
     firstName:reg.firstName, lastName:reg.lastName,
     email:reg.email, phone:reg.phone,
     region:reg.region, age:reg.age, gender:reg.gender||'N/A',
-    password:reg.password,
+    secQuestion:reg.secQuestion||'', secAnswer:reg.secAnswer||'', password:reg.password,
     tier:tier.tier, fee:tier.fee,
     paystackRef:ref,
     status:'awaiting_verification',
