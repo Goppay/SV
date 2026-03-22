@@ -2117,6 +2117,20 @@ function closeSurveyModal(){
 }
 
 // ── LOGIN ─────────────────────────────────────────────
+function getTombstones(){try{return JSON.parse(localStorage.getItem('gop_tombstones')||'[]');}catch(e){return [];}}
+function saveTombstones(t){try{localStorage.setItem('gop_tombstones',JSON.stringify(t));}catch(e){}}
+function addTombstone(member){
+  var t=getTombstones();
+  var exists=t.find(function(x){return x.id===member.id||x.phone===member.phone;});
+  if(!exists) t.push({id:member.id,phone:member.phone,email:(member.email||'').toLowerCase(),deletedAt:new Date().toISOString()});
+  saveTombstones(t);
+}
+function isTombstoned(phone,email){
+  var t=getTombstones();
+  var lEmail=(email||'').toLowerCase();
+  return !!t.find(function(x){return x.phone===phone||(lEmail&&x.email===lEmail);});
+}
+
 function doLogin(){
   var phone = val('loginPhone').trim();
   var pass  = val('loginPassword');
@@ -2135,7 +2149,7 @@ function doLogin(){
   // Check if account was deleted
   try{
     var bl=JSON.parse(localStorage.getItem('gop_deleted')||'[]');
-    if(bl.indexOf(m.id)>=0){showErr('loginError','This account no longer exists. Contact support.'); return;}
+    if(bl.indexOf(m.id)>=0||isTombstoned(phone,m.email)){showErr('loginError','This account has been permanently deleted and cannot be accessed. Contact support if you believe this is an error.'); return;}
   }catch(e){}
   if(m.status==='awaiting_verification'){
     closeLoginModal(); currentUser=m; saveSession(); showPaymentWaiting(m); return;
@@ -2171,6 +2185,12 @@ function doRegister(){
   if(!secAnswer){showErr('regError','Please provide an answer to your security question.'); return;}
 
   var members=getMembers();
+
+  // Check if phone or email was permanently deleted
+  if(isTombstoned(phone,email)){
+    showErr('regError','This phone number or email address belongs to a deleted account and cannot be used to register again. Contact support at Ghanaopinionpay@gmail.com if you believe this is an error.');
+    return;
+  }
 
   // Check duplicate phone
   if(members.find(function(m){return m.phone===phone;})){
@@ -3570,11 +3590,14 @@ function confirmDeleteMember(){
   var members=getMembers();
   var idx=members.findIndex(function(m){return m.id===pendingDeleteId;});
   var deletedId=pendingDeleteId;
+  var deletedMember=idx>=0?members[idx]:null;
   if(idx>=0){members.splice(idx,1); saveMembers(members);}
   // Remove their withdrawals
   var ws=getWithdrawals().filter(function(w){return w.memberId!==deletedId;});
   saveWithdrawals(ws);
-  // Add to deleted blacklist so they can never log back in
+  // Add to permanent tombstone (phone+email block)
+  if(deletedMember) addTombstone(deletedMember);
+  // Add to deleted blacklist
   try{
     var blacklist=JSON.parse(localStorage.getItem('gop_deleted')||'[]');
     if(blacklist.indexOf(deletedId)<0) blacklist.push(deletedId);
@@ -5159,6 +5182,8 @@ function confirmMemberDelete(){
   members[idx].status='pending_deletion';
   members[idx].deletionScheduledAt=new Date().toISOString();
   members[idx].deletionDueAt=deletionDate.toISOString();
+  // Pre-tombstone now so phone/email can't be reused immediately
+  addTombstone(members[idx]);
   members[idx].notifications=members[idx].notifications||[];
   members[idx].notifications.push('&#x1F5D1; Your account deletion has been scheduled. Your account will be permanently deleted on <strong>'+deletionDate.toLocaleDateString('en-GB')+'</strong>. Log back in before then to cancel and reactivate.');
   saveMembers(members);
@@ -5194,6 +5219,11 @@ function reactivateFromDeletion(){
   members[idx].status='active';
   delete members[idx].deletionScheduledAt;
   delete members[idx].deletionDueAt;
+  // Remove tombstone so they can log in again
+  try{
+    var tombs=getTombstones().filter(function(t){return t.id!==members[idx].id;});
+    saveTombstones(tombs);
+  }catch(e){}
   members[idx].notifications=members[idx].notifications||[];
   members[idx].notifications.push('&#x2705; Account deletion cancelled. Your account has been fully reactivated. Welcome back!');
   saveMembers(members);
@@ -5207,7 +5237,6 @@ function checkScheduledDeletions(){
   // Run on every page load — purge accounts past their 7-day window
   var members=getMembers();
   var now=new Date();
-  var changed=false;
   var toDelete=[];
   members.forEach(function(m){
     if(m.status==='pending_deletion'&&m.deletionDueAt){
@@ -5216,6 +5245,10 @@ function checkScheduledDeletions(){
     }
   });
   if(!toDelete.length) return;
+  // Add tombstones (permanent phone+email block)
+  members.forEach(function(m){
+    if(toDelete.indexOf(m.id)>=0) addTombstone(m);
+  });
   // Add to blacklist and remove from members
   try{
     var bl=JSON.parse(localStorage.getItem('gop_deleted')||'[]');
