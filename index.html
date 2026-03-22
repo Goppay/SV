@@ -1063,6 +1063,8 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
         <div class="a-card-title">
           <span>&#x1F4C4; Member Profiles</span>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <button class="abtn" id="expandAllProfiles" style="font-size:12px;padding:5px 12px">&#x25BC; Expand All</button>
+            <button class="abtn" id="collapseAllProfiles" style="font-size:12px;padding:5px 12px">&#x25B2; Collapse All</button>
             <input type="text" id="profileSearch" placeholder="&#x1F50D; Search name, phone or email..." style="padding:6px 12px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;outline:none;width:220px"/>
             <select id="profileGenderFilter" style="padding:6px 10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;outline:none;cursor:pointer">
               <option value="all">All Genders</option>
@@ -1546,6 +1548,22 @@ document.addEventListener('DOMContentLoaded', function(){
   if(profileGenderEl) profileGenderEl.addEventListener('change', renderProfilesTab);
   var profileTierEl=el('profileTierFilter');
   if(profileTierEl) profileTierEl.addEventListener('change', renderProfilesTab);
+  bindClick('expandAllProfiles',function(){
+    document.querySelectorAll('[id^="pbody_"]').forEach(function(b){
+      b.style.display='block';
+      var memberId=b.id.replace('pbody_','');
+      var arrow=el('parrow_'+memberId);
+      if(arrow) arrow.style.transform='rotate(180deg)';
+    });
+  });
+  bindClick('collapseAllProfiles',function(){
+    document.querySelectorAll('[id^="pbody_"]').forEach(function(b){
+      b.style.display='none';
+      var memberId=b.id.replace('pbody_','');
+      var arrow=el('parrow_'+memberId);
+      if(arrow) arrow.style.transform='';
+    });
+  });
 
   // Admin dashboard
   bindClick('aLogoutBtn', logout);
@@ -4424,23 +4442,25 @@ function renderProfilesTab(){
   };
 
   var html='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px">';
-  filtered.forEach(function(m){
+  filtered.forEach(function(m,mi){
+    var cardId='pcard_'+m.id;
+    var bodyId='pbody_'+m.id;
     var initials=(m.firstName.charAt(0)+(m.lastName||'').charAt(0)).toUpperCase();
-    var tierC=m.tier==='Bronze'?'#f59e0b':m.tier==='Silver'?'#6b7280':'#d97706';
-    html+='<div style="background:#fff;border:1.5px solid #e5e7eb;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.05)">';
-    // Header strip
-    html+='<div style="background:linear-gradient(135deg,#0d4a22,var(--green));padding:16px;display:flex;align-items:center;gap:12px">';
-    html+='<div style="width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.25);color:#fff;font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">'+initials+'</div>';
-    html+='<div><div style="font-size:15px;font-weight:700;color:#fff">'+m.firstName+' '+m.lastName+'</div>';
-    html+='<div style="font-size:12px;color:rgba(255,255,255,.8);margin-top:2px">'+tierIcon(m.tier)+' '+m.tier+' &nbsp;'+stBadge(m.status)+'</div></div>';
+    html+='<div id="'+cardId+'" style="background:#fff;border:1.5px solid #e5e7eb;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.05)">';
+    // Header strip — clickable toggle
+    html+='<div data-ptoggle="'+bodyId+'" style="background:linear-gradient(135deg,#0d4a22,var(--green));padding:13px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;user-select:none">';
+    html+='<div style="width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.25);color:#fff;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">'+initials+'</div>';
+    html+='<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+m.firstName+' '+m.lastName+'</div>';
+    html+='<div style="font-size:11.5px;color:rgba(255,255,255,.8);margin-top:2px">'+tierIcon(m.tier)+' '+m.tier+' &nbsp;'+stBadge(m.status)+'</div></div>';
+    html+='<div id="parrow_'+m.id+'" style="color:rgba(255,255,255,.8);font-size:13px;flex-shrink:0;transition:transform .25s">&#x25BC;</div>';
     html+='</div>';
-    // Body
-    html+='<div style="padding:14px 16px">';
+    // Body — hidden by default
+    html+='<div id="'+bodyId+'" style="display:none;padding:14px 16px">';
     var rows=[
       ['&#x1F4DE; Phone', m.phone],
       ['&#x1F4E7; Email', m.email||'—'],
       ['&#x1F4CD; Region', m.region||'—'],
-      ['&#x1F9D1; Gender', genderIcon(m.gender||'')+ ' '+(m.gender||'Not specified')],
+      ['&#x1F9D1; Gender', genderIcon(m.gender||'')+' '+(m.gender||'Not specified')],
       ['&#x1F382; Age', m.age||'—'],
       ['&#x1F4C5; Joined', m.joinedDate||'—'],
       ['&#x1F4B0; Balance', 'GHS '+(m.balance||0).toFixed(2)],
@@ -4458,6 +4478,20 @@ function renderProfilesTab(){
   });
   html+='</div>';
   listEl.innerHTML=html;
+
+  // Bind toggle clicks
+  listEl.querySelectorAll('[data-ptoggle]').forEach(function(hdr){
+    hdr.addEventListener('click',function(){
+      var body=el(hdr.dataset.ptoggle);
+      if(!body) return;
+      var open=body.style.display!=='none';
+      body.style.display=open?'none':'block';
+      // Rotate arrow
+      var memberId=hdr.dataset.ptoggle.replace('pbody_','');
+      var arrow=el('parrow_'+memberId);
+      if(arrow) arrow.style.transform=open?'':'rotate(180deg)';
+    });
+  });
 }
 
 function broadcastAnn(){
@@ -4857,8 +4891,6 @@ function showManualActivation(ref){
   document.body.appendChild(div);
 }
 </script>
-<script>
-
 
 </body>
 </html>
