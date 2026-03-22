@@ -213,7 +213,7 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
 .pp-for-label{font-size:11.5px;color:var(--text-muted);margin-bottom:3px;font-weight:600;text-transform:uppercase;letter-spacing:.4px}
 .pp-for-val{font-size:14px;font-weight:500;color:var(--text);margin-bottom:16px}
 .pp-div{border:none;border-top:1px solid var(--border);margin:14px 0}
-.tier-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}
+.tier-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px}
 .tier-opt{border-radius:10px;padding:12px 8px;text-align:center;cursor:pointer;transition:all .22s;border:1.5px solid var(--border);background:#fff}
 .tier-opt:hover{border-color:var(--green)}
 .tier-opt.selected{box-shadow:0 0 0 3px var(--green);transform:scale(1.04)}
@@ -390,7 +390,7 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
   .footer-bottom{flex-direction:column;align-items:flex-start}
   .form-row,.w-row{grid-template-columns:1fr}
   .modal{padding:22px 16px}
-  .tier-grid{grid-template-columns:1fr}
+  .tier-grid{grid-template-columns:repeat(2,1fr)}
   .d-metrics,.a-metrics{grid-template-columns:1fr 1fr}
   .form-row-3{grid-template-columns:1fr 1fr}
 }
@@ -492,6 +492,7 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
   <div class="container">
     <div class="reveal"><div class="section-label">Membership Levels</div><h2 class="section-title">Choose your tier &amp; activate</h2><p class="section-sub">Pay once via Telecel Cash. Higher tier = more daily tasks and better cashout terms.</p></div>
     <div class="tiers-grid reveal">
+      <div class="tc tc-f" style="border:2px solid #22c55e;background:#f0fdf4"><div class="tc-pop" style="background:#22c55e">Free</div><div class="tc-icon">&#x1F193;</div><div class="tc-name" style="color:#15803d">Free</div><div class="tc-req"><strong style="color:#15803d">GHS 0</strong> — No registration fee</div><div class="tc-min">GHS 10 <small>min cashout</small></div><ul class="tc-perks"><li>1 survey per day — GHS 1</li><li>No daily polls</li><li>1 video per day — GHS 1</li><li>1 ad per day — GHS 0.30</li><li>GHS 10 minimum cashout</li></ul></div>
       <div class="tc tc-b"><div class="tc-icon">&#x1F949;</div><div class="tc-name">Bronze</div><div class="tc-req">Registration: <strong style="color:#7a4515">GHS 60</strong></div><div class="tc-min">GHS 30 <small>min cashout</small></div><ul class="tc-perks"><li>3 surveys per day — GHS 1 each</li><li>1 poll per day — GHS 1</li><li>GHS 1 per video</li><li>Daily streak bonus</li><li>MoMo &amp; bank withdrawal</li></ul></div>
       <div class="tc tc-s"><div class="tc-icon">&#x1F948;</div><div class="tc-name">Silver</div><div class="tc-req">Registration: <strong style="color:#495057">GHS 100</strong></div><div class="tc-min">GHS 75 <small>min cashout</small></div><ul class="tc-perks"><li>6 surveys per day — GHS 1 each</li><li>2 polls per day — GHS 1 each</li><li>Priority survey access</li><li>Faster payment processing</li><li>Silver leaderboard</li></ul></div>
       <div class="tc tc-g"><div class="tc-pop">Top Tier</div><div class="tc-icon">&#x1F947;</div><div class="tc-name">Gold</div><div class="tc-req">Registration: <strong style="color:#856e00">GHS 150</strong></div><div class="tc-min">GHS 100 <small>min cashout</small></div><ul class="tc-perks"><li>10 surveys per day — GHS 1 each</li><li>3 polls per day — GHS 1 each</li><li>+20% bonus on surveys</li><li>Exclusive product test invites</li><li>Dedicated account manager</li></ul></div>
@@ -509,7 +510,7 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
       <div class="pay-card"><div class="pay-card-logo">&#x1F3E6;</div><h3>Bank Transfer</h3><p>GCB, Ecobank, Absa, Fidelity, Cal Bank, and more.</p></div>
       <div class="pay-card"><div class="pay-card-logo">&#x1F381;</div><h3>Gift Vouchers</h3><p>Redeem as Melcom or e-commerce vouchers at a 5% bonus.</p></div>
     </div>
-    <div class="info-note reveal"><div class="info-note-icon">&#x23F1;</div><p><strong style="color:#fff">&#x1F381; First withdrawal FREE for all tiers.</strong> From the 2nd withdrawal onwards, a <strong style="color:var(--gold)">35% processing fee</strong> is deducted. Withdrawals pass through <strong style="color:var(--gold)">3 phases: Pending &#x2192; Processing &#x2192; Complete</strong> — at least 2 business days. Processed every Monday &amp; Thursday. Min withdrawal: Bronze GHS 30 · Silver GHS 75 · Gold GHS 100.</p></div>
+    <div class="info-note reveal"><div class="info-note-icon">&#x23F1;</div><p><strong style="color:#fff">&#x1F381; First withdrawal FREE for all tiers.</strong> From the 2nd withdrawal onwards, a <strong style="color:var(--gold)">35% processing fee</strong> is deducted. Withdrawals pass through <strong style="color:var(--gold)">3 phases: Pending &#x2192; Processing &#x2192; Complete</strong> — at least 2 business days. Processed every Monday &amp; Thursday. Min withdrawal: Free GHS 10 · Bronze GHS 30 · Silver GHS 75 · Gold GHS 100.</p></div>
   </div>
 </section>
 
@@ -545,8 +546,8 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
     <div class="faq-list reveal">
       <div class="faq-item"><button class="faq-q">How long does payment verification take?<span class="faq-chev">&#x25BE;</span></button><div class="faq-a">After paying your registration fee via Telecel Cash to 0203910730, admin verifies your payment within 20 minutes. Once verified, your dashboard opens automatically. If verification fails, you receive a prompt to try again.</div></div>
       <div class="faq-item"><button class="faq-q">What should I use as payment reference?<span class="faq-chev">&#x25BE;</span></button><div class="faq-a">Use your registered mobile phone number as the reference or note when making the Telecel Cash payment. This is shown clearly on the payment page to help admin match your payment quickly.</div></div>
-      <div class="faq-item"><button class="faq-q">What are the minimum withdrawal amounts?<span class="faq-chev">&#x25BE;</span></button><div class="faq-a">Your <strong>first withdrawal is completely FREE</strong> — no fee deducted for all tiers. From the 2nd withdrawal onwards, a <strong>35% processing fee</strong> is automatically deducted. Minimum cashout: Bronze GHS 30 · Silver GHS 75 · Gold GHS 100. Maximum monthly withdrawal GHS 2,000. Withdrawals take at least 2 business days.</div></div>
-      <div class="faq-item"><button class="faq-q">How many surveys and polls per day?<span class="faq-chev">&#x25BE;</span></button><div class="faq-a">Daily limits — Surveys: Bronze 3, Silver 6, Gold 10 (GHS 1.00 each). Daily Polls: Bronze 1, Silver 2, Gold 3 (GHS 1.00 each). Videos have a separate daily limit of 10.</div></div>
+      <div class="faq-item"><button class="faq-q">What are the minimum withdrawal amounts?<span class="faq-chev">&#x25BE;</span></button><div class="faq-a">Your <strong>first withdrawal is completely FREE</strong> — no fee deducted for all tiers. From the 2nd withdrawal onwards, a <strong>35% processing fee</strong> is automatically deducted. Minimum cashout: Free GHS 10 · Bronze GHS 30 · Silver GHS 75 · Gold GHS 100. Maximum monthly withdrawal GHS 2,000. Withdrawals take at least 2 business days.</div></div>
+      <div class="faq-item"><button class="faq-q">How many surveys and polls per day?<span class="faq-chev">&#x25BE;</span></button><div class="faq-a">Daily limits — Free: 1 survey, 0 polls, 1 video, 1 ad. Bronze: 3 surveys, 1 poll, 5 ads. Silver: 6 surveys, 2 polls, 10 ads. Gold: 10 surveys, 3 polls, 15 ads.</div></div>
       <div class="faq-item"><button class="faq-q">Can I change my registered phone number?<span class="faq-chev">&#x25BE;</span></button><div class="faq-a">No. The phone number used at registration is permanently linked to your account and cannot be changed under any circumstances. Please use an active MoMo number (MTN, Telecel, or AirtelTigo).</div></div>
       <div class="faq-item"><button class="faq-q">What is the Ghana Affairs Survey?<span class="faq-chev">&#x25BE;</span></button><div class="faq-a">A short 5-question survey about current affairs in Ghana, available immediately on activation. It earns GHS 3.00 instantly and takes about 3 minutes.</div></div>
     </div>
@@ -670,6 +671,7 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
         <div style="margin-bottom:14px">
           <div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Select Membership Tier to Activate</div>
           <div class="tier-grid" id="ppTierGrid">
+            <div class="tier-opt" data-tier="Free" data-fee="0" style="border-color:#22c55e;background:#f0fdf4"><div style="font-size:20px">&#x1F193;</div><div style="font-size:13px;font-weight:700;color:#15803d">FREE</div><div style="font-size:12px;color:#15803d;font-weight:700">GHS 0</div></div>
             <div class="tier-opt" data-tier="Bronze" data-fee="60" style="border-color:#d4a06a;background:#fdf5ee"><div style="font-size:20px">&#x1F949;</div><div style="font-size:13px;font-weight:600;color:#7a4515">Bronze</div><div style="font-size:12px;color:#7a4515;font-weight:700">GHS 60</div></div>
             <div class="tier-opt" data-tier="Silver" data-fee="100" style="border-color:#adb5bd;background:#f4f5f6"><div style="font-size:20px">&#x1F948;</div><div style="font-size:13px;font-weight:600;color:#495057">Silver</div><div style="font-size:12px;color:#495057;font-weight:700">GHS 100</div></div>
             <div class="tier-opt" data-tier="Gold" data-fee="150" style="border-color:#c9a500;background:#fffbeb"><div style="font-size:20px">&#x1F947;</div><div style="font-size:13px;font-weight:600;color:#856e00">Gold</div><div style="font-size:12px;color:#856e00;font-weight:700">GHS 150</div></div>
@@ -859,10 +861,11 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
       <div class="d-card">
         <div class="d-card-title">&#x1F4B8; Request a Withdrawal</div>
         <div class="with-note">
-          &#x1F381; <strong>Your first withdrawal is FREE — no fees deducted.</strong><br>
-          &#x26A0;&#xFE0F; From your 2nd withdrawal onwards, a <strong>35% processing fee</strong> is deducted from the amount you request.<br>
+          &#x1F381; <strong>Your first withdrawal is FREE — no fees deducted.</strong> (Paid tiers only)<br>
+          &#x26A0;&#xFE0F; <strong>Free account:</strong> 15% processing fee on every withdrawal.<br>
+          &#x26A0;&#xFE0F; From your 2nd withdrawal onwards (paid tiers), a <strong>35% processing fee</strong> is deducted from the amount you request.<br>
           &#x23F1; All withdrawals pass through <strong>3 phases: Pending &#x2192; Processing &#x2192; Complete</strong> — at least 2 business days. Processed Mon &amp; Thu only.<br>
-          <strong>Minimums:</strong> Bronze GHS 30 · Silver GHS 75 · Gold GHS 100.
+          <strong>Minimums:</strong> Free GHS 10 · Bronze GHS 30 · Silver GHS 75 · Gold GHS 100.
         </div>
         <div id="withdrawFeePreview" style="display:none;margin-bottom:12px;padding:10px 13px;border-radius:9px;border:1.5px solid #e5e7eb;background:#f9fafb;font-size:13px;line-height:1.7"></div>
         <div class="w-row">
@@ -1245,10 +1248,11 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
 var ADMIN_PHONE = '0551152894';
 var ADMIN_PASS  = '123Akati@';
 var MERCHANT    = '0203910730';
-var TIER_DAILY  = {Bronze:3, Silver:6, Gold:10};
-var TIER_MINW   = {Bronze:30, Silver:75, Gold:100};
-var TIER_POLLS  = {Bronze:1, Silver:2, Gold:3};
-var TIER_ADS    = {Bronze:5, Silver:10, Gold:15};
+var TIER_DAILY  = {Free:1, Bronze:3, Silver:6, Gold:10};
+var TIER_MINW   = {Free:10, Bronze:30, Silver:75, Gold:100};
+var TIER_POLLS  = {Free:0, Bronze:1, Silver:2, Gold:3};
+var TIER_ADS    = {Free:1, Bronze:5, Silver:10, Gold:15};
+var TIER_VIDEOS = {Free:1, Bronze:10, Silver:10, Gold:10};
 var AD_EARN     = 0.30;
 var AD_VIEW_SECS= 25;
 
@@ -2294,8 +2298,22 @@ function updateWithdrawFeePreview(){
   if(!currentUser||currentUser==='admin'||currentUser.role==='superadmin'||currentUser.role==='subadmin'){preview.style.display='none';return;}
   var amount=parseFloat(val('wAmt'))||0;
   if(!amount||amount<=0){preview.style.display='none';return;}
+
+  var isFreeAcct=currentUser.tier==='Free';
   var isFirst=(currentUser.withdrawalCount||0)===0;
-  if(isFirst){
+
+  if(isFreeAcct){
+    // Free account: 15% fee on every withdrawal, no exceptions
+    var fee15=parseFloat((amount*0.15).toFixed(2));
+    var youGet15=parseFloat((amount-fee15).toFixed(2));
+    preview.style.display='block';
+    preview.style.borderColor='#e8c800';
+    preview.style.background='#fff8d6';
+    preview.innerHTML='&#x26A0;&#xFE0F; <strong style="color:#6b5200">15% processing fee applies (Free account).</strong><br>'
+      +'Amount requested: <strong>GHS '+amount.toFixed(2)+'</strong><br>'
+      +'Processing fee (15%): <strong style="color:var(--red)">− GHS '+fee15.toFixed(2)+'</strong><br>'
+      +'<strong>You will receive: <span style="color:var(--green);font-size:15px">GHS '+youGet15.toFixed(2)+'</span></strong>';
+  } else if(isFirst){
     preview.style.display='block';
     preview.style.borderColor='var(--green)';
     preview.style.background='var(--green-pale)';
@@ -2335,10 +2353,23 @@ function submitWithdrawal(){
   if(amount>(currentUser.balance||0)){showWithdrawMsg('error','Insufficient balance. Your available balance is GHS '+(currentUser.balance||0).toFixed(2)+'.'); return;}
   if(!account){showWithdrawMsg('error','Please enter your MoMo or bank account number.'); return;}
 
-  // Calculate fee
+  // Calculate fee — Free tier: 15% on every withdrawal; others: 0% first, 35% thereafter
+  var isFreeAcct=currentUser.tier==='Free';
   var isFirst=(currentUser.withdrawalCount||0)===0;
-  var fee=isFirst?0:parseFloat((amount*0.35).toFixed(2));
-  var amountAfterFee=parseFloat((amount-fee).toFixed(2));
+  var fee, amountAfterFee, feeLabel;
+  if(isFreeAcct){
+    fee=parseFloat((amount*0.15).toFixed(2));
+    amountAfterFee=parseFloat((amount-fee).toFixed(2));
+    feeLabel='15% (Free account)';
+  } else if(isFirst){
+    fee=0;
+    amountAfterFee=amount;
+    feeLabel='Free (first withdrawal)';
+  } else {
+    fee=parseFloat((amount*0.35).toFixed(2));
+    amountAfterFee=parseFloat((amount-fee).toFixed(2));
+    feeLabel='35% processing fee';
+  }
 
   var ws=getWithdrawals();
   var w={
@@ -2349,7 +2380,7 @@ function submitWithdrawal(){
     amount:amount,
     fee:fee,
     amountAfterFee:amountAfterFee,
-    isFree:isFirst,
+    isFree:(!isFreeAcct && isFirst),
     method:method,
     account:account,
     date:today(),
@@ -2364,10 +2395,10 @@ function submitWithdrawal(){
     members[idx].withdrawalCount=(members[idx].withdrawalCount||0)+1;
     members[idx].notifications=members[idx].notifications||[];
     var notifMsg='&#x1F4B8; Withdrawal request of GHS '+amount.toFixed(2)+' via '+method+' submitted on '+w.date+'.';
-    if(isFirst){
+    if(!isFreeAcct && isFirst){
       notifMsg+=' &#x1F381; <strong>First withdrawal — no fee charged.</strong> You will receive GHS '+amountAfterFee.toFixed(2)+'. Status: Pending. At least 2 business days.';
     } else {
-      notifMsg+=' 35% processing fee applied. Fee: GHS '+fee.toFixed(2)+'. <strong>You will receive GHS '+amountAfterFee.toFixed(2)+'.</strong> Status: Pending. At least 2 business days.';
+      notifMsg+=' '+feeLabel+' applied. Fee: GHS '+fee.toFixed(2)+'. <strong>You will receive GHS '+amountAfterFee.toFixed(2)+'.</strong> Status: Pending. At least 2 business days.';
     }
     members[idx].notifications.push(notifMsg);
     saveMembers(members);
@@ -2681,6 +2712,7 @@ function renderMembersTable(){
   // ── Tier summary cards ───────────────────────────────
   var allForSummary=getMembers(); // always use unfiltered for summaries
   var tierDefs=[
+    {key:'Free',  icon:'&#x1F193;',cls:'free',  color:'#15803d'},
     {key:'Bronze',icon:'&#x1F949;',cls:'bronze',color:'#7a4515'},
     {key:'Silver',icon:'&#x1F948;',cls:'silver',color:'#495057'},
     {key:'Gold',  icon:'&#x1F947;',cls:'gold',  color:'#856e00'}
@@ -4073,8 +4105,8 @@ function copyRefMainLink(){
 }
 
 // ── UPGRADE TAB ──────────────────────────────────────
-var TIER_FEES={Bronze:60,Silver:100,Gold:150};
-var TIER_ORDER=['Bronze','Silver','Gold'];
+var TIER_FEES={Free:0,Bronze:60,Silver:100,Gold:150};
+var TIER_ORDER=['Free','Bronze','Silver','Gold'];
 
 function renderUpgradeTab(member){
   var wrap=el('upgradeTiersWrap');
@@ -4096,7 +4128,8 @@ function renderUpgradeTab(member){
       html+='<div><div style="font-size:15px;font-weight:700;color:var(--green)">'+icon+' Upgrade to '+tierName+'</div>';
       html+='<div style="font-size:12.5px;color:var(--text-muted);margin-top:3px">Upgrade fee: <strong style="color:var(--green)">GHS '+diff+'</strong> (difference from your current tier)</div>';
       html+='<div style="font-size:12px;color:var(--text-muted);margin-top:2px">';
-      if(tierName==='Silver') html+='6 surveys/day · 2 polls/day · GHS 75 min cashout';
+      if(tierName==='Bronze') html+='3 surveys/day · 1 poll/day · GHS 30 min cashout';
+      else if(tierName==='Silver') html+='6 surveys/day · 2 polls/day · GHS 75 min cashout';
       else html+='10 surveys/day · 3 polls/day · GHS 100 min cashout';
       html+='</div></div>';
       html+='<button class="c-btn" style="background:var(--green);color:#fff;white-space:nowrap" data-upgradetier="'+tierName+'" data-upgradefee="'+diff+'">Upgrade &#x2192;</button>';
@@ -4694,6 +4727,24 @@ function confirmPayment(){
   }catch(e){}
 
   // Build Paystack hosted page URL with pre-filled details
+  // Free tier — skip payment entirely
+  if(tier.fee===0||tier.tier==='Free'){
+    var existing2=getMembers().find(function(x){return x.phone===reg.phone;});
+    if(existing2){currentUser=existing2;saveSession();showPaymentWaiting(existing2);return;}
+    var mFree={
+      id:'M'+Date.now(),firstName:reg.firstName,lastName:reg.lastName,
+      email:reg.email,phone:reg.phone,region:reg.region,age:reg.age,gender:reg.gender||'N/A',
+      password:reg.password,tier:'Free',fee:0,paystackRef:'FREE-'+Date.now(),
+      status:'awaiting_verification',joinedDate:today(),paymentSubmittedAt:new Date().toISOString(),
+      balance:0,monthEarned:0,referrals:0,referralEarnings:0,
+      ghSurveyDone:false,withdrawalCount:0,streakBonusDate:'',streakDays:0,
+      dailySurveyDate:'',dailySurveyCount:0,dailyPollDate:'',dailyPollCount:0,
+      dailyAdDate:'',dailyAdCount:0,viewedAdsToday:[],answeredPolls:[],completedSurveys:[],completedVideos:[],
+      notifications:['&#x1F193; Welcome to GhanaOpinionPay Free tier! Your account is awaiting admin activation.']
+    };
+    var mems=getMembers();mems.push(mFree);saveMembers(mems);
+    currentUser=mFree;saveSession();showPaymentWaiting(mFree);return;
+  }
   var slug=PAYSTACK_PAGES[tier.tier]||'goppay';
   var url='https://paystack.com/pay/'+slug
     +'?email='+encodeURIComponent(reg.email)
