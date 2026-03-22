@@ -689,7 +689,7 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
           <ul class="ussd-steps">
             <li><div class="ussd-circle">1</div><span>Select your membership tier above</span></li>
             <li><div class="ussd-circle">2</div><span>Click <strong>"Pay Now with Paystack"</strong> below</span></li>
-            <li><div class="ussd-circle">3</div><span>You will be taken to <strong>Paystack's secure checkout page</strong> — pay with card, Mobile Money, or bank</span></li>
+            <li><div class="ussd-circle">3</div><span>A <strong>secure Paystack popup</strong> will appear — pay with card, Mobile Money, or bank</span></li>
             <li><div class="ussd-circle">4</div><span>After payment you are <strong>automatically brought back</strong> and your account is submitted for activation</span></li>
           </ul>
           <div style="margin-top:8px;font-size:11.5px;color:#9ca3af">&#x1F512; All payments secured by Paystack — Ghana's trusted payment gateway</div>
@@ -1618,7 +1618,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
   // Restore session after refresh — must be last so all DOM elements are ready
   restoreSession();
-  // Check if returning from Paystack payment redirect
+  // Paystack payment callback check
   checkPaystackReturn();
 });
 
@@ -4631,72 +4631,159 @@ function checkDailyStreakBonus(member){
 }
 
 </script>
-<!-- Paystack: inline v1 loaded synchronously -->
-<script src="https://js.paystack.co/v1/inline.js"></script>
+<!-- Paystack popup window approach -->
 <script>
+// ── STEP 1: Create a payment page in your Paystack dashboard ──
+// Go to: dashboard.paystack.com → Payment Pages → Create Page
+// Set amount to 0 (variable amount) or create separate pages per tier
+// Copy the page slug (e.g. "goppay-bronze") and set it below
+
+var PAYSTACK_PAGES={
+  Bronze:'goppay-bronze',   // ← replace with your actual page slugs
+  Silver:'goppay-silver',
+  Gold:'goppay-gold'
+};
+
+var _paymentWindow=null;
+var _paymentCheckInterval=null;
+
 function confirmPayment(){
   if(!selectedTier){adminAlert('Please select a membership tier before paying.');return;}
   if(!pendingReg){adminAlert('Registration details missing. Please register again.');return;}
 
   var btn=el('ppConfirmBtn');
   if(btn){btn.disabled=true;btn.innerHTML='&#x23F3; Opening Paystack...';}
-
   function restoreBtn(){if(btn){btn.disabled=false;btn.innerHTML='&#x1F4B3; Pay Now with Paystack &#x2192;';}}
 
-  if(typeof PaystackPop==='undefined'||!PaystackPop.setup){
+  // Save registration data to localStorage before opening popup
+  var ref='GOP'+Date.now();
+  var reg={
+    firstName:pendingReg.firstName, lastName:pendingReg.lastName,
+    email:pendingReg.email, phone:pendingReg.phone,
+    region:pendingReg.region, age:pendingReg.age,
+    gender:pendingReg.gender||'N/A', password:pendingReg.password
+  };
+  var tier={tier:selectedTier.tier, fee:selectedTier.fee};
+
+  try{
+    localStorage.setItem('gop_pending_payment', JSON.stringify({ref:ref, reg:reg, tier:tier}));
+  }catch(e){}
+
+  // Build Paystack hosted page URL with pre-filled details
+  var slug=PAYSTACK_PAGES[tier.tier]||'goppay';
+  var url='https://paystack.com/pay/'+slug
+    +'?email='+encodeURIComponent(reg.email)
+    +'&name='+encodeURIComponent(reg.firstName+' '+reg.lastName)
+    +'&amount='+(tier.fee*100);
+
+  // Open in popup window
+  var w=600, h=700;
+  var left=(screen.width/2)-(w/2);
+  var top=(screen.height/2)-(h/2);
+  _paymentWindow=window.open(
+    url,'PaystackPayment',
+    'width='+w+',height='+h+',top='+top+',left='+left+',scrollbars=yes,resizable=yes'
+  );
+
+  if(!_paymentWindow||_paymentWindow.closed||typeof _paymentWindow.closed==='undefined'){
+    // Popup was blocked — redirect instead
     restoreBtn();
-    alert('Paystack did not load. Please check your internet connection and try again.');
+    try{localStorage.setItem('gop_pending_payment', JSON.stringify({ref:ref, reg:reg, tier:tier}));}catch(e){}
+    if(confirm('Popup was blocked by your browser.\n\nClick OK to open Paystack in this tab instead.\n\nYou will be brought back after payment.')){
+      var callbackUrl=window.location.href.split('?')[0]+'?ref='+encodeURIComponent(ref);
+      window.location.href='https://paystack.com/pay/'+slug
+        +'?email='+encodeURIComponent(reg.email)
+        +'&name='+encodeURIComponent(reg.firstName+' '+reg.lastName)
+        +'&amount='+(tier.fee*100)
+        +'&callback_url='+encodeURIComponent(callbackUrl);
+    }
     return;
   }
 
-  try{
-    var handler=PaystackPop.setup({
-      key:'pk_live_170c23ed7e9bf70fbb05f058956c1c9e2b5696f1',
-      email:pendingReg.email,
-      amount:selectedTier.fee*100,
-      currency:'GHS',
-      ref:'GOP'+Date.now(),
-      channels:['card','mobile_money','bank','ussd'],
-      label:pendingReg.firstName+' '+pendingReg.lastName,
-      callback:function(response){
-        restoreBtn();
-        var existing=getMembers().find(function(x){return x.phone===pendingReg.phone;});
-        if(existing){currentUser=existing;saveSession();showPaymentWaiting(existing);return;}
-        var m={
-          id:'M'+Date.now(),
-          firstName:pendingReg.firstName,lastName:pendingReg.lastName,
-          email:pendingReg.email,phone:pendingReg.phone,
-          region:pendingReg.region,age:pendingReg.age,gender:pendingReg.gender||'N/A',
-          password:pendingReg.password,
-          tier:selectedTier.tier,fee:selectedTier.fee,
-          paystackRef:response.reference,
-          status:'awaiting_verification',
-          joinedDate:today(),
-          paymentSubmittedAt:new Date().toISOString(),
-          balance:0,monthEarned:0,referrals:0,referralEarnings:0,
-          ghSurveyDone:false,withdrawalCount:0,
-          streakBonusDate:'',streakDays:0,
-          dailySurveyDate:'',dailySurveyCount:0,
-          dailyPollDate:'',dailyPollCount:0,
-          dailyAdDate:'',dailyAdCount:0,
-          answeredPolls:[],completedSurveys:[],completedVideos:[],
-          notifications:['&#x2705; Payment of GHS '+selectedTier.fee+' received via Paystack (Ref: '+response.reference+'). Your account is awaiting admin activation — usually within 20 minutes.']
-        };
-        var members=getMembers();members.push(m);saveMembers(members);
-        currentUser=m;saveSession();showPaymentWaiting(m);
-      },
-      onClose:function(){restoreBtn();}
-    });
-    handler.openIframe();
-  }catch(err){
-    restoreBtn();
-    alert('Payment error: '+err.message);
-  }
+  // Poll for popup close — when closed, check localStorage for payment confirmation
+  if(_paymentCheckInterval) clearInterval(_paymentCheckInterval);
+  _paymentCheckInterval=setInterval(function(){
+    if(!_paymentWindow||_paymentWindow.closed){
+      clearInterval(_paymentCheckInterval);
+      restoreBtn();
+      // Check if payment was confirmed (set by Paystack callback redirect)
+      checkPaystackReturn();
+    }
+  },500);
 }
 
 function checkPaystackReturn(){
-  // No redirect used — this function is kept for compatibility
+  // Check URL params (when redirected back from Paystack)
+  var urlParams=new URLSearchParams(window.location.search);
+  var trxref=urlParams.get('trxref')||urlParams.get('reference')||urlParams.get('ref');
+  if(!trxref) return;
+  try{window.history.replaceState({},'',window.location.pathname);}catch(e){}
+
+  // Also check localStorage for registration data
+  var raw=null;
+  try{raw=localStorage.getItem('gop_pending_payment');}catch(e){}
+
+  var pending=null;
+  try{if(raw) pending=JSON.parse(raw);}catch(e){}
+  try{localStorage.removeItem('gop_pending_payment');}catch(e){}
+
+  if(!pending||!pending.reg||!pending.tier){
+    // No pending data — show a form to complete registration manually
+    showManualActivation(trxref);
+    return;
+  }
+
+  createMemberAccount(pending.reg, pending.tier, trxref);
+}
+
+function createMemberAccount(reg, tier, ref){
+  // Guard against duplicates
+  var members=getMembers();
+  var existing=members.find(function(x){return x.phone===reg.phone;});
+  if(existing){currentUser=existing;saveSession();showPaymentWaiting(existing);return;}
+
+  var m={
+    id:'M'+Date.now(),
+    firstName:reg.firstName, lastName:reg.lastName,
+    email:reg.email, phone:reg.phone,
+    region:reg.region, age:reg.age, gender:reg.gender||'N/A',
+    password:reg.password,
+    tier:tier.tier, fee:tier.fee,
+    paystackRef:ref,
+    status:'awaiting_verification',
+    joinedDate:today(),
+    paymentSubmittedAt:new Date().toISOString(),
+    balance:0, monthEarned:0, referrals:0, referralEarnings:0,
+    ghSurveyDone:false, withdrawalCount:0,
+    streakBonusDate:'', streakDays:0,
+    dailySurveyDate:'', dailySurveyCount:0,
+    dailyPollDate:'', dailyPollCount:0,
+    dailyAdDate:'', dailyAdCount:0,
+    viewedAdsToday:[], answeredPolls:[], completedSurveys:[], completedVideos:[],
+    notifications:['&#x2705; Payment of GHS '+tier.fee+' received via Paystack (Ref: '+ref+'). Your account is awaiting admin activation — usually within 20 minutes.']
+  };
+  members.push(m);
+  saveMembers(members);
+  currentUser=m;
+  saveSession();
+  showPaymentWaiting(m);
+}
+
+function showManualActivation(ref){
+  // Fallback: show a simple form to collect details if localStorage was cleared
+  hide('paymentPage');
+  var div=document.createElement('div');
+  div.style.cssText='position:fixed;inset:0;z-index:700;background:#f0f2f5;display:flex;align-items:center;justify-content:center;padding:20px';
+  div.innerHTML='<div style="background:#fff;border-radius:16px;padding:28px;max-width:440px;width:100%;box-shadow:0 4px 24px rgba(0,0,0,.1)">'
+    +'<h3 style="margin-bottom:12px;color:var(--green)">&#x2705; Payment Received!</h3>'
+    +'<p style="font-size:13.5px;color:#6b7280;margin-bottom:16px">Payment reference: <strong>'+ref+'</strong><br>Please log in with your registered phone and password to access your account.</p>'
+    +'<button onclick="this.parentElement.parentElement.remove();openLoginModal();" style="width:100%;padding:12px;background:var(--green);color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer">Log In to My Account &#x2192;</button>'
+    +'</div>';
+  document.body.appendChild(div);
 }
 </script>
+<script>
+
+
 </body>
 </html>
