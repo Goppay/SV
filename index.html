@@ -1310,19 +1310,24 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
   <div class="a-body">
     <div class="a-title">Admin Control Panel</div>
     <div class="a-sub">Full platform oversight — payments, members, content, and site control.</div>
-    <div class="a-metrics" style="grid-template-columns:repeat(8,1fr)">
+    <div class="a-metrics" style="grid-template-columns:repeat(5,1fr);row-gap:10px;grid-auto-rows:auto">
+      <div class="am"><div class="am-label">Site Visits</div><div class="am-val" id="aTotalVisits" style="color:var(--green)">0</div><div class="am-sub">All-time visits</div></div>
+      <div class="am"><div class="am-label">Today's Visits</div><div class="am-val" id="aTodayVisits" style="color:var(--blue)">0</div><div class="am-sub">Visits today</div></div>
+      <div class="am"><div class="am-label">Site Visits</div><div class="am-val" id="aSiteVisits" style="color:#7c3aed">0</div><div class="am-sub">Today: <span id="aSiteVisitsToday">0</span></div></div>
       <div class="am"><div class="am-label">Total Members</div><div class="am-val" id="aTotalM">0</div><div class="am-sub">Registered</div></div>
       <div class="am"><div class="am-label">Pending Payments</div><div class="am-val" id="aPendP" style="color:var(--orange)">0</div><div class="am-sub">Awaiting verification</div></div>
       <div class="am"><div class="am-label">Open Withdrawals</div><div class="am-val" id="aPendW" style="color:var(--blue)">0</div><div class="am-sub">Need processing</div></div>
       <div class="am"><div class="am-label">Total Paid Out</div><div class="am-val" id="aTotalPaid">GHS 0</div><div class="am-sub">Completed</div></div>
       <div class="am"><div class="am-label">Flagged Duplicates</div><div class="am-val" id="aDupCount" style="color:var(--red)">0</div><div class="am-sub">Possible multi-accounts</div></div>
       <div class="am"><div class="am-label">Open Issues</div><div class="am-val" id="aOpenIssues" style="color:var(--orange)">0</div><div class="am-sub">Needs response</div></div>
+      <div class="am"><div class="am-label">Pending Upgrades</div><div class="am-val" id="aPendingUpgrades" style="color:var(--orange)">0</div><div class="am-sub">Awaiting approval</div></div>
       <div class="am"><div class="am-label">Pages Followed</div><div class="am-val" id="aTotalPages" style="color:var(--blue)">0</div><div class="am-sub">All-time follows</div></div>
       <div class="am"><div class="am-label">Total Ads Viewed</div><div class="am-val" id="aTotalAds" style="color:var(--blue)">0</div><div class="am-sub">All-time by members</div></div>
     </div>
     <div class="a-tabs">
       <button class="a-tab active" data-atab="payments">&#x1F4B3; Pending Payments</button>
       <button class="a-tab" data-atab="members">&#x1F465; Members</button>
+      <button class="a-tab" data-atab="upgrades">&#x2B06; Upgrades <span id="upgradeTabBadge" style="display:none;background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;margin-left:4px">0</span></button>
       <button class="a-tab" data-atab="profiles">&#x1F4C4; Profiles</button>
       <button class="a-tab" data-atab="duplicates">&#x26A0; Duplicates</button>
       <button class="a-tab" data-atab="withdrawals">&#x1F4B8; Withdrawals</button>
@@ -1330,6 +1335,7 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
       <button class="a-tab" data-atab="issues">&#x1F6A8; Issues</button>
       <button class="a-tab" data-atab="pages">&#x1F4F1; Pages</button>
       <button class="a-tab" data-atab="ads">&#x1F4E2; Ads</button>
+      <button class="a-tab" data-atab="visits">&#x1F4CA; Site Visits</button>
       <button class="a-tab" data-atab="asettings">&#x2699; Settings</button>
     </div>
     <div class="a-section active" id="atab-payments">
@@ -1338,11 +1344,26 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
         <div style="overflow-x:auto"><table class="atable"><thead><tr><th>#</th><th>Member</th><th>Phone</th><th>Tier</th><th>Amount</th><th>Reference</th><th>Submitted</th><th>Status</th><th>Action</th></tr></thead><tbody id="aPaymentsBody"><tr><td colspan="9" class="empty-row">No pending payments.</td></tr></tbody></table></div>
       </div>
     </div>
-    <div class="a-section" id="atab-members">
+    <!-- PENDING UPGRADES TAB -->
+    <div class="a-section" id="atab-upgrades">
       <div class="a-card">
-        <div class="a-card-title">&#x2B06; Pending Tier Upgrade Requests</div>
-        <div id="adminUpgradeList"><p class="empty-row">No pending upgrade requests.</p></div>
+        <div class="a-card-title">
+          <span>&#x2B06; Pending Tier Upgrades</span>
+          <div style="display:flex;gap:8px;align-items:center">
+            <select id="upgradeFilterStatus" style="padding:6px 10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;outline:none;cursor:pointer">
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="denied">Denied</option>
+              <option value="all">All</option>
+            </select>
+            <button class="abtn" id="refreshUpgradesBtn">&#x21BB; Refresh</button>
+          </div>
+        </div>
+        <p style="font-size:13px;color:#6b7280;margin-bottom:14px;line-height:1.6">Members who have paid via Paystack for a tier upgrade. Cross-check the <strong>Paystack Reference</strong> in your Paystack dashboard before approving.</p>
+        <div id="adminUpgradeListFull"><p class="empty-row">No upgrade requests found.</p></div>
       </div>
+    </div>
+    <div class="a-section" id="atab-members">
       <div class="a-card">
         <div class="a-card-title">All Registered Members</div>
         <!-- Tier filter tabs -->
@@ -1528,6 +1549,30 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
       </div>
     </div>
 
+    <!-- SITE VISITS TAB -->
+    <div class="a-section" id="atab-visits">
+      <div class="a-card">
+        <div class="a-card-title">
+          <span>&#x1F4CA; Site Visits &amp; Device Info</span>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <select id="visitsFilter" style="padding:6px 10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;outline:none;cursor:pointer">
+              <option value="all">All Time</option>
+              <option value="today">Today</option>
+              <option value="week">This Week</option>
+              <option value="month">This Month</option>
+            </select>
+            <button class="abtn" id="clearVisitsBtn" style="color:var(--red);border-color:var(--red)">&#x1F5D1; Clear Visits</button>
+          </div>
+        </div>
+        <div id="visitsSummary" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:18px"></div>
+        <div style="overflow-x:auto">
+          <table class="atable">
+            <thead><tr><th>#</th><th>Date &amp; Time</th><th>Device</th><th>Browser</th><th>OS</th><th>Screen</th><th>Language</th><th>Page</th></tr></thead>
+            <tbody id="visitsTableBody"><tr><td colspan="8" class="empty-row">No visits recorded yet.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
     <div class="a-section" id="atab-asettings">
       <div class="a-card">
         <div class="a-card-title">&#x1F4E2; Broadcast Announcement</div>
@@ -1958,6 +2003,19 @@ document.addEventListener('DOMContentLoaded', function(){
   bindClick('shareWhatsappBtn', function(){shareReferral('whatsapp');});
   bindClick('shareTextBtn',    function(){shareReferral('sms');});
   bindClick('shareFbBtn',      function(){shareReferral('fb');});
+  bindClick('refreshUpgradesBtn', renderAdminUpgradesFull);
+  var upgradeFilter=el('upgradeFilterStatus');
+  if(upgradeFilter) upgradeFilter.addEventListener('change', renderAdminUpgradesFull);
+  // Visits tab filter & clear
+  var visitsFilterEl=el('visitsFilter');
+  if(visitsFilterEl) visitsFilterEl.addEventListener('change', renderVisitsTab);
+  bindClick('clearVisitsBtn',function(){
+    if(confirm('Clear all visit records? This cannot be undone.')){
+      saveVisits([]);
+      renderVisitsTab();
+      refreshAdminMetrics();
+    }
+  });
   bindClick('refreshIssuesBtn', renderAdminIssues);
   var issueFilter=el('issueFilterStatus');
   if(issueFilter) issueFilter.addEventListener('change', renderAdminIssues);
@@ -2064,8 +2122,12 @@ document.addEventListener('DOMContentLoaded', function(){
     });
   });
 
+  // Track site visit
+  trackSiteVisit();
   // Check and purge accounts past 7-day deletion window
   checkScheduledDeletions();
+  // Track this page visit
+  trackVisit();
   // Restore session after refresh — must be last so all DOM elements are ready
   restoreSession();
   // Paystack payment callback check
@@ -3254,6 +3316,8 @@ function openAdminDashboard(){
   renderSubAdminList();
   renderProfilesTab();
   renderAdminPages();
+  renderAdminUpgradesFull();
+  renderVisitsTab();
 }
 
 function refreshAdminMetrics(){
@@ -3280,6 +3344,18 @@ function refreshAdminMetrics(){
   setText('aOpenIssues', getIssues().filter(function(i){return i.status==='open';}).length);
   var totalPagesFollowed=getMembers().reduce(function(s,m){return s+(m.completedPages||[]).length;},0);
   var pgEl=el('aTotalPages'); if(pgEl) pgEl.textContent=totalPagesFollowed;
+  var pendingUpgrades=getUpgradeReqs().filter(function(r){return r.status==='pending';}).length;
+  var upEl=el('aPendingUpgrades'); if(upEl) upEl.textContent=pendingUpgrades;
+  var badge=el('upgradeTabBadge');
+  if(badge){badge.textContent=pendingUpgrades;badge.style.display=pendingUpgrades>0?'inline':'none';}
+  // Visit counts
+  var allVisits=getVisits();
+  var todayStr=new Date().toLocaleDateString('en-GB');
+  var tvEl=el('aTotalVisits'); if(tvEl) tvEl.textContent=allVisits.length;
+  var todayEl=el('aTodayVisits'); if(todayEl) todayEl.textContent=allVisits.filter(function(v){return v.date===todayStr;}).length;
+  var visitStats=getSiteVisitStats();
+  var vsEl=el('aSiteVisits'); if(vsEl) vsEl.textContent=visitStats.total.toLocaleString();
+  var vstEl=el('aSiteVisitsToday'); if(vstEl) vstEl.textContent=visitStats.today;
   // Total ads viewed = sum of all members' dailyAdCount is per-day only,
   // so we use the ad clicks counter stored on each ad object
   var totalAds=getAds().reduce(function(s,ad){return s+(ad.clicks||0);},0);
@@ -3305,6 +3381,8 @@ function switchAdminTab(name, btn){
   if(name==='asettings') renderSubAdminList();
   if(name==='profiles') renderProfilesTab();
   if(name==='pages') renderAdminPages();
+  if(name==='upgrades') renderAdminUpgradesFull();
+  if(name==='visits') renderVisitsTab();
 }
 
 // ── ADMIN: PENDING PAYMENTS ───────────────────────────
@@ -5013,6 +5091,7 @@ function processUpgrade(reqId, action){
   }
   renderAdminUpgradeRequests();
   refreshAdminMetrics();
+  renderAdminUpgradesFull();
 }
 
 // ── PENALTY DEDUCTION ────────────────────────────────
@@ -5312,6 +5391,34 @@ function checkScheduledDeletions(){
   if(currentUser&&!isAdminUser()&&toDelete.indexOf(currentUser.id)>=0){
     logout();
   }
+}
+
+// ── SITE VISIT TRACKING ──────────────────────────────
+function trackSiteVisit(){
+  try{
+    var todayKey='gop_visits_'+new Date().toISOString().slice(0,10);
+    // Total all-time visits
+    var total=parseInt(localStorage.getItem('gop_visits_total')||'0')+1;
+    localStorage.setItem('gop_visits_total',total);
+    // Today's visits
+    var todayCount=parseInt(localStorage.getItem(todayKey)||'0')+1;
+    localStorage.setItem(todayKey,todayCount);
+    // Clean up old daily keys (keep last 30 days)
+    var keys=[];
+    for(var i=0;i<localStorage.length;i++){
+      var k=localStorage.key(i);
+      if(k&&k.startsWith('gop_visits_2')) keys.push(k);
+    }
+    keys.sort();
+    if(keys.length>30) keys.slice(0,keys.length-30).forEach(function(k){localStorage.removeItem(k);});
+  }catch(e){}
+}
+
+function getSiteVisitStats(){
+  var total=parseInt(localStorage.getItem('gop_visits_total')||'0');
+  var todayKey='gop_visits_'+new Date().toISOString().slice(0,10);
+  var todayCount=parseInt(localStorage.getItem(todayKey)||'0');
+  return {total:total, today:todayCount};
 }
 
 // ── PAGES ─────────────────────────────────────────────
@@ -5643,6 +5750,188 @@ function checkWithdrawalDay(){
       nextEl.textContent='Next withdrawal day: '+nextDay+' (in '+nearest+' day'+(nearest===1?'':'s')+')';
     }
   }
+}
+
+function renderAdminUpgradeRequests(){
+  // Legacy: keep for compatibility — now delegates to full render
+  renderAdminUpgradesFull();
+}
+
+function renderAdminUpgradesFull(){
+  var filterEl=el('upgradeFilterStatus');
+  var filterVal=filterEl?filterEl.value:'pending';
+  var allReqs=getUpgradeReqs();
+  var reqs=filterVal==='all'?allReqs:allReqs.filter(function(r){return r.status===filterVal;});
+  var el2=el('adminUpgradeListFull');
+  if(!el2) return;
+
+  // Update badge count (pending only)
+  var pendingCount=allReqs.filter(function(r){return r.status==='pending';}).length;
+  var badge=el('upgradeTabBadge');
+  if(badge){
+    badge.textContent=pendingCount;
+    badge.style.display=pendingCount>0?'inline':'none';
+  }
+  var metricEl=el('aPendingUpgrades');
+  if(metricEl) metricEl.textContent=pendingCount;
+
+  if(!reqs.length){
+    el2.innerHTML='<p class="empty-row">No '+(filterVal==='all'?'':''+filterVal+' ')+'upgrade requests found.</p>';
+    return;
+  }
+
+  var html='';
+  reqs.slice().reverse().forEach(function(r){
+    var isPending=r.status==='pending';
+    var stColor=isPending?'#b45309':r.status==='approved'?'#065f46':'#991b1b';
+    var stBg=isPending?'#fff3e0':r.status==='approved'?'#d1fae5':'#fee2e2';
+    var stLabel=isPending?'&#x23F3; Pending Payment Verification':r.status==='approved'?'&#x2705; Approved':'&#x2716; Denied';
+    html+='<div style="border:1.5px solid '+(isPending?'#f59e0b':'#e5e7eb')+';border-radius:12px;padding:16px;margin-bottom:12px;background:#fff">';
+    // Header
+    html+='<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px">';
+    html+='<div>';
+    html+='<div style="font-size:15px;font-weight:700;color:#0d1117">'+r.memberName+'</div>';
+    html+='<div style="font-size:12.5px;color:#6b7280">'+r.memberPhone+' &middot; Submitted: '+r.date+'</div>';
+    html+='</div>';
+    html+='<span style="font-size:11.5px;font-weight:700;padding:4px 12px;border-radius:20px;background:'+stBg+';color:'+stColor+'">'+stLabel+'</span>';
+    html+='</div>';
+    // Details
+    html+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin-bottom:12px">';
+    html+='<div style="background:#f9fafb;border-radius:8px;padding:8px 12px"><div style="font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px">From Tier</div><div style="font-size:14px;font-weight:700;color:#374151">'+r.currentTier+'</div></div>';
+    html+='<div style="background:#f0fdf4;border-radius:8px;padding:8px 12px"><div style="font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px">To Tier</div><div style="font-size:14px;font-weight:700;color:var(--green)">'+r.targetTier+'</div></div>';
+    html+='<div style="background:#f9fafb;border-radius:8px;padding:8px 12px"><div style="font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px">Fee Paid</div><div style="font-size:14px;font-weight:700;color:#0d1117">GHS '+r.fee+'</div></div>';
+    if(r.paystackRef) html+='<div style="background:#eff6ff;border-radius:8px;padding:8px 12px"><div style="font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px">Paystack Ref</div><div style="font-size:12px;font-weight:700;color:#1d4ed8">'+r.paystackRef+'</div></div>';
+    html+='</div>';
+    if(r.notes) html+='<div style="font-size:12.5px;color:#6b7280;margin-bottom:10px;padding:8px 12px;background:#f9fafb;border-radius:8px">&#x1F4DD; '+r.notes+'</div>';
+    if(isPending){
+      html+='<div style="display:flex;gap:8px">';
+      html+='<button class="abtn vbtn" data-upgapprove="'+r.id+'" style="flex:1;padding:10px;font-size:13px">&#x2705; Approve Upgrade</button>';
+      html+='<button class="abtn fbtn" data-upgdeny="'+r.id+'" style="padding:10px;font-size:13px">&#x2716; Deny</button>';
+      html+='</div>';
+    }
+    html+='</div>';
+  });
+  el2.innerHTML=html;
+
+  el2.querySelectorAll('[data-upgapprove]').forEach(function(b){
+    b.addEventListener('click',function(){processUpgrade(b.dataset.upgapprove,'approved');});
+  });
+  el2.querySelectorAll('[data-upgdeny]').forEach(function(b){
+    b.addEventListener('click',function(){processUpgrade(b.dataset.upgdeny,'denied');});
+  });
+}
+
+// ── SITE VISITS TRACKING ─────────────────────────────
+function getVisits(){try{return JSON.parse(localStorage.getItem('gop_visits')||'[]');}catch(e){return [];}}
+function saveVisits(v){try{localStorage.setItem('gop_visits',JSON.stringify(v));}catch(e){}}
+
+function trackVisit(){
+  var ua=navigator.userAgent||'';
+  // Detect device type
+  var device='Desktop';
+  if(/tablet|ipad|playbook|silk/i.test(ua)) device='Tablet';
+  else if(/mobile|iphone|ipod|android|blackberry|opera mini|iemobile|wpdesktop/i.test(ua)) device='Mobile';
+  // Detect browser
+  var browser='Other';
+  if(/edg\//i.test(ua)) browser='Edge';
+  else if(/opr\//i.test(ua)||/opera/i.test(ua)) browser='Opera';
+  else if(/chrome/i.test(ua)&&!/chromium/i.test(ua)) browser='Chrome';
+  else if(/firefox/i.test(ua)) browser='Firefox';
+  else if(/safari/i.test(ua)&&!/chrome/i.test(ua)) browser='Safari';
+  else if(/msie|trident/i.test(ua)) browser='IE';
+  // Detect OS
+  var os='Other';
+  if(/windows nt/i.test(ua)) os='Windows';
+  else if(/macintosh|mac os x/i.test(ua)) os='macOS';
+  else if(/android/i.test(ua)) os='Android';
+  else if(/iphone|ipad|ipod/i.test(ua)) os='iOS';
+  else if(/linux/i.test(ua)) os='Linux';
+  // Screen
+  var screen2=(window.screen?window.screen.width+'x'+window.screen.height:'—');
+  // Language
+  var lang=navigator.language||navigator.userLanguage||'—';
+  // Page
+  var page=window.location.pathname||'/';
+  var now=new Date();
+  var visit={
+    id:'V'+now.getTime(),
+    ts:now.toISOString(),
+    date:now.toLocaleDateString('en-GB'),
+    time:now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}),
+    device:device,
+    browser:browser,
+    os:os,
+    screen:screen2,
+    lang:lang,
+    page:page
+  };
+  var visits=getVisits();
+  // Limit to last 2000 visits to avoid localStorage bloat
+  if(visits.length>=2000) visits=visits.slice(-1999);
+  visits.push(visit);
+  saveVisits(visits);
+}
+
+function renderVisitsTab(){
+  var filterEl=el('visitsFilter');
+  var filter=filterEl?filterEl.value:'all';
+  var allVisits=getVisits();
+  var now=new Date();
+  var todayStr=now.toLocaleDateString('en-GB');
+  var weekAgo=new Date(now.getTime()-7*24*60*60*1000);
+  var monthAgo=new Date(now.getTime()-30*24*60*60*1000);
+
+  var filtered=allVisits.filter(function(v){
+    if(filter==='today') return v.date===todayStr;
+    if(filter==='week') return new Date(v.ts)>=weekAgo;
+    if(filter==='month') return new Date(v.ts)>=monthAgo;
+    return true;
+  });
+
+  // Summary stats
+  var devCount={}, brCount={}, osCount={};
+  filtered.forEach(function(v){
+    devCount[v.device]=(devCount[v.device]||0)+1;
+    brCount[v.browser]=(brCount[v.browser]||0)+1;
+    osCount[v.os]=(osCount[v.os]||0)+1;
+  });
+
+  var summaryEl=el('visitsSummary');
+  if(summaryEl){
+    var sHtml='';
+    sHtml+='<div style="background:var(--green-pale);border:1px solid var(--green);border-radius:9px;padding:12px;text-align:center"><div style="font-size:22px;font-weight:700;color:var(--green)">'+filtered.length+'</div><div style="font-size:11px;color:var(--text-muted)">Total Visits</div></div>';
+    // Device breakdown
+    Object.keys(devCount).forEach(function(k){
+      var devIcon=k==='Mobile'?'&#x1F4F1;':k==='Tablet'?'&#x1F4BB;':'&#x1F5A5;';
+      sHtml+='<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:9px;padding:12px;text-align:center"><div style="font-size:22px;font-weight:700;color:#374151">'+devCount[k]+'</div><div style="font-size:11px;color:var(--text-muted)">'+devIcon+' '+k+'</div></div>';
+    });
+    // Browser breakdown
+    Object.keys(brCount).sort(function(a,b){return brCount[b]-brCount[a];}).forEach(function(k){
+      sHtml+='<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:9px;padding:12px;text-align:center"><div style="font-size:22px;font-weight:700;color:#1d4ed8">'+brCount[k]+'</div><div style="font-size:11px;color:var(--text-muted)">'+k+'</div></div>';
+    });
+    summaryEl.innerHTML=sHtml;
+  }
+
+  // Table
+  var tbody=el('visitsTableBody');
+  if(!tbody) return;
+  if(!filtered.length){tbody.innerHTML='<tr><td colspan="8" class="empty-row">No visits in selected period.</td></tr>';return;}
+  var devIcon=function(d){return d==='Mobile'?'&#x1F4F1;':d==='Tablet'?'&#x1F4BB;':'&#x1F5A5;';};
+  var rows='';
+  filtered.slice().reverse().slice(0,200).forEach(function(v,i){
+    rows+='<tr>';
+    rows+='<td style="font-size:12px;color:#9ca3af">'+(filtered.length-i)+'</td>';
+    rows+='<td style="font-size:12px"><strong>'+v.date+'</strong><br><span style="color:#9ca3af">'+v.time+'</span></td>';
+    rows+='<td>'+devIcon(v.device)+' <span style="font-size:12px">'+v.device+'</span></td>';
+    rows+='<td style="font-size:12px">'+v.browser+'</td>';
+    rows+='<td style="font-size:12px">'+v.os+'</td>';
+    rows+='<td style="font-size:12px;color:#9ca3af">'+v.screen+'</td>';
+    rows+='<td style="font-size:12px">'+v.lang+'</td>';
+    rows+='<td style="font-size:12px;color:#9ca3af">'+v.page+'</td>';
+    rows+='</tr>';
+  });
+  if(filtered.length>200) rows+='<tr><td colspan="8" style="text-align:center;font-size:12px;color:#9ca3af;padding:8px">Showing latest 200 of '+filtered.length+' visits</td></tr>';
+  tbody.innerHTML=rows;
 }
 
 function broadcastAnn(){
