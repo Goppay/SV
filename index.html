@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<script src="https://js.paystack.co/v1/inline.js"></script>
+<script src="https://js.paystack.co/v2/inline.js"></script>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>GhanaOpinionPay — Earn GHS for Your Opinion</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"/>
@@ -4630,7 +4630,7 @@ function checkDailyStreakBonus(member){
 }
 
 </script>
-<!-- Paystack: also loaded in <head> for synchronous popup on click -->
+<!-- Paystack v2 inline - loaded in head -->
 <script>
 function confirmPayment(){
   if(!selectedTier){
@@ -4642,15 +4642,11 @@ function confirmPayment(){
     return;
   }
   if(typeof PaystackPop==='undefined'){
-    // Paystack script didn't load — show clear error on page
     var btn2=el('ppConfirmBtn');
     if(btn2){
       btn2.style.background='var(--red)';
-      btn2.innerHTML='&#x26A0; Paystack not loaded — check internet connection';
-      setTimeout(function(){
-        btn2.style.background='';
-        btn2.innerHTML='&#x1F4B3; Pay Now with Paystack &#x2192;';
-      },4000);
+      btn2.innerHTML='&#x26A0; Paystack not loaded — check internet';
+      setTimeout(function(){btn2.style.background='';btn2.innerHTML='&#x1F4B3; Pay Now with Paystack &#x2192;';},4000);
     }
     return;
   }
@@ -4659,7 +4655,7 @@ function confirmPayment(){
   if(btn){btn.disabled=true; btn.innerHTML='&#x23F3; Opening payment...';}
 
   try{
-    var handler=PaystackPop.setup({
+    PaystackPop.newTransaction({
       key:'pk_live_170c23ed7e9bf70fbb05f058956c1c9e2b5696f1',
       email:pendingReg.email,
       amount:selectedTier.fee * 100,
@@ -4672,7 +4668,7 @@ function confirmPayment(){
           {display_name:'Tier',variable_name:'tier',value:selectedTier.tier}
         ]
       },
-      callback:function(response){
+      onSuccess:function(response){
         if(btn){btn.disabled=false; btn.innerHTML='&#x1F4B3; Pay Now with Paystack &#x2192;';}
         var m={
           id:'M'+Date.now(),
@@ -4686,8 +4682,7 @@ function confirmPayment(){
           joinedDate:today(),
           paymentSubmittedAt:new Date().toISOString(),
           balance:0, monthEarned:0, referrals:0, referralEarnings:0,
-          ghSurveyDone:false,
-          withdrawalCount:0,
+          ghSurveyDone:false, withdrawalCount:0,
           streakBonusDate:'', streakDays:0,
           dailySurveyDate:'', dailySurveyCount:0,
           dailyPollDate:'', dailyPollCount:0,
@@ -4698,14 +4693,13 @@ function confirmPayment(){
         var members=getMembers(); members.push(m); saveMembers(members);
         currentUser=m; saveSession(); showPaymentWaiting(m);
       },
-      onClose:function(){
+      onCancel:function(){
         if(btn){btn.disabled=false; btn.innerHTML='&#x1F4B3; Pay Now with Paystack &#x2192;';}
       }
     });
-    handler.openModal();
   }catch(err){
     if(btn){btn.disabled=false; btn.innerHTML='&#x1F4B3; Pay Now with Paystack &#x2192;';}
-    alert('Payment error: '+err.message+'\n\nPlease ensure you have an internet connection and try again.');
+    alert('Payment error: '+err.message+'\n\nPlease try again.');
   }
 }
 </script>
