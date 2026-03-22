@@ -1567,7 +1567,7 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
         <div id="visitsSummary" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:18px"></div>
         <div style="overflow-x:auto">
           <table class="atable">
-            <thead><tr><th>#</th><th>Date &amp; Time</th><th>Device</th><th>Browser</th><th>OS</th><th>Screen</th><th>Language</th><th>Page</th></tr></thead>
+            <thead><tr><th>#</th><th>Date &amp; Time</th><th>Device Type</th><th>Device Name</th><th>Browser</th><th>OS</th><th>Screen</th><th>Language</th></tr></thead>
             <tbody id="visitsTableBody"><tr><td colspan="8" class="empty-row">No visits recorded yet.</td></tr></tbody>
           </table>
         </div>
@@ -5084,10 +5084,10 @@ function processUpgrade(reqId, action){
     var mi2=members2.findIndex(function(m){return m.id===req.memberId;});
     if(mi2>=0){
       members2[mi2].notifications=members2[mi2].notifications||[];
-      members2[mi2].notifications.push('&#x26A0; Your upgrade request to '+req.targetTier+' was not approved. Please contact support if you believe this is an error.');
+      members2[mi2].notifications.push('&#x26A0; Your upgrade request to <strong>'+req.targetTier+'</strong> was denied. Reason: <strong>Unsuccessful transaction</strong>. Please retry your payment or contact support at Ghanaopinionpay@gmail.com.');
       saveMembers(members2);
     }
-    adminAlert('Upgrade request denied. Member notified.');
+    adminAlert('Upgrade denied. Member notified: Unsuccessful transaction.');
   }
   renderAdminUpgradeRequests();
   refreshAdminMetrics();
@@ -5831,6 +5831,25 @@ function trackVisit(){
   var device='Desktop';
   if(/tablet|ipad|playbook|silk/i.test(ua)) device='Tablet';
   else if(/mobile|iphone|ipod|android|blackberry|opera mini|iemobile|wpdesktop/i.test(ua)) device='Mobile';
+  // Detect device name
+  var deviceName='Unknown';
+  if(/iphone/i.test(ua)) deviceName='iPhone';
+  else if(/ipad/i.test(ua)) deviceName='iPad';
+  else if(/ipod/i.test(ua)) deviceName='iPod';
+  else if(/samsung/i.test(ua)) deviceName='Samsung';
+  else if(/pixel/i.test(ua)) deviceName='Google Pixel';
+  else if(/huawei/i.test(ua)) deviceName='Huawei';
+  else if(/tecno/i.test(ua)) deviceName='Tecno';
+  else if(/itel/i.test(ua)) deviceName='Itel';
+  else if(/infinix/i.test(ua)) deviceName='Infinix';
+  else if(/nokia/i.test(ua)) deviceName='Nokia';
+  else if(/xiaomi|redmi|mi\s/i.test(ua)) deviceName='Xiaomi';
+  else if(/oppo/i.test(ua)) deviceName='Oppo';
+  else if(/vivo/i.test(ua)) deviceName='Vivo';
+  else if(/android/i.test(ua)) deviceName='Android Device';
+  else if(/macintosh/i.test(ua)) deviceName='Mac';
+  else if(/windows nt/i.test(ua)) deviceName='Windows PC';
+  else if(/linux/i.test(ua)) deviceName='Linux PC';
   // Detect browser
   var browser='Other';
   if(/edg\//i.test(ua)) browser='Edge';
@@ -5859,6 +5878,7 @@ function trackVisit(){
     date:now.toLocaleDateString('en-GB'),
     time:now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}),
     device:device,
+    deviceName:deviceName,
     browser:browser,
     os:os,
     screen:screen2,
@@ -5923,11 +5943,11 @@ function renderVisitsTab(){
     rows+='<td style="font-size:12px;color:#9ca3af">'+(filtered.length-i)+'</td>';
     rows+='<td style="font-size:12px"><strong>'+v.date+'</strong><br><span style="color:#9ca3af">'+v.time+'</span></td>';
     rows+='<td>'+devIcon(v.device)+' <span style="font-size:12px">'+v.device+'</span></td>';
+    rows+='<td style="font-size:12px;font-weight:600;color:#374151">'+(v.deviceName||'—')+'</td>';
     rows+='<td style="font-size:12px">'+v.browser+'</td>';
     rows+='<td style="font-size:12px">'+v.os+'</td>';
     rows+='<td style="font-size:12px;color:#9ca3af">'+v.screen+'</td>';
     rows+='<td style="font-size:12px">'+v.lang+'</td>';
-    rows+='<td style="font-size:12px;color:#9ca3af">'+v.page+'</td>';
     rows+='</tr>';
   });
   if(filtered.length>200) rows+='<tr><td colspan="8" style="text-align:center;font-size:12px;color:#9ca3af;padding:8px">Showing latest 200 of '+filtered.length+' visits</td></tr>';
