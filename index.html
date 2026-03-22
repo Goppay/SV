@@ -705,6 +705,31 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
   </div>
 </div>
 
+<!-- DENY UPGRADE MODAL -->
+<div class="modal-overlay" id="denyUpgradeModal">
+  <div class="modal modal-sm">
+    <button class="modal-close" id="closeDenyUpgradeBtn">&#x2715;</button>
+    <h2 style="color:var(--red)">&#x2716; Deny Upgrade Request</h2>
+    <p style="font-size:13.5px;color:var(--text-muted);margin-bottom:16px">Select a reason for denying this upgrade. The member will be notified.</p>
+    <div class="fg">
+      <label>Reason for Denial</label>
+      <select id="denyUpgradeReason">
+        <option value="Unsuccessful transaction">Unsuccessful transaction</option>
+        <option value="Payment not received">Payment not received</option>
+        <option value="Wrong amount paid">Wrong amount paid</option>
+        <option value="Duplicate payment request">Duplicate payment request</option>
+        <option value="Other">Other (enter below)</option>
+      </select>
+    </div>
+    <div class="fg" id="denyUpgradeOtherWrap" style="display:none">
+      <label>Custom Reason</label>
+      <input type="text" id="denyUpgradeOther" placeholder="Enter reason..."/>
+    </div>
+    <div class="err-box" id="denyUpgradeError"></div>
+    <button class="sbtn" style="background:var(--red)" id="confirmDenyUpgradeBtn">Confirm Denial &#x2192;</button>
+  </div>
+</div>
+
 <!-- CONTACT MODAL -->
 <div class="modal-overlay" id="contactModal">
   <div class="modal modal-sm">
@@ -2003,6 +2028,13 @@ document.addEventListener('DOMContentLoaded', function(){
   bindClick('shareWhatsappBtn', function(){shareReferral('whatsapp');});
   bindClick('shareTextBtn',    function(){shareReferral('sms');});
   bindClick('shareFbBtn',      function(){shareReferral('fb');});
+  bindClick('closeDenyUpgradeBtn', closeDenyUpgradeModal);
+  bindClick('confirmDenyUpgradeBtn', confirmDenyUpgrade);
+  // Show/hide custom reason input
+  var denyReasonSel=el('denyUpgradeReason');
+  if(denyReasonSel) denyReasonSel.addEventListener('change',function(){
+    el('denyUpgradeOtherWrap').style.display=denyReasonSel.value==='Other'?'block':'none';
+  });
   bindClick('refreshUpgradesBtn', renderAdminUpgradesFull);
   var upgradeFilter=el('upgradeFilterStatus');
   if(upgradeFilter) upgradeFilter.addEventListener('change', renderAdminUpgradesFull);
@@ -2141,7 +2173,7 @@ function bindClose(id, fn){var b=el(id);if(b) b.addEventListener('click',functio
 document.addEventListener('click',function(e){
   if(e.target.classList.contains('modal-overlay')) {
     closeLoginModal(); closeRegisterModal(); closeDeleteModal(); closeAddContentModal();
-    ['aboutModal','termsModal','privacyModal','contactModal','penaltyModal','memberDeleteModal','forgotPwModal'].forEach(function(id){
+    ['aboutModal','termsModal','privacyModal','contactModal','penaltyModal','memberDeleteModal','forgotPwModal','denyUpgradeModal'].forEach(function(id){
       var m=el(id); if(m) m.classList.remove('open');
     });
     var sm=el('surveyModal');
@@ -5044,6 +5076,7 @@ function renderAdminUpgradeRequests(){
     html+='<div><div style="font-size:13.5px;font-weight:700;color:#0d1117">'+r.memberName+' &mdash; '+r.memberPhone+'</div>';
     html+='<div style="font-size:12.5px;color:#6b7280">Upgrade: <strong>'+r.currentTier+' &#x2192; '+r.targetTier+'</strong> &middot; Fee: GHS '+r.fee+' &middot; Submitted: '+r.date+'</div>';
     if(r.paystackRef) html+='<div style="font-size:12px;color:#059669;margin-top:2px">&#x1F4B3; Paystack Ref: <strong>'+r.paystackRef+'</strong></div>';
+    if(r.denyReason) html+='<div style="font-size:12px;color:var(--red);margin-top:2px">&#x26A0; Denial reason: <strong>'+r.denyReason+'</strong></div>';
     if(r.notes) html+='<div style="font-size:12px;color:#9ca3af;margin-top:2px">Notes: '+r.notes+'</div>';
     html+='</div>';
     html+='<div style="display:flex;gap:7px">';
@@ -5056,15 +5089,16 @@ function renderAdminUpgradeRequests(){
     b.addEventListener('click',function(){processUpgrade(b.dataset.upgapprove,'approved');});
   });
   el2.querySelectorAll('[data-upgdeny]').forEach(function(b){
-    b.addEventListener('click',function(){processUpgrade(b.dataset.upgdeny,'denied');});
+    b.addEventListener('click',function(){openDenyUpgradeModal(b.dataset.upgdeny);});
   });
 }
 
-function processUpgrade(reqId, action){
+function processUpgrade(reqId, action, denyReason){
   var reqs=getUpgradeReqs();
   var idx=reqs.findIndex(function(r){return r.id===reqId;});
   if(idx<0) return;
   reqs[idx].status=action;
+  if(denyReason) reqs[idx].denyReason=denyReason;
   saveUpgradeReqs(reqs);
   var req=reqs[idx];
   if(action==='approved'){
@@ -5080,14 +5114,15 @@ function processUpgrade(reqId, action){
     }
     adminAlert('Upgrade approved. Member tier changed to '+req.targetTier+'.');
   } else {
+    var reason=denyReason||'Unsuccessful transaction';
     var members2=getMembers();
     var mi2=members2.findIndex(function(m){return m.id===req.memberId;});
     if(mi2>=0){
       members2[mi2].notifications=members2[mi2].notifications||[];
-      members2[mi2].notifications.push('&#x26A0; Your upgrade request to <strong>'+req.targetTier+'</strong> was denied. Reason: <strong>Unsuccessful transaction</strong>. Please retry your payment or contact support at Ghanaopinionpay@gmail.com.');
+      members2[mi2].notifications.push('&#x26A0; Your upgrade request to <strong>'+req.targetTier+'</strong> was denied. Reason: <strong>'+reason+'</strong>. Please contact support at Ghanaopinionpay@gmail.com if you need assistance.');
       saveMembers(members2);
     }
-    adminAlert('Upgrade denied. Member notified: Unsuccessful transaction.');
+    adminAlert('Upgrade denied. Reason: '+reason+'.');
   }
   renderAdminUpgradeRequests();
   refreshAdminMetrics();
@@ -5817,7 +5852,7 @@ function renderAdminUpgradesFull(){
     b.addEventListener('click',function(){processUpgrade(b.dataset.upgapprove,'approved');});
   });
   el2.querySelectorAll('[data-upgdeny]').forEach(function(b){
-    b.addEventListener('click',function(){processUpgrade(b.dataset.upgdeny,'denied');});
+    b.addEventListener('click',function(){openDenyUpgradeModal(b.dataset.upgdeny);});
   });
 }
 
@@ -5826,6 +5861,11 @@ function getVisits(){try{return JSON.parse(localStorage.getItem('gop_visits')||'
 function saveVisits(v){try{localStorage.setItem('gop_visits',JSON.stringify(v));}catch(e){}}
 
 function trackVisit(){
+  // Only count once per browser session (not on every refresh)
+  try{
+    if(sessionStorage.getItem('gop_visited')) return;
+    sessionStorage.setItem('gop_visited','1');
+  }catch(e){}
   var ua=navigator.userAgent||'';
   // Detect device type
   var device='Desktop';
@@ -5952,6 +5992,35 @@ function renderVisitsTab(){
   });
   if(filtered.length>200) rows+='<tr><td colspan="8" style="text-align:center;font-size:12px;color:#9ca3af;padding:8px">Showing latest 200 of '+filtered.length+' visits</td></tr>';
   tbody.innerHTML=rows;
+}
+
+// ── DENY UPGRADE MODAL ───────────────────────────────
+var _pendingDenyUpgradeId=null;
+
+function openDenyUpgradeModal(reqId){
+  _pendingDenyUpgradeId=reqId;
+  setVal('denyUpgradeReason','Unsuccessful transaction');
+  setVal('denyUpgradeOther','');
+  hideErr('denyUpgradeError');
+  el('denyUpgradeOtherWrap').style.display='none';
+  el('denyUpgradeModal').classList.add('open');
+}
+
+function closeDenyUpgradeModal(){
+  el('denyUpgradeModal').classList.remove('open');
+  _pendingDenyUpgradeId=null;
+}
+
+function confirmDenyUpgrade(){
+  if(!_pendingDenyUpgradeId) return;
+  var reason=val('denyUpgradeReason');
+  if(reason==='Other'){
+    var custom=(val('denyUpgradeOther')||'').trim();
+    if(!custom){showErr('denyUpgradeError','Please enter a reason.');return;}
+    reason=custom;
+  }
+  closeDenyUpgradeModal();
+  processUpgrade(_pendingDenyUpgradeId,'denied',reason);
 }
 
 function broadcastAnn(){
