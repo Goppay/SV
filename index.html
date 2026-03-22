@@ -5861,23 +5861,44 @@ function confirmPayment(){
   }catch(e){}
 
   // Build Paystack hosted page URL with pre-filled details
-  // Free tier — skip payment entirely
+  // Free tier — skip payment AND auto-activate instantly
   if(tier.fee===0||tier.tier==='Free'){
     var existing2=getMembers().find(function(x){return x.phone===reg.phone;});
-    if(existing2){currentUser=existing2;saveSession();showPaymentWaiting(existing2);return;}
+    if(existing2){
+      currentUser=existing2; saveSession();
+      if(existing2.status==='active') openMemberDashboard(existing2);
+      else showPaymentWaiting(existing2);
+      return;
+    }
     var mFree={
       id:'M'+Date.now(),firstName:reg.firstName,lastName:reg.lastName,
       email:reg.email,phone:reg.phone,region:reg.region,age:reg.age,gender:reg.gender||'N/A',
-      secQuestion:reg.secQuestion||'',secAnswer:reg.secAnswer||'',password:reg.password,tier:'Free',fee:0,paystackRef:'FREE-'+Date.now(),
-      status:'awaiting_verification',joinedDate:today(),paymentSubmittedAt:new Date().toISOString(),
-      balance:0,monthEarned:0,referrals:0,referralEarnings:0,
+      secQuestion:reg.secQuestion||'',secAnswer:reg.secAnswer||'',password:reg.password,
+      tier:'Free',fee:0,paystackRef:'FREE-'+Date.now(),
+      status:'active',
+      joinedDate:today(),paymentSubmittedAt:new Date().toISOString(),
+      balance:1.00,monthEarned:1.00,
+      referrals:0,referralEarnings:0,
       ghSurveyDone:false,withdrawalCount:0,streakBonusDate:'',streakDays:0,
       dailySurveyDate:'',dailySurveyCount:0,dailyPollDate:'',dailyPollCount:0,
-      dailyAdDate:'',dailyAdCount:0,viewedAdsToday:[],answeredPolls:[],completedSurveys:[],completedVideos:[],completedPages:[],
-      notifications:['&#x1F193; Welcome to GhanaOpinionPay Free tier! Your account is awaiting admin activation.']
+      dailyAdDate:'',dailyAdCount:0,
+      viewedAdsToday:[],answeredPolls:[],completedSurveys:[],completedVideos:[],completedPages:[],
+      notifications:[
+        '&#x1F193; Welcome to GhanaOpinionPay! Your <strong>Free account is now active</strong> — no waiting required.',
+        '&#x1F381; <strong>GHS 1.00 welcome bonus</strong> has been added to your balance. Start earning now!'
+      ]
     };
-    var mems=getMembers();mems.push(mFree);saveMembers(mems);
-    currentUser=mFree;saveSession();showPaymentWaiting(mFree);return;
+    // Handle referral if any
+    if(reg.referredBy){
+      var allM=getMembers();
+      var refIdx=allM.findIndex(function(m){return m.id===reg.referredBy;});
+      if(refIdx>=0){mFree.referredBy=reg.referredBy;}
+    }
+    var mems=getMembers(); mems.push(mFree); saveMembers(mems);
+    currentUser=mFree; saveSession();
+    hide('paymentPage');
+    openMemberDashboard(mFree);
+    return;
   }
   var slug=PAYSTACK_PAGES[tier.tier]||'goppay';
   var url='https://paystack.com/pay/'+slug
