@@ -1709,7 +1709,31 @@ function doRegister(){
   if(!phone||phone.length<10||!/^0[2345679]\d{8}$/.test(phone)){showErr('regError','Please enter a valid Ghanaian MoMo phone number.'); return;}
   if(!region){showErr('regError','Please select your region.'); return;}
   if(!pass||pass.length<6){showErr('regError','Password must be at least 6 characters.'); return;}
-  if(getMembers().find(function(m){return m.phone===phone;})){showErr('regError','A member with this phone number already exists. Please log in.'); return;}
+
+  var members=getMembers();
+
+  // Check duplicate phone
+  if(members.find(function(m){return m.phone===phone;})){
+    showErr('regError','A member with this phone number already exists. Please log in.');
+    return;
+  }
+
+  // Check duplicate email
+  if(members.find(function(m){return (m.email||'').toLowerCase()===email.toLowerCase();})){
+    showErr('regError','This email address is already registered. Please use a different email or log in.');
+    return;
+  }
+
+  // Check duplicate full name (both first AND last match, case-insensitive)
+  var dupName=members.find(function(m){
+    return m.firstName.toLowerCase()===first.toLowerCase() &&
+           m.lastName.toLowerCase()===last.toLowerCase();
+  });
+  if(dupName){
+    showErr('regError','The name "'+first+' '+last+'" is already registered on this platform. If this is you, please log in. If you are a different person, please use a variation of your name (e.g. include a middle name or initial).');
+    return;
+  }
+
   pendingReg={firstName:first,lastName:last,email:email,phone:phone,region:region,age:age||'N/A',gender:gender||'N/A',password:pass};
   closeRegisterModal();
   openPaymentPage();
