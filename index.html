@@ -2920,8 +2920,11 @@ function showWithdrawConfirm(){
 
   hideWithdrawMsg();
   if(!amountRaw||amount<=0){showWithdrawMsg('error','Please enter a valid withdrawal amount.'); return;}
-  if(amount<minW){showWithdrawMsg('error','Minimum withdrawal for '+currentUser.tier+' tier is GHS '+minW+'.'); return;}
-  if(amount>(currentUser.balance||0)){showWithdrawMsg('error','Insufficient balance. Available: GHS '+(currentUser.balance||0).toFixed(2)+'.'); return;}
+  if(amount<minW){
+    showWithdrawMsg('error','Your balance of GHS '+(currentUser.balance||0).toFixed(2)+' does not meet the minimum withdrawal of GHS '+minW+' for '+currentUser.tier+' tier. Keep earning to reach the minimum!');
+    return;
+  }
+  if(amount>(currentUser.balance||0)){showWithdrawMsg('error','Insufficient balance. Your available balance is GHS '+(currentUser.balance||0).toFixed(2)+'.'); return;}
   if(!account){showWithdrawMsg('error','Please enter your account number.'); return;}
 
   var isFreeAcct=currentUser.tier==='Free';
@@ -3037,7 +3040,10 @@ function submitWithdrawal(){
   var minW=TIER_MINW[currentUser.tier]||10;
 
   if(!amountRaw||amount<=0){showWithdrawMsg('error','Please enter a valid withdrawal amount.'); return;}
-  if(amount<minW){showWithdrawMsg('error','Minimum withdrawal for '+currentUser.tier+' tier is GHS '+minW+'. Your balance must be at least GHS '+minW+' to withdraw.'); return;}
+  if(amount<minW){
+    showWithdrawMsg('error','Your balance of GHS '+(currentUser.balance||0).toFixed(2)+' does not meet the minimum withdrawal of GHS '+minW+' for '+currentUser.tier+' tier. Keep earning to reach the minimum!');
+    return;
+  }
   if(amount>(currentUser.balance||0)){showWithdrawMsg('error','Insufficient balance. Your available balance is GHS '+(currentUser.balance||0).toFixed(2)+'.'); return;}
   if(!account){showWithdrawMsg('error','Please enter your MoMo or bank account number.'); return;}
   if(method==='Bank Transfer'){showWithdrawMsg('error','Bank transfers are not yet supported for instant payouts. Please use Mobile Money.'); return;}
@@ -3085,86 +3091,113 @@ function submitWithdrawal(){
   };
   ws.push(w); saveWithdrawals(ws);
 
-  // Call Make webhook
-  fetch(MAKE_WEBHOOK_URL+'/withdraw', {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({
-      memberId:currentUser.id,
-      memberName:currentUser.firstName+' '+currentUser.lastName,
-      phone:currentUser.phone,
-      amount:amount,
-      amountAfterFee:amountAfterFee,
-      fee:fee,
-      feeLabel:feeLabel,
-      method:method,
-      account:account,
-      reference:wRef
-    })
-  })
-  .then(function(r){
-    // Make can return plain text or JSON — handle both
-    var contentType=r.headers.get('content-type')||'';
-    if(contentType.indexOf('application/json')>=0){
-      return r.json();
+  // Retry withdrawal with exponential backoff
+  var _retryCount=0;
+  var _maxRetries=5;
+  var _retryDelays=[300000,300000,300000,300000,300000];
+
+  function attemptWithdrawal(){
+    _retryCount++;
+    var isRetry=_retryCount>1;
+    if(btn){
+      btn.disabled=true;
+      btn.textContent=isRetry?'Retrying ('+_retryCount+'/'+_maxRetries+')...':'Processing...';
     }
-    return r.text().then(function(t){
-      // Make returns "Accepted" on success if no response module is set
-      var lower=t.toLowerCase().trim();
-      if(lower==='accepted'||lower==='"accepted"'||r.ok){
-        return {success:true, reference:wRef, message:'Transfer sent via Make.'};
+    if(isRetry){
+      showWithdrawMsg('info','&#x1F504; Retry attempt '+_retryCount+' of '+_maxRetries+' — please wait...');
+    } else {
+      showWithdrawMsg('info','&#x23F3; Sending GHS '+amountAfterFee.toFixed(2)+' to '+account+' via '+method+' — please wait...');
+    }
+
+    fetch(MAKE_WEBHOOK_URL+'/withdraw', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        memberId:currentUser.id,
+        memberName:currentUser.firstName+' '+currentUser.lastName,
+        phone:currentUser.phone,
+        amount:amount,
+        amountAfterFee:amountAfterFee,
+        fee:fee,
+        feeLabel:feeLabel,
+        method:method,
+        account:account,
+        reference:wRef
+      })
+    })
+    .then(function(r){
+      var contentType=r.headers.get('content-type')||'';
+      if(contentType.indexOf('application/json')>=0) return r.json();
+      return r.text().then(function(t){
+        var lower=t.toLowerCase().trim();
+        if(lower==='accepted'||lower==='"accepted"'||r.ok)
+          return {success:true, reference:wRef};
+        return {success:false, error:t||'Webhook error'};
+      });
+    })
+    .then(function(data){
+      if(data.success){
+        // SUCCESS
+        if(btn){btn.disabled=false; btn.textContent='Withdraw Now';}
+        var allWs=getWithdrawals();
+        var wIdx=allWs.findIndex(function(x){return x.id===wId;});
+        if(wIdx>=0){allWs[wIdx].phase='Complete'; allWs[wIdx].reference=data.reference||wRef; saveWithdrawals(allWs);}
+        var allM=getMembers(); var mIdx=allM.findIndex(function(m){return m.id===currentUser.id;});
+        if(mIdx>=0){
+          allM[mIdx].notifications=allM[mIdx].notifications||[];
+          allM[mIdx].notifications.push('&#x26A1; GHS '+amountAfterFee.toFixed(2)+' sent to '+account+' via '+method+'. Ref: '+(data.reference||wRef)+'.');
+          saveMembers(allM); currentUser=allM[mIdx];
+        }
+        setVal('wAmt',''); setVal('wAccount','');
+        var preview=el('withdrawFeePreview'); if(preview) preview.style.display='none';
+        renderWithdrawalHistory(currentUser); renderNotifications(currentUser);
+        showWithdrawMsg('success','&#x26A1; <strong>GHS '+amountAfterFee.toFixed(2)+' sent successfully!</strong><br>'
+          +'Sent to: <strong>'+account+'</strong> via '+method+'<br>'
+          +'Fee: GHS '+fee.toFixed(2)+' ('+feeLabel+')<br>'
+          +'Reference: '+(data.reference||wRef));
+      } else {
+        // FAILED — retry if attempts remain
+        handleRetryOrGiveUp(data.error||'Transfer failed');
       }
-      return {success:false, error:t||'Webhook error'};
+    })
+    .catch(function(err){
+      // NETWORK ERROR — retry
+      handleRetryOrGiveUp(err.message||'Network error');
     });
-  })
-  .then(function(data){
-    if(btn){btn.disabled=false; btn.textContent='Withdraw Now';}
-    var allWs=getWithdrawals();
-    var wIdx=allWs.findIndex(function(x){return x.id===wId;});
-    if(data.success){
-      if(wIdx>=0){allWs[wIdx].phase='Complete'; allWs[wIdx].reference=data.reference||wRef; saveWithdrawals(allWs);}
-      var allM=getMembers(); var mIdx=allM.findIndex(function(m){return m.id===currentUser.id;});
-      if(mIdx>=0){
-        allM[mIdx].notifications=allM[mIdx].notifications||[];
-        allM[mIdx].notifications.push('&#x26A1; GHS '+amountAfterFee.toFixed(2)+' sent to '+account+' via '+method+'. Ref: '+(data.reference||wRef)+'.');
-        saveMembers(allM); currentUser=allM[mIdx];
+  }
+
+  function handleRetryOrGiveUp(errorMsg){
+    if(_retryCount<_maxRetries){
+      var delay=_retryDelays[_retryCount-1]||300000;
+      var mins=Math.round(delay/60000);
+      showWithdrawMsg('info','&#x23F3; Transfer attempt '+_retryCount+' failed. Retrying in '+mins+' minute'+(mins===1?'':'s')+'...');
+      setTimeout(attemptWithdrawal, delay);
+    } else {
+      // ALL RETRIES EXHAUSTED — keep balance deducted, mark Pending for admin
+      if(btn){btn.disabled=false; btn.textContent='Withdraw Now';}
+      var allWs2=getWithdrawals(); var wIdx2=allWs2.findIndex(function(x){return x.id===wId;});
+      if(wIdx2>=0){
+        allWs2[wIdx2].phase='Pending';
+        allWs2[wIdx2].adminNote='Auto-transfer failed after '+_maxRetries+' attempts: '+errorMsg+'. Requires manual payout.';
+        saveWithdrawals(allWs2);
+      }
+      var allM3=getMembers(); var mIdx3=allM3.findIndex(function(m){return m.id===currentUser.id;});
+      if(mIdx3>=0){
+        allM3[mIdx3].notifications=allM3[mIdx3].notifications||[];
+        allM3[mIdx3].notifications.push('&#x23F3; Your withdrawal of <strong>GHS '+amountAfterFee.toFixed(2)+'</strong> via '+method+' is being processed manually. You will receive your payment within <strong>30 minutes</strong>.');
+        saveMembers(allM3); currentUser=allM3[mIdx3];
       }
       setVal('wAmt',''); setVal('wAccount','');
-      var preview=el('withdrawFeePreview'); if(preview) preview.style.display='none';
+      var prev=el('withdrawFeePreview'); if(prev) prev.style.display='none';
       renderWithdrawalHistory(currentUser); renderNotifications(currentUser);
-      showWithdrawMsg('success','&#x26A1; <strong>GHS '+amountAfterFee.toFixed(2)+' sent successfully!</strong><br>'
-        +'Sent to: <strong>'+account+'</strong> via '+method+'<br>'
-        +'Fee: GHS '+fee.toFixed(2)+' ('+feeLabel+')<br>'
-        +'Reference: '+(data.reference||wRef));
-    } else {
-      // Refund on failure
-      if(wIdx>=0){allWs[wIdx].phase='Failed'; saveWithdrawals(allWs);}
-      var allM2=getMembers(); var mIdx2=allM2.findIndex(function(m){return m.id===currentUser.id;});
-      if(mIdx2>=0){
-        allM2[mIdx2].balance=parseFloat(((allM2[mIdx2].balance||0)+amount).toFixed(2));
-        allM2[mIdx2].withdrawalCount=Math.max(0,(allM2[mIdx2].withdrawalCount||1)-1);
-        saveMembers(allM2); currentUser=allM2[mIdx2];
-        setText('dmBal','GHS '+(currentUser.balance||0).toFixed(2));
-      }
-      renderWithdrawalHistory(currentUser);
-      showWithdrawMsg('error','&#x274C; Transfer failed: '+(data.error||'Unknown error')+'. Your balance has been refunded.');
+      showWithdrawMsg('success','&#x23F3; <strong>Withdrawal submitted!</strong><br>'
+        +'Amount: <strong>GHS '+amountAfterFee.toFixed(2)+'</strong> via '+method+'<br>'
+        +'Your payment will be completed within <strong>30 minutes</strong>. Please be patient.');
     }
-  })
-  .catch(function(err){
-    if(btn){btn.disabled=false; btn.textContent='Withdraw Now';}
-    // Refund on network error
-    var allWs2=getWithdrawals(); var wIdx2=allWs2.findIndex(function(x){return x.id===wId;});
-    if(wIdx2>=0){allWs2[wIdx2].phase='Failed'; saveWithdrawals(allWs2);}
-    var allM3=getMembers(); var mIdx3=allM3.findIndex(function(m){return m.id===currentUser.id;});
-    if(mIdx3>=0){
-      allM3[mIdx3].balance=parseFloat(((allM3[mIdx3].balance||0)+amount).toFixed(2));
-      allM3[mIdx3].withdrawalCount=Math.max(0,(allM3[mIdx3].withdrawalCount||1)-1);
-      saveMembers(allM3); currentUser=allM3[mIdx3];
-      setText('dmBal','GHS '+(currentUser.balance||0).toFixed(2));
-    }
-    renderWithdrawalHistory(currentUser);
-    showWithdrawMsg('error','&#x274C; Could not reach payment server. Your balance has been refunded. Please try again.');
-  });
+  }
+
+  // Start first attempt
+  attemptWithdrawal();
 }
 function showWithdrawMsg(type, msg){
   var el2=document.getElementById('withdrawMsg');
@@ -3744,8 +3777,12 @@ function renderWithdrawalsTable(){
     html+='<td>'+w.method+'</td>';
     html+='<td style="font-size:12px">'+w.account+'</td>';
     html+='<td style="white-space:nowrap;font-size:12px">'+w.date+'</td>';
-    html+='<td><span class="ph-badge '+bc+'">'+w.phase+'</span></td>';
-    html+='<td><select class="ph-sel" data-wid="'+w.id+'"><option'+(w.phase==='Pending'?' selected':'')+'>Pending</option><option'+(w.phase==='Processing'?' selected':'')+'>Processing</option><option'+(w.phase==='Complete'?' selected':'')+'>Complete</option></select></td>';
+    html+='<td><span class="ph-badge '+bc+'">'+w.phase+'</span>'
+      +(w.adminNote?'<div style="font-size:11px;color:var(--orange);margin-top:3px;font-weight:600">&#x26A0; Manual payout needed</div>':'')
+      +'</td>';
+    html+='<td><select class="ph-sel" data-wid="'+w.id+'"><option'+(w.phase==='Pending'?' selected':'')+'>Pending</option><option'+(w.phase==='Processing'?' selected':'')+'>Processing</option><option'+(w.phase==='Complete'?' selected':'')+'>Complete</option></select>'
+      +(w.adminNote?'<div style="font-size:10.5px;color:#9ca3af;margin-top:3px;max-width:160px;word-break:break-word">'+w.adminNote+'</div>':'')
+      +'</td>';
     html+='</tr>';
   });
   setHTML('aWithdrawalsBody', html);
