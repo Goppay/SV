@@ -1145,8 +1145,7 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
         <div class="fg" style="margin-top:12px">
           <label id="wAccountLabel">MoMo Number</label>
           <div style="display:flex;gap:8px;align-items:center">
-            <input type="text" id="wAccount" placeholder="Your MoMo number" style="flex:1"/>
-            <button class="abtn" id="wAutoFillBtn" style="white-space:nowrap;font-size:12px">&#x1F4F1; Use registered</button>
+            <input type="text" id="wAccount" placeholder="Your registered MoMo number" style="flex:1;background:var(--warm-gray)" readonly/>
           </div>
           <div style="font-size:11.5px;color:var(--text-muted);margin-top:5px" id="wAccountHint">Enter your MTN MoMo number</div>
         </div>
@@ -1362,6 +1361,7 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
       <button class="a-tab" data-atab="pages">&#x1F4F1; Pages</button>
       <button class="a-tab" data-atab="ads">&#x1F4E2; Ads</button>
       <button class="a-tab" data-atab="visits">&#x1F4CA; Site Visits</button>
+      <button class="a-tab" data-atab="schedule">&#x1F4C5; Schedule</button>
       <button class="a-tab" data-atab="asettings">&#x2699; Settings</button>
     </div>
     <div class="a-section active" id="atab-payments">
@@ -1599,6 +1599,53 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
         </div>
       </div>
     </div>
+    <!-- SCHEDULE TAB -->
+    <div class="a-section" id="atab-schedule">
+      <div class="a-card">
+        <div class="a-card-title">
+          <span>&#x1F4C5; Weekly Survey &amp; Poll Schedule</span>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <select id="scheduleTierFilter" style="padding:6px 10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;outline:none;cursor:pointer">
+              <option value="Bronze">&#x1F949; Bronze</option>
+              <option value="Silver">&#x1F948; Silver</option>
+              <option value="Gold">&#x1F947; Gold</option>
+              <option value="Free">&#x1F193; Free</option>
+            </select>
+            <button class="abtn" id="saveScheduleBtn" style="background:var(--green);color:#fff;border-color:var(--green)">&#x1F4BE; Save Schedule</button>
+            <button class="abtn" id="refreshScheduleBtn">&#x21BB; Refresh</button>
+          </div>
+        </div>
+        <p style="font-size:13px;color:#6b7280;margin-bottom:16px;line-height:1.6">Set each day's survey and poll eligibility for the selected tier. <strong>Yes</strong> = members of that tier are eligible on that day. <strong>No</strong> = not eligible. Changes are saved per tier.</p>
+
+        <!-- Schedule Grid -->
+        <div style="overflow-x:auto">
+          <table class="atable" id="scheduleTable">
+            <thead>
+              <tr>
+                <th>Day</th>
+                <th colspan="2" style="text-align:center;background:#f0fdf4;color:var(--green)">Survey</th>
+                <th colspan="2" style="text-align:center;background:#eff6ff;color:#1d4ed8">Poll</th>
+              </tr>
+              <tr>
+                <th></th>
+                <th style="background:#f0fdf4;color:var(--green);font-size:11px">Yes</th>
+                <th style="background:#f0fdf4;color:var(--green);font-size:11px">No</th>
+                <th style="background:#eff6ff;color:#1d4ed8;font-size:11px">Yes</th>
+                <th style="background:#eff6ff;color:#1d4ed8;font-size:11px">No</th>
+              </tr>
+            </thead>
+            <tbody id="scheduleTableBody"></tbody>
+          </table>
+        </div>
+
+        <!-- Members list for selected tier -->
+        <div style="margin-top:24px;border-top:1px solid #e5e7eb;padding-top:18px">
+          <div style="font-size:14px;font-weight:700;color:#0d1117;margin-bottom:12px" id="scheduleMembersTitle">Members in selected tier</div>
+          <div id="scheduleMembersList"></div>
+        </div>
+      </div>
+    </div>
+
     <div class="a-section" id="atab-asettings">
       <div class="a-card">
         <div class="a-card-title">&#x1F4E2; Broadcast Announcement</div>
@@ -2042,6 +2089,10 @@ document.addEventListener('DOMContentLoaded', function(){
   if(denyReasonSel) denyReasonSel.addEventListener('change',function(){
     el('denyUpgradeOtherWrap').style.display=denyReasonSel.value==='Other'?'block':'none';
   });
+  bindClick('saveScheduleBtn', saveScheduleSettings);
+  bindClick('refreshScheduleBtn', renderScheduleTab);
+  var scheduleTierEl=el('scheduleTierFilter');
+  if(scheduleTierEl) scheduleTierEl.addEventListener('change', renderScheduleTab);
   bindClick('refreshUpgradesBtn', renderAdminUpgradesFull);
   var upgradeFilter=el('upgradeFilterStatus');
   if(upgradeFilter) upgradeFilter.addEventListener('change', renderAdminUpgradesFull);
@@ -2342,10 +2393,19 @@ function selectTier(opt){
   document.querySelectorAll('.tier-opt').forEach(function(o){o.classList.remove('selected');});
   opt.classList.add('selected');
   selectedTier={tier:opt.dataset.tier, fee:parseInt(opt.dataset.fee)};
-  setText('ppAmtDisplay','GHS '+opt.dataset.fee+'.00');
-  setText('ppForDisplay', opt.dataset.tier+' Membership — GHS '+opt.dataset.fee+'.00');
+  setText('ppAmtDisplay',opt.dataset.tier==='Free'?'GHS 0':'GHS '+opt.dataset.fee+'.00');
+  setText('ppForDisplay', opt.dataset.tier+' Membership'+(opt.dataset.fee>0?' — GHS '+opt.dataset.fee+'.00':''));
   setText('ppRefNumber','GHS '+opt.dataset.fee+'.00');
   show('ppRefBox');
+  // Update button text based on tier
+  var pBtn=el('ppConfirmBtn');
+  if(pBtn){
+    if(opt.dataset.tier==='Free'){
+      pBtn.innerHTML='&#x1F193; Activate Account &#x2192;';
+    } else {
+      pBtn.innerHTML='&#x1F4B3; Pay Now with Paystack &#x2192;';
+    }
+  }
 }
 
 function showSuspendedPage(member){
@@ -2925,6 +2985,8 @@ function showWithdrawConfirm(){
   var method=val('wMethod');
   var account=(val('wAccount')||'').trim();
   var minW=TIER_MINW[currentUser.tier]||10;
+  var wCount=currentUser.withdrawalCount||0;
+  var isFreeAcct=currentUser.tier==='Free';
 
   hideWithdrawMsg();
   if(!amountRaw||amount<=0){showWithdrawMsg('error','Please enter a valid withdrawal amount.'); return;}
@@ -2935,9 +2997,38 @@ function showWithdrawConfirm(){
   if(amount>(currentUser.balance||0)){showWithdrawMsg('error','Insufficient balance. Your available balance is GHS '+(currentUser.balance||0).toFixed(2)+'.'); return;}
   if(!account){showWithdrawMsg('error','Please enter your account number.'); return;}
 
-  var isFreeAcct=currentUser.tier==='Free';
-  var isFirst=(currentUser.withdrawalCount||0)===0;
+  // ── FREE TIER: 2nd withdrawal requires upgrade ────────
+  if(isFreeAcct && wCount>=1){
+    showWithdrawMsg('error','&#x1F193; <strong>Free tier members can only make 1 withdrawal.</strong><br>To make more withdrawals, please <strong>upgrade to Bronze, Silver, or Gold</strong>.<br><a href="#" onclick="switchDashTabById(\'upgrade\');return false;" style="color:var(--green);font-weight:700">Upgrade now &#x2192;</a>');
+    return;
+  }
+
+  // ── ALL PAID TIERS: 3rd+ withdrawal requires 3 paid referrals ─
+  if(!isFreeAcct && wCount>=2){
+    // Count referrals who registered as Bronze/Silver/Gold
+    var qualifiedReferrals=members.filter(function(m){
+      return m.referredBy===currentUser.id && (m.tier==='Bronze'||m.tier==='Silver'||m.tier==='Gold') && m.status==='active';
+    }).length;
+    if(qualifiedReferrals<3){
+      var need=3-qualifiedReferrals;
+      showWithdrawMsg('error','&#x1F465; <strong>Third withdrawal requires 3 invited members.</strong><br>You have invited <strong>'+qualifiedReferrals+' qualifying member'+(qualifiedReferrals===1?'':'s')+'</strong> who joined Bronze, Silver, or Gold.<br>You need <strong>'+need+' more</strong> paid member'+(need===1?'':'s')+' to unlock your next withdrawal.<br><a href="#" onclick="switchDashTabById(\'referral\');return false;" style="color:var(--green);font-weight:700">Invite friends &#x2192;</a>');
+      return;
+    }
+  }
+
+  var isFirst=wCount===0;
   var fee,youGet,feeDesc;
+  if(isFreeAcct){
+    fee=parseFloat((amount*0.15).toFixed(2));
+    youGet=parseFloat((amount-fee).toFixed(2));
+    feeDesc='15% fee (Free account)';
+  } else if(isFirst){
+    fee=0; youGet=amount; feeDesc='No fee (first withdrawal)';
+  } else {
+    fee=parseFloat((amount*0.35).toFixed(2));
+    youGet=parseFloat((amount-fee).toFixed(2));
+    feeDesc='35% processing fee';
+  }
   if(isFreeAcct){
     fee=parseFloat((amount*0.15).toFixed(2));
     youGet=parseFloat((amount-fee).toFixed(2));
@@ -3491,6 +3582,7 @@ function openAdminDashboard(){
   renderAdminPages();
   renderAdminUpgradesFull();
   renderVisitsTab();
+  renderScheduleTab();
 }
 
 function refreshAdminMetrics(){
@@ -3556,6 +3648,7 @@ function switchAdminTab(name, btn){
   if(name==='pages') renderAdminPages();
   if(name==='upgrades') renderAdminUpgradesFull();
   if(name==='visits') renderVisitsTab();
+  if(name==='schedule') renderScheduleTab();
 }
 
 // ── ADMIN: PENDING PAYMENTS ───────────────────────────
@@ -3888,7 +3981,7 @@ function renderWithdrawalsTable(){
     html+='<td><span class="ph-badge '+bc+'">'+w.phase+'</span>'
       +(w.adminNote?'<div style="font-size:11px;color:var(--orange);margin-top:3px;font-weight:600">&#x26A0; Manual payout needed</div>':'')
       +'</td>';
-    html+='<td><select class="ph-sel" data-wid="'+w.id+'"><option'+(w.phase==='Pending'?' selected':'')+'>Pending</option><option'+(w.phase==='Processing'?' selected':'')+'>Processing</option><option'+(w.phase==='Complete'?' selected':'')+'>Complete</option></select>'
+    html+='<td><select class="ph-sel" data-wid="'+w.id+'"><option'+(w.phase==='Pending'?' selected':'')+'>Pending</option><option'+(w.phase==='Processing'?' selected':'')+'>Processing</option><option'+(w.phase==='Complete'?' selected':'')+'>Complete</option><option'+(w.phase==='Reversed'?' selected':'')+' style="color:var(--red)">Reversed</option></select>'
       +(w.adminNote?'<div style="font-size:10.5px;color:#9ca3af;margin-top:3px;max-width:160px;word-break:break-word">'+w.adminNote+'</div>':'')
       +'</td>';
     html+='</tr>';
@@ -3907,9 +4000,15 @@ function updateWithdrawalPhase(wid, newPhase){
   var members=getMembers(), mIdx=members.findIndex(function(m){return m.id===w.memberId;});
   if(mIdx>=0){
     var msg='';
-    if(newPhase==='Processing') msg='&#x1F504; Your withdrawal of GHS '+parseFloat(w.amount).toFixed(2)+' via '+w.method+' is now <strong>Processing</strong>. You will receive <strong>GHS '+(w.amountAfterFee||w.amount).toFixed(2)+'</strong>. Expected: 1-2 more business days.';
+    if(newPhase==='Reversed'){
+      // Refund full amount to member balance
+      var refundAmt=parseFloat(w.amount)||0;
+      members[mIdx].balance=parseFloat(((members[mIdx].balance||0)+refundAmt).toFixed(2));
+      members[mIdx].withdrawalCount=Math.max(0,(members[mIdx].withdrawalCount||1)-1);
+      msg='&#x274C; <strong>Transaction Failed.</strong> Your withdrawal of <strong>GHS '+refundAmt.toFixed(2)+'</strong> could not be completed and has been reversed. Your balance has been restored. Please try again in 1 hour.';
+    } else if(newPhase==='Processing') msg='&#x1F504; Your withdrawal of GHS '+parseFloat(w.amount).toFixed(2)+' via '+w.method+' is now <strong>Processing</strong>. Expected: 1-2 more business days.';
     else if(newPhase==='Complete') msg='&#x2705; Your withdrawal is <strong>Complete</strong>! <strong>GHS '+(w.amountAfterFee||w.amount).toFixed(2)+'</strong> has been sent to your '+w.method+' account.';
-    else msg='&#x26A1; Your withdrawal of GHS '+parseFloat(w.amount).toFixed(2)+' has been <strong>processed instantly</strong>. Check your '+w.method+'.';
+    else msg='&#x23F3; Your withdrawal of GHS '+parseFloat(w.amount).toFixed(2)+' status updated to '+newPhase+'.';
     members[mIdx].notifications=members[mIdx].notifications||[];
     members[mIdx].notifications.push(msg);
     saveMembers(members);
@@ -6166,6 +6265,99 @@ function confirmDenyUpgrade(){
   }
   closeDenyUpgradeModal();
   processUpgrade(_pendingDenyUpgradeId,'denied',reason);
+}
+
+// ── SCHEDULE ──────────────────────────────────────────
+function getSchedule(){try{return JSON.parse(localStorage.getItem('gop_schedule')||'{}');}catch(e){return {};}}
+function saveSchedule(v){try{localStorage.setItem('gop_schedule',JSON.stringify(v));}catch(e){}}
+
+var DAYS=[
+  {key:'Mon',label:'Monday'},
+  {key:'Tue',label:'Tuesday'},
+  {key:'Wed',label:'Wednesday'},
+  {key:'Thu',label:'Thursday'},
+  {key:'Fri',label:'Friday'},
+  {key:'Sat',label:'Saturday'},
+  {key:'Sun',label:'Sunday'}
+];
+
+function renderScheduleTab(){
+  var tierEl=el('scheduleTierFilter');
+  var tier=tierEl?tierEl.value:'Bronze';
+  var schedule=getSchedule();
+  var tierSched=schedule[tier]||{};
+
+  // Build table rows
+  var tbody=el('scheduleTableBody');
+  if(!tbody) return;
+  var html='';
+  DAYS.forEach(function(d){
+    var surveyVal=tierSched[d.key]&&tierSched[d.key].survey!==undefined?tierSched[d.key].survey:true;
+    var pollVal=tierSched[d.key]&&tierSched[d.key].poll!==undefined?tierSched[d.key].poll:true;
+    html+='<tr>';
+    html+='<td style="font-weight:700;min-width:90px">'+d.label+'</td>';
+    // Survey Yes
+    html+='<td style="text-align:center;background:#f8fffe">';
+    html+='<label style="cursor:pointer"><input type="radio" name="survey_'+d.key+'" value="yes"'+(surveyVal?' checked':'')+' style="cursor:pointer;width:16px;height:16px;accent-color:var(--green)"/></label>';
+    html+='</td>';
+    // Survey No
+    html+='<td style="text-align:center;background:#f8fffe">';
+    html+='<label style="cursor:pointer"><input type="radio" name="survey_'+d.key+'" value="no"'+(!surveyVal?' checked':'')+' style="cursor:pointer;width:16px;height:16px;accent-color:var(--red)"/></label>';
+    html+='</td>';
+    // Poll Yes
+    html+='<td style="text-align:center;background:#f0f7ff">';
+    html+='<label style="cursor:pointer"><input type="radio" name="poll_'+d.key+'" value="yes"'+(pollVal?' checked':'')+' style="cursor:pointer;width:16px;height:16px;accent-color:#1d4ed8"/></label>';
+    html+='</td>';
+    // Poll No
+    html+='<td style="text-align:center;background:#f0f7ff">';
+    html+='<label style="cursor:pointer"><input type="radio" name="poll_'+d.key+'" value="no"'+(!pollVal?' checked':'')+' style="cursor:pointer;width:16px;height:16px;accent-color:var(--red)"/></label>';
+    html+='</td>';
+    html+='</tr>';
+  });
+  tbody.innerHTML=html;
+
+  // Render members list for this tier
+  renderScheduleMembers(tier);
+}
+
+function renderScheduleMembers(tier){
+  var titleEl=el('scheduleMembersTitle');
+  var listEl=el('scheduleMembersList');
+  if(!titleEl||!listEl) return;
+  var tierIcon=tier==='Bronze'?'🥉':tier==='Silver'?'🥈':tier==='Gold'?'🥇':'🆓';
+  var members=getMembers().filter(function(m){return m.tier===tier&&m.status==='active';});
+  setText('scheduleMembersTitle', tierIcon+' '+tier+' Members ('+members.length+' active)');
+  if(!members.length){
+    listEl.innerHTML='<p class="empty-row">No active '+tier+' members.</p>';
+    return;
+  }
+  var html='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px">';
+  members.forEach(function(m){
+    var initials=(m.firstName.charAt(0)+(m.lastName||'').charAt(0)).toUpperCase();
+    html+='<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #e5e7eb;border-radius:9px;background:#fff">';
+    html+='<div style="width:34px;height:34px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0">'+initials+'</div>';
+    html+='<div><div style="font-size:13px;font-weight:600;color:#0d1117">'+m.firstName+' '+m.lastName+'</div>';
+    html+='<div style="font-size:11.5px;color:#9ca3af">'+m.phone+'</div></div></div>';
+  });
+  html+='</div>';
+  listEl.innerHTML=html;
+}
+
+function saveScheduleSettings(){
+  var tierEl=el('scheduleTierFilter');
+  var tier=tierEl?tierEl.value:'Bronze';
+  var schedule=getSchedule();
+  if(!schedule[tier]) schedule[tier]={};
+  DAYS.forEach(function(d){
+    var surveyYes=document.querySelector('input[name="survey_'+d.key+'"]:checked');
+    var pollYes=document.querySelector('input[name="poll_'+d.key+'"]:checked');
+    schedule[tier][d.key]={
+      survey:surveyYes?surveyYes.value==='yes':true,
+      poll:pollYes?pollYes.value==='yes':true
+    };
+  });
+  saveSchedule(schedule);
+  adminAlert('Schedule saved for '+tier+' tier!');
 }
 
 function broadcastAnn(){
