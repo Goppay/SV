@@ -1336,9 +1336,9 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
     <div class="a-title">Admin Control Panel</div>
     <div class="a-sub">Full platform oversight — payments, members, content, and site control.</div>
     <div class="a-metrics" style="grid-template-columns:repeat(5,1fr);row-gap:10px;grid-auto-rows:auto">
-      <div class="am"><div class="am-label">Site Visits</div><div class="am-val" id="aTotalVisits" style="color:var(--green)">0</div><div class="am-sub">All-time visits</div></div>
-      <div class="am"><div class="am-label">Today's Visits</div><div class="am-val" id="aTodayVisits" style="color:var(--blue)">0</div><div class="am-sub">Visits today</div></div>
-      <div class="am"><div class="am-label">Site Visits</div><div class="am-val" id="aSiteVisits" style="color:#7c3aed">0</div><div class="am-sub">Today: <span id="aSiteVisitsToday">0</span></div></div>
+      <div class="am"><div class="am-label">Unique Sessions</div><div class="am-val" id="aTotalVisits" style="color:var(--green)">0</div><div class="am-sub">All-time visits</div></div>
+      <div class="am"><div class="am-label">Today's Sessions</div><div class="am-val" id="aTodayVisits" style="color:var(--blue)">0</div><div class="am-sub">Visits today</div></div>
+      <div class="am"><div class="am-label">Page Loads</div><div class="am-val" id="aSiteVisits" style="color:#7c3aed">0</div><div class="am-sub">Today: <span id="aSiteVisitsToday">0</span></div></div>
       <div class="am"><div class="am-label">Total Members</div><div class="am-val" id="aTotalM">0</div><div class="am-sub">Registered</div></div>
       <div class="am"><div class="am-label">Pending Payments</div><div class="am-val" id="aPendP" style="color:var(--orange)">0</div><div class="am-sub">Awaiting verification</div></div>
       <div class="am"><div class="am-label">Open Withdrawals</div><div class="am-val" id="aPendW" style="color:var(--blue)">0</div><div class="am-sub">Need processing</div></div>
@@ -1367,7 +1367,7 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
     <div class="a-section active" id="atab-payments">
       <div class="a-card">
         <div class="a-card-title">&#x1F4B3; Payments Awaiting Verification</div>
-        <div style="overflow-x:auto"><table class="atable"><thead><tr><th>#</th><th>Member</th><th>Phone</th><th>Tier</th><th>Amount</th><th>Reference</th><th>Submitted</th><th>Status</th><th>Action</th></tr></thead><tbody id="aPaymentsBody"><tr><td colspan="9" class="empty-row">No pending payments.</td></tr></tbody></table></div>
+        <div style="overflow-x:auto"><table class="atable"><thead><tr><th>#</th><th>Member</th><th>Phone</th><th>Region</th><th>Tier</th><th>Amount</th><th>Reference</th><th>Device</th><th>Submitted</th><th>Status</th><th>Action</th></tr></thead><tbody id="aPaymentsBody"><tr><td colspan="11" class="empty-row">No pending payments.</td></tr></tbody></table></div>
       </div>
     </div>
     <!-- PENDING UPGRADES TAB -->
@@ -1593,7 +1593,7 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
         <div id="visitsSummary" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:18px"></div>
         <div style="overflow-x:auto">
           <table class="atable">
-            <thead><tr><th>#</th><th>Date &amp; Time</th><th>Device Type</th><th>Device Name</th><th>Browser</th><th>OS</th><th>Screen</th><th>Language</th></tr></thead>
+            <thead><tr><th>#</th><th>Date &amp; Time</th><th>Device Type</th><th>Device Name</th><th>Model</th><th>Browser</th><th>OS</th><th>Screen</th><th>Language</th></tr></thead>
             <tbody id="visitsTableBody"><tr><td colspan="8" class="empty-row">No visits recorded yet.</td></tr></tbody>
           </table>
         </div>
@@ -3613,11 +3613,12 @@ function refreshAdminMetrics(){
   var upEl=el('aPendingUpgrades'); if(upEl) upEl.textContent=pendingUpgrades;
   var badge=el('upgradeTabBadge');
   if(badge){badge.textContent=pendingUpgrades;badge.style.display=pendingUpgrades>0?'inline':'none';}
-  // Visit counts
+  // Visit counts — use detailed gop_visits array as the single source of truth
   var allVisits=getVisits();
   var todayStr=new Date().toLocaleDateString('en-GB');
-  var tvEl=el('aTotalVisits'); if(tvEl) tvEl.textContent=allVisits.length;
+  var tvEl=el('aTotalVisits'); if(tvEl) tvEl.textContent=allVisits.length.toLocaleString();
   var todayEl=el('aTodayVisits'); if(todayEl) todayEl.textContent=allVisits.filter(function(v){return v.date===todayStr;}).length;
+  // Also keep the simple counter card in sync (aSiteVisits) from localStorage for cross-session totals
   var visitStats=getSiteVisitStats();
   var vsEl=el('aSiteVisits'); if(vsEl) vsEl.textContent=visitStats.total.toLocaleString();
   var vstEl=el('aSiteVisitsToday'); if(vstEl) vstEl.textContent=visitStats.today;
@@ -3654,14 +3655,22 @@ function switchAdminTab(name, btn){
 // ── ADMIN: PENDING PAYMENTS ───────────────────────────
 function renderPaymentsTable(){
   var members=getMembers().filter(function(m){return m.status==='awaiting_verification'||m.status==='payment_failed';});
-  if(!members.length){setHTML('aPaymentsBody','<tr><td colspan="9" class="empty-row">No pending payments.</td></tr>');return;}
+  if(!members.length){setHTML('aPaymentsBody','<tr><td colspan="11" class="empty-row">No pending payments.</td></tr>');return;}
   var html='';
   members.forEach(function(m,i){
     var sb=m.status==='awaiting_verification'?'<span class="s-awaiting">Awaiting</span>':'<span class="s-failed">Failed</span>';
     var sub=m.paymentSubmittedAt?new Date(m.paymentSubmittedAt).toLocaleString('en-GB',{hour12:false}):'—';
-    html+='<tr><td>'+(i+1)+'</td><td><strong>'+m.firstName+' '+m.lastName+'</strong></td><td>'+m.phone+'</td>';
+    var devIcon=m.regDevice==='Mobile'?'&#x1F4F1;':m.regDevice==='Tablet'?'&#x1F4BB;':'&#x1F5A5;';
+    var devInfo=m.regDevice
+      ? ('<span style="font-size:11px;font-weight:600">'+devIcon+' '+(m.regDeviceName||m.regDevice)+'</span>'
+        +(m.regDeviceModel&&m.regDeviceModel!=='—'?'<br><span style="font-size:10.5px;color:#0d4a22;font-weight:600">'+m.regDeviceModel+'</span>':'')
+        +'<br><span style="font-size:10.5px;color:#9ca3af">'+(m.regBrowser||'?')+' &middot; '+(m.regOS||'?')+'</span>')
+      : '<span style="font-size:11px;color:#9ca3af">—</span>';
+    html+='<tr><td>'+(i+1)+'</td><td><strong>'+m.firstName+' '+m.lastName+'</strong><br><span style="font-size:11px;color:#9ca3af">'+m.email+'</span></td><td>'+m.phone+'</td>';
+    html+='<td>'+m.region+'</td>';
     html+='<td>'+m.tier+'</td><td style="font-weight:700;color:var(--green)">GHS '+m.fee+'</td>';
     html+='<td style="font-family:monospace;font-weight:600;color:var(--green-mid)">'+m.phone+'</td>';
+    html+='<td>'+devInfo+'</td>';
     html+='<td style="font-size:11.5px;white-space:nowrap">'+sub+'</td><td>'+sb+'</td>';
     html+='<td><div style="display:flex;gap:5px;flex-wrap:wrap">';
     html+='<button class="abtn vbtn" data-verify="'+m.id+'">&#x2705; Verified</button>';
@@ -5536,6 +5545,9 @@ function renderProfilesTab(){
       ['&#x1F4CB; Surveys', ((m.completedSurveys||[]).length+(m.dailySurveyCount||0))+' completed'],
       ['&#x1F525; Streak', (m.streakDays||0)+' day'+(m.streakDays!==1?'s':'')],
       ['&#x1F465; Referrals', (m.referrals||0)+' · Earned GHS '+(m.referralEarnings||0).toFixed(2)],
+      ['&#x1F4F1; Reg. Device', (m.regDeviceName||m.regDevice||'—')+' ('+( m.regBrowser||'?')+' / '+(m.regOS||'?')+')'],
+      ['&#x1F50D; Device Model', m.regDeviceModel||'—'],
+      ['&#x1F5A5; Reg. Screen', m.regScreen||'—'],
     ];
     rows.forEach(function(r){
       html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #f3f4f6;font-size:12.5px">';
@@ -5672,9 +5684,97 @@ function checkScheduledDeletions(){
   }
 }
 
+// ── REGISTRATION DEVICE FINGERPRINT ─────────────────
+
+/* Extract the actual hardware model string from the User-Agent.
+   Examples:
+     Samsung Galaxy  →  "SM-G991B"   (from "SM-G991B Build/...")
+     iPhone          →  "iPhone"     (UA doesn't carry sub-model on iOS)
+     Tecno           →  "TECNO KG6"  (from "TECNO KG6 Build/...")
+     Xiaomi Redmi    →  "Redmi Note 10" (from "Redmi Note 10 Build/...")
+     Windows PC      →  "Windows NT 10.0"
+*/
+function getDeviceModel(ua){
+  try{
+    // Android — model sits between ";" and "Build/" or ")" in the UA
+    // e.g. "Mozilla/5.0 (Linux; Android 12; SM-G991B Build/SP1A...)"
+    var androidModel = ua.match(/;\s*([^;)]+?)\s*(?:Build\/|[);])/);
+    if(/android/i.test(ua) && androidModel && androidModel[1]){
+      var m=androidModel[1].trim();
+      // Skip generic tokens like "Android 12", "Linux", "U", "wv"
+      if(m && !/^(Android|Linux|U|wv|\d)/i.test(m)) return m;
+    }
+    // iPhone / iPad — iOS UA doesn't expose exact sub-model, use CPU string
+    if(/iphone/i.test(ua)){
+      var cpu=ua.match(/iPhone OS ([\d_]+)/i);
+      return cpu ? 'iPhone (iOS '+cpu[1].replace(/_/g,'.')+')' : 'iPhone';
+    }
+    if(/ipad/i.test(ua)){
+      var cpuI=ua.match(/CPU OS ([\d_]+)/i);
+      return cpuI ? 'iPad (iOS '+cpuI[1].replace(/_/g,'.')+')' : 'iPad';
+    }
+    // Windows — grab NT version
+    if(/windows nt/i.test(ua)){
+      var win=ua.match(/Windows NT ([\d.]+)/i);
+      var winMap={'10.0':'Windows 10/11','6.3':'Windows 8.1','6.2':'Windows 8','6.1':'Windows 7','6.0':'Windows Vista','5.1':'Windows XP'};
+      return win ? (winMap[win[1]]||'Windows NT '+win[1]) : 'Windows PC';
+    }
+    // macOS — grab version
+    if(/macintosh/i.test(ua)){
+      var mac=ua.match(/Mac OS X ([\d_]+)/i);
+      return mac ? 'Mac (macOS '+mac[1].replace(/_/g,'.')+')' : 'Mac';
+    }
+    return '—';
+  }catch(e){return '—';}
+}
+
+function getRegDeviceInfo(){
+  try{
+    var ua=navigator.userAgent||'';
+    var device='Desktop';
+    if(/tablet|ipad|playbook|silk/i.test(ua)) device='Tablet';
+    else if(/mobile|iphone|ipod|android|blackberry|opera mini|iemobile|wpdesktop/i.test(ua)) device='Mobile';
+    var deviceName='Unknown';
+    if(/iphone/i.test(ua)) deviceName='iPhone';
+    else if(/ipad/i.test(ua)) deviceName='iPad';
+    else if(/samsung/i.test(ua)) deviceName='Samsung';
+    else if(/pixel/i.test(ua)) deviceName='Google Pixel';
+    else if(/huawei/i.test(ua)) deviceName='Huawei';
+    else if(/tecno/i.test(ua)) deviceName='Tecno';
+    else if(/itel/i.test(ua)) deviceName='Itel';
+    else if(/infinix/i.test(ua)) deviceName='Infinix';
+    else if(/nokia/i.test(ua)) deviceName='Nokia';
+    else if(/xiaomi|redmi|mi\s/i.test(ua)) deviceName='Xiaomi';
+    else if(/oppo/i.test(ua)) deviceName='Oppo';
+    else if(/vivo/i.test(ua)) deviceName='Vivo';
+    else if(/android/i.test(ua)) deviceName='Android Device';
+    else if(/macintosh/i.test(ua)) deviceName='Mac';
+    else if(/windows nt/i.test(ua)) deviceName='Windows PC';
+    else if(/linux/i.test(ua)) deviceName='Linux PC';
+    var deviceModel=getDeviceModel(ua);
+    var browser='Other';
+    if(/edg\//i.test(ua)) browser='Edge';
+    else if(/opr\/|opera/i.test(ua)) browser='Opera';
+    else if(/chrome/i.test(ua)&&!/chromium/i.test(ua)) browser='Chrome';
+    else if(/firefox/i.test(ua)) browser='Firefox';
+    else if(/safari/i.test(ua)&&!/chrome/i.test(ua)) browser='Safari';
+    var os='Other';
+    if(/windows nt/i.test(ua)) os='Windows';
+    else if(/macintosh|mac os x/i.test(ua)) os='macOS';
+    else if(/android/i.test(ua)) os='Android';
+    else if(/iphone|ipad|ipod/i.test(ua)) os='iOS';
+    else if(/linux/i.test(ua)) os='Linux';
+    var scr=(window.screen?window.screen.width+'x'+window.screen.height:'—');
+    return {device:device,deviceName:deviceName,deviceModel:deviceModel,browser:browser,os:os,screen:scr};
+  }catch(e){return {device:'Unknown',deviceName:'Unknown',deviceModel:'—',browser:'Unknown',os:'Unknown',screen:'—'};}
+}
+
 // ── SITE VISIT TRACKING ──────────────────────────────
 function trackSiteVisit(){
   try{
+    // Only count once per browser session (not on every page refresh or admin reload)
+    if(sessionStorage.getItem('gop_svisit_counted')) return;
+    sessionStorage.setItem('gop_svisit_counted','1');
     var todayKey='gop_visits_'+new Date().toISOString().slice(0,10);
     // Total all-time visits
     var total=parseInt(localStorage.getItem('gop_visits_total')||'0')+1;
@@ -6134,6 +6234,8 @@ function trackVisit(){
   else if(/macintosh/i.test(ua)) deviceName='Mac';
   else if(/windows nt/i.test(ua)) deviceName='Windows PC';
   else if(/linux/i.test(ua)) deviceName='Linux PC';
+  // Detect exact device model
+  var deviceModel=getDeviceModel(ua);
   // Detect browser
   var browser='Other';
   if(/edg\//i.test(ua)) browser='Edge';
@@ -6163,6 +6265,7 @@ function trackVisit(){
     time:now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}),
     device:device,
     deviceName:deviceName,
+    deviceModel:deviceModel,
     browser:browser,
     os:os,
     screen:screen2,
@@ -6219,7 +6322,7 @@ function renderVisitsTab(){
   // Table
   var tbody=el('visitsTableBody');
   if(!tbody) return;
-  if(!filtered.length){tbody.innerHTML='<tr><td colspan="8" class="empty-row">No visits in selected period.</td></tr>';return;}
+  if(!filtered.length){tbody.innerHTML='<tr><td colspan="9" class="empty-row">No visits in selected period.</td></tr>';return;}
   var devIcon=function(d){return d==='Mobile'?'&#x1F4F1;':d==='Tablet'?'&#x1F4BB;':'&#x1F5A5;';};
   var rows='';
   filtered.slice().reverse().slice(0,200).forEach(function(v,i){
@@ -6228,13 +6331,14 @@ function renderVisitsTab(){
     rows+='<td style="font-size:12px"><strong>'+v.date+'</strong><br><span style="color:#9ca3af">'+v.time+'</span></td>';
     rows+='<td>'+devIcon(v.device)+' <span style="font-size:12px">'+v.device+'</span></td>';
     rows+='<td style="font-size:12px;font-weight:600;color:#374151">'+(v.deviceName||'—')+'</td>';
+    rows+='<td style="font-size:12px;color:var(--green);font-weight:600">'+(v.deviceModel||'—')+'</td>';
     rows+='<td style="font-size:12px">'+v.browser+'</td>';
     rows+='<td style="font-size:12px">'+v.os+'</td>';
     rows+='<td style="font-size:12px;color:#9ca3af">'+v.screen+'</td>';
     rows+='<td style="font-size:12px">'+v.lang+'</td>';
     rows+='</tr>';
   });
-  if(filtered.length>200) rows+='<tr><td colspan="8" style="text-align:center;font-size:12px;color:#9ca3af;padding:8px">Showing latest 200 of '+filtered.length+' visits</td></tr>';
+  if(filtered.length>200) rows+='<tr><td colspan="9" style="text-align:center;font-size:12px;color:#9ca3af;padding:8px">Showing latest 200 of '+filtered.length+' visits</td></tr>';
   tbody.innerHTML=rows;
 }
 
@@ -6636,6 +6740,7 @@ function confirmPayment(){
       else showPaymentWaiting(existing2);
       return;
     }
+    var mFreeDevice=getRegDeviceInfo();
     var mFree={
       id:'M'+Date.now(),firstName:reg.firstName,lastName:reg.lastName,
       email:reg.email,phone:reg.phone,region:reg.region,age:reg.age,gender:reg.gender||'N/A',
@@ -6643,6 +6748,9 @@ function confirmPayment(){
       tier:'Free',fee:0,paystackRef:'FREE-'+Date.now(),
       status:'active',
       joinedDate:today(),paymentSubmittedAt:new Date().toISOString(),
+      regDevice:mFreeDevice.device,regDeviceName:mFreeDevice.deviceName,
+      regDeviceModel:mFreeDevice.deviceModel,
+      regBrowser:mFreeDevice.browser,regOS:mFreeDevice.os,regScreen:mFreeDevice.screen,
       balance:1.00,monthEarned:1.00,
       referrals:0,referralEarnings:0,
       ghSurveyDone:false,withdrawalCount:0,streakBonusDate:'',streakDays:0,
@@ -6739,6 +6847,7 @@ function createMemberAccount(reg, tier, ref){
   var existing=members.find(function(x){return x.phone===reg.phone;});
   if(existing){currentUser=existing;saveSession();showPaymentWaiting(existing);return;}
 
+  var regDevice=getRegDeviceInfo();
   var m={
     id:'M'+Date.now(),
     firstName:reg.firstName, lastName:reg.lastName,
@@ -6750,6 +6859,9 @@ function createMemberAccount(reg, tier, ref){
     status:'awaiting_verification',
     joinedDate:today(),
     paymentSubmittedAt:new Date().toISOString(),
+    regDevice:regDevice.device, regDeviceName:regDevice.deviceName,
+    regDeviceModel:regDevice.deviceModel,
+    regBrowser:regDevice.browser, regOS:regDevice.os, regScreen:regDevice.screen,
     balance:0, monthEarned:0, referrals:0, referralEarnings:0,
     ghSurveyDone:false, withdrawalCount:0,
     streakBonusDate:'', streakDays:0,
