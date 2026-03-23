@@ -1166,6 +1166,7 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
 
         <button class="sbtn" style="margin-top:4px;display:block" id="submitWithdrawBtn">Continue &#x2192;</button>
         <div id="withdrawMsg" style="display:none;margin-top:10px;padding:10px 13px;border-radius:9px;font-size:13px"></div>
+        <button id="cancelWithdrawBtn" style="display:none;margin-top:8px;width:100%;padding:10px;background:var(--red);color:#fff;border:none;border-radius:9px;font-size:13.5px;font-weight:700;cursor:pointer">&#x274C; Cancel Withdrawal</button>
         </div><!-- end withdrawFormArea -->
       </div>
 
@@ -1857,6 +1858,12 @@ function restoreSession(){
       pendingReg={firstName:m.firstName,lastName:m.lastName,email:m.email,phone:m.phone,region:m.region,age:m.age,gender:m.gender||'N/A',secQuestion:m.secQuestion||'',secAnswer:m.secAnswer||'',password:m.password};
       showPaymentFailed('Your previous payment was not verified. Please try again.'); startIdleTracking(); return;
     }
+    // Only auto-restore member session if within same browser session (not on fresh page load/refresh)
+    try{
+      if(!sessionStorage.getItem('gop_session_active')){
+        localStorage.removeItem('gop_session'); return; // Show homepage on refresh
+      }
+    }catch(e){}
     if(m.status==='active'){openMemberDashboard(m); startIdleTracking(); return;}
     if(m.status==='suspended'){currentUser=m; showSuspendedPage(m); return;}
     if(m.status==='pending_deletion'){currentUser=m; showPendingDeletionPage(m); startIdleTracking(); return;}
@@ -2260,6 +2267,7 @@ function doLogin(){
   }
   if(m.status!=='active'){showErr('loginError','Your account is not active. Contact support.'); return;}
   currentUser=m; saveSession(); closeLoginModal(); openMemberDashboard(m); startIdleTracking();
+  try{sessionStorage.setItem('gop_session_active','1');}catch(e){}
 }
 
 // ── REGISTER ──────────────────────────────────────────
@@ -3095,8 +3103,41 @@ function submitWithdrawal(){
   var _retryCount=0;
   var _maxRetries=5;
   var _retryDelays=[300000,300000,300000,300000,300000];
+  var _withdrawalCancelled=false;
+  var _retryTimer=null;
+
+  // Show cancel button during processing
+  var cancelBtn=el('cancelWithdrawBtn');
+  if(cancelBtn){
+    cancelBtn.style.display='block';
+    cancelBtn.onclick=function(){
+      if(!_withdrawalCancelled){
+        _withdrawalCancelled=true;
+        if(_retryTimer){clearTimeout(_retryTimer);_retryTimer=null;}
+        // Reverse balance
+        var allM=getMembers(); var mIdx=allM.findIndex(function(m){return m.id===currentUser.id;});
+        if(mIdx>=0){
+          allM[mIdx].balance=parseFloat(((allM[mIdx].balance||0)+amount).toFixed(2));
+          allM[mIdx].withdrawalCount=Math.max(0,(allM[mIdx].withdrawalCount||1)-1);
+          allM[mIdx].notifications=allM[mIdx].notifications||[];
+          allM[mIdx].notifications.push('&#x274C; Withdrawal of <strong>GHS '+amount.toFixed(2)+'</strong> was cancelled. Your balance of <strong>GHS '+allM[mIdx].balance.toFixed(2)+'</strong> has been restored.');
+          saveMembers(allM); currentUser=allM[mIdx];
+          setText('dmBal','GHS '+(currentUser.balance||0).toFixed(2));
+        }
+        // Remove withdrawal record
+        var allWs=getWithdrawals(); var wIdx=allWs.findIndex(function(x){return x.id===wId;});
+        if(wIdx>=0){allWs.splice(wIdx,1);saveWithdrawals(allWs);}
+        // Reset UI
+        if(btn){btn.disabled=false;btn.textContent='Withdraw Now';}
+        cancelBtn.style.display='none';
+        renderWithdrawalHistory(currentUser); renderNotifications(currentUser);
+        showWithdrawMsg('info','&#x274C; Withdrawal cancelled. Your balance has been fully restored.');
+      }
+    };
+  }
 
   function attemptWithdrawal(){
+    if(_withdrawalCancelled) return;
     _retryCount++;
     var isRetry=_retryCount>1;
     if(btn){
@@ -3138,6 +3179,7 @@ function submitWithdrawal(){
     .then(function(data){
       if(data.success){
         // SUCCESS
+        if(cancelBtn) cancelBtn.style.display='none';
         if(btn){btn.disabled=false; btn.textContent='Withdraw Now';}
         var allWs=getWithdrawals();
         var wIdx=allWs.findIndex(function(x){return x.id===wId;});
@@ -3167,13 +3209,15 @@ function submitWithdrawal(){
   }
 
   function handleRetryOrGiveUp(errorMsg){
+    if(_withdrawalCancelled) return;
     if(_retryCount<_maxRetries){
       var delay=_retryDelays[_retryCount-1]||300000;
       var mins=Math.round(delay/60000);
       showWithdrawMsg('info','&#x23F3; Transfer attempt '+_retryCount+' failed. Retrying in '+mins+' minute'+(mins===1?'':'s')+'...');
-      setTimeout(attemptWithdrawal, delay);
+      _retryTimer=setTimeout(attemptWithdrawal, delay);
     } else {
-      // ALL RETRIES EXHAUSTED — keep balance deducted, mark Pending for admin
+      // ALL RETRIES EXHAUSTED
+      if(cancelBtn) cancelBtn.style.display='none';
       if(btn){btn.disabled=false; btn.textContent='Withdraw Now';}
       var allWs2=getWithdrawals(); var wIdx2=allWs2.findIndex(function(x){return x.id===wId;});
       if(wIdx2>=0){
@@ -6362,6 +6406,7 @@ function confirmPayment(){
     }
     var mems=getMembers(); mems.push(mFree); saveMembers(mems);
     currentUser=mFree; saveSession();
+    try{sessionStorage.setItem('gop_session_active','1');}catch(e){}
     hide('paymentPage');
     openMemberDashboard(mFree);
     return;
