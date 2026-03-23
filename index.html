@@ -3110,6 +3110,8 @@ function submitWithdrawal(){
   var cancelBtn=el('cancelWithdrawBtn');
   if(cancelBtn){
     cancelBtn.style.display='block';
+    cancelBtn.style.background='var(--red)';
+    cancelBtn.innerHTML='&#x274C; Cancel Withdrawal';
     cancelBtn.onclick=function(){
       if(!_withdrawalCancelled){
         _withdrawalCancelled=true;
@@ -3178,8 +3180,20 @@ function submitWithdrawal(){
     })
     .then(function(data){
       if(data.success){
-        // SUCCESS
-        if(cancelBtn) cancelBtn.style.display='none';
+        // SUCCESS — hide processing cancel, show post-success info
+        if(cancelBtn){
+          cancelBtn.style.display='block';
+          cancelBtn.style.background='var(--blue,#1d4ed8)';
+          cancelBtn.innerHTML='&#x2139; Cancel / Undo this withdrawal';
+          cancelBtn.onclick=function(){
+            // Money already sent — inform user, cannot reverse
+            cancelBtn.style.display='none';
+            showWithdrawMsg('info','&#x2705; <strong>Your withdrawal was already sent successfully.</strong><br>'
+              +'GHS '+amountAfterFee.toFixed(2)+' has been transferred to <strong>'+account+'</strong> via '+method+'.<br>'
+              +'Ref: '+(data.reference||wRef)+'<br>'
+              +'<strong>The transfer cannot be reversed</strong> as the money has already been dispatched to your Mobile Money account.');
+          };
+        }
         if(btn){btn.disabled=false; btn.textContent='Withdraw Now';}
         var allWs=getWithdrawals();
         var wIdx=allWs.findIndex(function(x){return x.id===wId;});
@@ -3187,7 +3201,7 @@ function submitWithdrawal(){
         var allM=getMembers(); var mIdx=allM.findIndex(function(m){return m.id===currentUser.id;});
         if(mIdx>=0){
           allM[mIdx].notifications=allM[mIdx].notifications||[];
-          allM[mIdx].notifications.push('&#x26A1; GHS '+amountAfterFee.toFixed(2)+' sent to '+account+' via '+method+'. Ref: '+(data.reference||wRef)+'.');
+          allM[mIdx].notifications.push('&#x26A1; <strong>Withdrawal successful!</strong> GHS '+amountAfterFee.toFixed(2)+' has been sent to '+account+' via '+method+'. Ref: '+(data.reference||wRef)+'. If you did not authorise this, contact support immediately.');
           saveMembers(allM); currentUser=allM[mIdx];
         }
         setVal('wAmt',''); setVal('wAccount','');
