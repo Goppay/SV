@@ -3285,14 +3285,19 @@ function showWithdrawMsg(type, msg){
 function renderWithdrawalHistory(member){
   var ws=getWithdrawals().filter(function(w){return w.memberId===member.id;});
   if(!ws.length){setHTML('wHistory','<p style="font-size:13.5px;color:var(--text-muted);text-align:center;padding:18px">No withdrawal requests yet.</p>');return;}
-  var html='<div style="overflow-x:auto"><table class="atable"><thead><tr><th>Date</th><th>Requested</th><th>Fee</th><th>You Receive</th><th>Method</th><th>Account</th><th>Status</th></tr></thead><tbody>';
+  var html='<div style="overflow-x:auto"><table class="atable"><thead><tr><th>Date</th><th>Requested</th><th>Fee</th><th>You Receive</th><th>Method</th><th>Account</th><th>Status</th><th>Action</th></tr></thead><tbody>';
   ws.slice().reverse().forEach(function(w){
-    var bc=w.phase==='Complete'?'ph-complete':w.phase==='Processing'?'ph-processing':'ph-pending';
+    var bc=w.phase==='Complete'?'ph-complete':w.phase==='Processing'?'ph-processing':w.phase==='Reversed'?'ph-failed':'ph-pending';
     var fee=w.fee||0;
     var receives=w.amountAfterFee!=null?w.amountAfterFee:parseFloat(w.amount);
     var feeCell=w.isFree
       ?'<span style="color:var(--green);font-weight:600;font-size:12px">&#x1F381; FREE</span>'
       :'<span style="color:var(--red);font-weight:600">− GHS '+fee.toFixed(2)+'</span>';
+    // Reverse button — only show on non-Complete, non-Reversed rows
+    var actionCell='<span style="color:#9ca3af;font-size:12px">—</span>';
+    if(w.phase!=='Complete'&&w.phase!=='Reversed'){
+      actionCell='<button class="abtn" data-reversew="'+w.id+'" style="font-size:11.5px;padding:4px 10px;color:var(--red);border-color:var(--red)">&#x21A9; Reverse</button>';
+    }
     html+='<tr>';
     html+='<td>'+w.date+'</td>';
     html+='<td style="font-weight:600">GHS '+parseFloat(w.amount).toFixed(2)+'</td>';
@@ -3301,10 +3306,55 @@ function renderWithdrawalHistory(member){
     html+='<td>'+w.method+'</td>';
     html+='<td>'+w.account+'</td>';
     html+='<td><span class="ph-badge '+bc+'">'+w.phase+'</span></td>';
+    html+='<td>'+actionCell+'</td>';
     html+='</tr>';
   });
   html+='</tbody></table></div>';
   setHTML('wHistory', html);
+
+  // Wire reverse buttons
+  var histEl=el('wHistory');
+  if(histEl) histEl.querySelectorAll('[data-reversew]').forEach(function(b){
+    b.addEventListener('click',function(){reverseWithdrawal(b.dataset.reversew);});
+  });
+}
+
+function reverseWithdrawal(wId){
+  var ws=getWithdrawals();
+  var wIdx=ws.findIndex(function(x){return x.id===wId;});
+  if(wIdx<0) return;
+  var w=ws[wIdx];
+  if(w.phase==='Complete'||w.phase==='Reversed') return; // cannot reverse complete or already reversed
+  var amount=parseFloat(w.amount)||0;
+  if(!amount) return;
+
+  // Restore full amount to member balance
+  var members=getMembers();
+  var mIdx=members.findIndex(function(m){return m.id===w.memberId;});
+  if(mIdx<0) return;
+  members[mIdx].balance=parseFloat(((members[mIdx].balance||0)+amount).toFixed(2));
+  // Also restore withdrawal count
+  members[mIdx].withdrawalCount=Math.max(0,(members[mIdx].withdrawalCount||1)-1);
+  members[mIdx].notifications=members[mIdx].notifications||[];
+  members[mIdx].notifications.push(
+    '&#x274C; <strong>Transaction Failed.</strong> Your withdrawal of <strong>GHS '+amount.toFixed(2)+'</strong> could not be completed. '
+    +'Your balance has been restored. <strong>Please try again in 1 hour.</strong>'
+  );
+  saveMembers(members);
+  currentUser=members[mIdx];
+
+  // Mark withdrawal as Reversed
+  ws[wIdx].phase='Reversed';
+  ws[wIdx].reversedAt=new Date().toISOString();
+  saveWithdrawals(ws);
+
+  // Update UI
+  setText('dmBal','GHS '+(currentUser.balance||0).toFixed(2));
+  renderWithdrawalHistory(currentUser);
+  renderNotifications(currentUser);
+
+  // Show message on withdraw tab
+  showWithdrawMsg('info','&#x274C; <strong>Transaction failed. Your GHS '+amount.toFixed(2)+' has been reversed to your account.</strong><br>Please try again in 1 hour.');
 }
 
 // ── SETTINGS ──────────────────────────────────────────
