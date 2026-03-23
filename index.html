@@ -2986,32 +2986,32 @@ function updateWithdrawFeePreview(){
 
   var isFreeAcct=currentUser.tier==='Free';
   var isFirst=(currentUser.withdrawalCount||0)===0;
+  var feeAmt=0, youGet=amount;
 
   if(isFreeAcct){
-    // Free account: 15% fee on every withdrawal, no exceptions
-    var fee15=parseFloat((amount*0.15).toFixed(2));
-    var youGet15=parseFloat((amount-fee15).toFixed(2));
+    feeAmt=parseFloat((amount*0.15).toFixed(2));
+    youGet=parseFloat((amount-feeAmt).toFixed(2));
     preview.style.display='block';
     preview.style.borderColor='#e8c800';
     preview.style.background='#fff8d6';
     preview.innerHTML='&#x26A0;&#xFE0F; <strong style="color:#6b5200">15% processing fee applies (Free account).</strong><br>'
       +'Amount requested: <strong>GHS '+amount.toFixed(2)+'</strong><br>'
-      +'Processing fee (15%): <strong style="color:var(--red)">− GHS '+fee15.toFixed(2)+'</strong><br>'
-      +'<strong>You will receive: <span style="color:var(--green);font-size:15px">GHS '+youGet15.toFixed(2)+'</span></strong>';
+      +'Processing fee (15%): <strong style="color:var(--red)">− GHS '+feeAmt.toFixed(2)+'</strong><br>'
+      +'<strong>You will receive: <span style="color:var(--green);font-size:15px">GHS '+youGet.toFixed(2)+'</span></strong>';
   } else if(isFirst){
     preview.style.display='block';
     preview.style.borderColor='var(--green)';
     preview.style.background='var(--green-pale)';
     preview.innerHTML='&#x1F381; <strong style="color:var(--green)">First withdrawal — FREE!</strong> You will receive the full <strong>GHS '+amount.toFixed(2)+'</strong> with no fees deducted.';
   } else {
-    var fee=amount*0.35;
-    var youGet=amount-fee;
+    feeAmt=parseFloat((amount*0.35).toFixed(2));
+    youGet=parseFloat((amount-feeAmt).toFixed(2));
     preview.style.display='block';
     preview.style.borderColor='#e8c800';
     preview.style.background='#fff8d6';
     preview.innerHTML='&#x26A0;&#xFE0F; <strong style="color:#6b5200">35% processing fee applies.</strong><br>'
       +'Amount requested: <strong>GHS '+amount.toFixed(2)+'</strong><br>'
-      +'Processing fee (35%): <strong style="color:var(--red)">− GHS '+fee.toFixed(2)+'</strong><br>'
+      +'Processing fee (35%): <strong style="color:var(--red)">− GHS '+feeAmt.toFixed(2)+'</strong><br>'
       +'<strong>You will receive: <span style="color:var(--green);font-size:15px">GHS '+youGet.toFixed(2)+'</span></strong>';
   }
 }
@@ -3034,15 +3034,15 @@ function submitWithdrawal(){
   var amount=parseFloat(amountRaw)||0;
   var method=val('wMethod');
   var account=(val('wAccount')||'').trim();
-  var minW=TIER_MINW[currentUser.tier]||30;
+  var minW=TIER_MINW[currentUser.tier]||10;
 
   if(!amountRaw||amount<=0){showWithdrawMsg('error','Please enter a valid withdrawal amount.'); return;}
-  if(amount<minW){showWithdrawMsg('error','Minimum withdrawal for '+currentUser.tier+' tier is GHS '+minW+'.'); return;}
+  if(amount<minW){showWithdrawMsg('error','Minimum withdrawal for '+currentUser.tier+' tier is GHS '+minW+'. Your balance must be at least GHS '+minW+' to withdraw.'); return;}
   if(amount>(currentUser.balance||0)){showWithdrawMsg('error','Insufficient balance. Your available balance is GHS '+(currentUser.balance||0).toFixed(2)+'.'); return;}
   if(!account){showWithdrawMsg('error','Please enter your MoMo or bank account number.'); return;}
   if(method==='Bank Transfer'){showWithdrawMsg('error','Bank transfers are not yet supported for instant payouts. Please use Mobile Money.'); return;}
 
-  // Calculate fee
+  // Calculate fee — member receives whatever remains after deduction
   var isFreeAcct=currentUser.tier==='Free';
   var isFirst=(currentUser.withdrawalCount||0)===0;
   var fee, amountAfterFee, feeLabel;
