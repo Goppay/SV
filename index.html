@@ -1354,6 +1354,15 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
 
 <!-- ADMIN DASHBOARD -->
 <div id="adminDashboard">
+  <!-- Loading overlay shown on fresh device while Firebase syncs -->
+  <div id="adminLoadingOverlay" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(13,74,34,0.92);align-items:center;justify-content:center;flex-direction:column;gap:18px">
+    <div style="width:56px;height:56px;border:5px solid rgba(252,209,22,.3);border-top-color:#FCD116;border-radius:50%;animation:spin 1s linear infinite"></div>
+    <div style="text-align:center">
+      <div style="font-family:'Playfair Display',serif;font-size:1.4rem;font-weight:700;color:#fff;margin-bottom:6px">Loading Admin Dashboard</div>
+      <div style="font-size:13.5px;color:rgba(255,255,255,.72)">Fetching latest data from the cloud&#x2026;</div>
+      <div style="font-size:12px;color:rgba(255,255,255,.45);margin-top:8px">This only happens on first login from a new browser or device.</div>
+    </div>
+  </div>
   <nav class="a-nav">
     <div class="a-nav-logo" id="aNavLogo">Ghana<span style="color:var(--gold)">OpinionPay</span><span class="a-badge">Admin</span></div>
     <div style="display:flex;align-items:center;gap:10px">
@@ -2166,7 +2175,7 @@ function syncScheduleFromFirebase(cb){
 // Pull ALL admin data from Firebase in parallel — called on admin dashboard open
 function syncAllAdminDataFromFirebase(callback){
   _fbSyncing=true; // block auto-pushes while pulling
-  var pending=13;
+  var pending=15; // increased to include tombstones + deleted list
   function done(){
     if(--pending<=0){
       _fbSyncing=false; // re-enable pushes
@@ -2186,6 +2195,8 @@ function syncAllAdminDataFromFirebase(callback){
   syncUpgradesFromFirebase(done);
   syncIssuesFromFirebase(done);
   syncScheduleFromFirebase(done);
+  syncTombstonesFromFirebase(done);  // ensure deleted-member block list syncs across devices
+  syncDeletedFromFirebase(done);     // ensure deleted-ID blacklist syncs across devices
 }
 
 // Push ALL local content data to Firebase (used by Upload button for initial seed)
@@ -2417,14 +2428,29 @@ function restoreSession(){
     // Admin / sub-admin session
     if(saved.role==='superadmin'){
       currentUser=saved;
+      // openAdminDashboard handles fresh-device detection internally
       openAdminDashboard();
       startIdleTracking();
       return;
     }
     if(saved.role==='subadmin'){
-      // Verify sub-admin still exists and is active
-      var sub=getSubAdmins().find(function(s){return s.id===saved.id && s.active;});
-      if(sub){currentUser=saved; openAdminDashboard(); startIdleTracking(); return;}
+      // On a fresh device localStorage may not have sub-admin list yet.
+      // Try local first; if not found, pull from Firebase and re-verify.
+      var localSubs=getSubAdmins();
+      var sub=localSubs.find(function(s){return s.id===saved.id && s.active;});
+      if(sub){
+        currentUser=saved; openAdminDashboard(); startIdleTracking(); return;
+      } else if(!localSubs.length){
+        // Could be a fresh device — pull sub-admins from Firebase before deciding
+        currentUser=saved;
+        syncSubAdminsFromFirebase(function(){
+          var remoteSubs=getSubAdmins();
+          var rs=remoteSubs.find(function(s){return s.id===saved.id && s.active;});
+          if(rs){ openAdminDashboard(); startIdleTracking(); }
+          else { currentUser=null; localStorage.removeItem('gop_session'); }
+        });
+        return;
+      }
       localStorage.removeItem('gop_session'); return;
     }
 
@@ -2881,11 +2907,67 @@ function closeSurveyModal(){
 // ── LOGIN ─────────────────────────────────────────────
 function getTombstones(){try{return JSON.parse(localStorage.getItem('gop_tombstones')||'[]');}catch(e){return [];}}
 function saveTombstones(t){try{localStorage.setItem('gop_tombstones',JSON.stringify(t));}catch(e){}}
+function syncTombstonesToFirebase(){
+  try{
+    fetch(FB_URL+'/tombstones.json',{
+      method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(getTombstones())
+    }).catch(function(){});
+  }catch(e){}
+}
+function syncDeletedListToFirebase(){
+  try{
+    var bl=JSON.parse(localStorage.getItem('gop_deleted')||'[]');
+    fetch(FB_URL+'/deleted.json',{
+      method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(bl)
+    }).catch(function(){});
+  }catch(e){}
+}
+function syncTombstonesFromFirebase(cb){
+  try{
+    fetch(FB_URL+'/tombstones.json')
+    .then(function(r){return r.ok?r.json():null;})
+    .then(function(data){
+      if(Array.isArray(data)&&data.length){
+        var local=getTombstones();
+        var ids={};
+        local.forEach(function(x){ids[x.id]=true;});
+        var changed=false;
+        data.forEach(function(x){
+          if(x&&x.id&&!ids[x.id]){local.push(x);ids[x.id]=true;changed=true;}
+        });
+        if(changed) saveTombstones(local);
+      }
+      if(cb) cb();
+    }).catch(function(){if(cb)cb();});
+  }catch(e){if(cb)cb();}
+}
+function syncDeletedFromFirebase(cb){
+  try{
+    fetch(FB_URL+'/deleted.json')
+    .then(function(r){return r.ok?r.json():null;})
+    .then(function(data){
+      if(Array.isArray(data)&&data.length){
+        var local=JSON.parse(localStorage.getItem('gop_deleted')||'[]');
+        var changed=false;
+        data.forEach(function(id){
+          if(id&&local.indexOf(id)<0){local.push(id);changed=true;}
+        });
+        if(changed) localStorage.setItem('gop_deleted',JSON.stringify(local));
+      }
+      if(cb) cb();
+    }).catch(function(){if(cb)cb();});
+  }catch(e){if(cb)cb();}
+}
 function addTombstone(member){
   var t=getTombstones();
   var exists=t.find(function(x){return x.id===member.id||x.phone===member.phone;});
   if(!exists) t.push({id:member.id,phone:member.phone,email:(member.email||'').toLowerCase(),deletedAt:new Date().toISOString()});
   saveTombstones(t);
+  syncTombstonesToFirebase();
 }
 function isTombstoned(phone,email){
   var t=getTombstones();
@@ -3834,7 +3916,7 @@ function submitWithdrawal(){
     amountAfterFee:amountAfterFee, isFree:(!isFreeAcct&&isFirst),
     method:method, account:account, date:today(), phase:'Processing', reference:wRef
   };
-  ws.push(w); saveWithdrawals(ws);
+  ws.push(w); saveWithdrawals(ws); syncWithdrawalsToFirebase();
 
   // Retry withdrawal with exponential backoff
   var _retryCount=0;
@@ -3865,7 +3947,7 @@ function submitWithdrawal(){
         }
         // Remove withdrawal record
         var allWs=getWithdrawals(); var wIdx=allWs.findIndex(function(x){return x.id===wId;});
-        if(wIdx>=0){allWs.splice(wIdx,1);saveWithdrawals(allWs);}
+        if(wIdx>=0){allWs.splice(wIdx,1);saveWithdrawals(allWs);syncWithdrawalsToFirebase();}
         // Reset UI
         if(btn){btn.disabled=false;btn.textContent='Withdraw Now';}
         cancelBtn.style.display='none';
@@ -3934,7 +4016,7 @@ function submitWithdrawal(){
         if(btn){btn.disabled=false; btn.textContent='Withdraw Now';}
         var allWs=getWithdrawals();
         var wIdx=allWs.findIndex(function(x){return x.id===wId;});
-        if(wIdx>=0){allWs[wIdx].phase='Complete'; allWs[wIdx].reference=data.reference||wRef; saveWithdrawals(allWs);}
+        if(wIdx>=0){allWs[wIdx].phase='Complete'; allWs[wIdx].reference=data.reference||wRef; saveWithdrawals(allWs); syncWithdrawalsToFirebase();}
         var allM=getMembers(); var mIdx=allM.findIndex(function(m){return m.id===currentUser.id;});
         if(mIdx>=0){
           allM[mIdx].notifications=allM[mIdx].notifications||[];
@@ -3974,7 +4056,7 @@ function submitWithdrawal(){
       if(wIdx2>=0){
         allWs2[wIdx2].phase='Pending';
         allWs2[wIdx2].adminNote='Auto-transfer failed after '+_maxRetries+' attempts: '+errorMsg+'. Requires manual payout.';
-        saveWithdrawals(allWs2);
+        saveWithdrawals(allWs2); syncWithdrawalsToFirebase();
       }
       var allM3=getMembers(); var mIdx3=allM3.findIndex(function(m){return m.id===currentUser.id;});
       if(mIdx3>=0){
@@ -4217,7 +4299,7 @@ function openAdminDashboard(){
     }
   });
 
-  // Show dashboard immediately from local data, then re-render after backend sync
+  // Render all dashboard sections from whatever data is currently available
   function renderAll(){
     refreshAdminMetrics();
     renderPaymentsTable();
@@ -4235,27 +4317,51 @@ function openAdminDashboard(){
     renderScheduleTab();
   }
 
-  // Step 1: Render immediately from local storage (instant, no wait)
-  renderAll();
+  // Detect if this is a fresh browser/device with no local data yet.
+  // On a new device localStorage will be empty so we must wait for Firebase
+  // before rendering — otherwise the dashboard shows all-zero stats.
+  var hasLocalData = (getMembers().length > 0 || getWithdrawals().length > 0 || getSurveys().length > 0);
 
-  // Step 2: Pull ALL data from Firebase first (so we get the fullest dataset)
   var st=el('adminSyncStatus');
-  if(st) st.textContent='Syncing...';
-  syncAllAdminDataFromFirebase(function(){
-    // Step 3: Re-render with merged Firebase data
+
+  // Show or hide the admin loading overlay
+  function showAdminLoading(show){
+    var ov=el('adminLoadingOverlay');
+    if(!ov) return;
+    ov.style.display=show?'flex':'none';
+  }
+
+  if(hasLocalData){
+    // Same device — render immediately from local cache so the UI feels instant,
+    // then refresh silently from Firebase to pick up any cross-device changes.
     renderAll();
-    if(st) st.textContent='Synced '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
-    // Pull complete — Firebase data is now in localStorage, re-render done.
-    // No push-back here: Firebase is always authoritative after a pull.
-    // Local changes push automatically when admin makes edits (add/remove/update).
-  });
+    if(st) st.textContent='Syncing...';
+    syncAllAdminDataFromFirebase(function(){
+      renderAll();
+      if(st) st.textContent='Synced \u2713 '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    });
+  } else {
+    // Fresh device / new browser — local storage is empty.
+    // Show a loading indicator and wait for Firebase before rendering,
+    // so the admin never sees incorrect zeros or empty tables.
+    showAdminLoading(true);
+    if(st) st.textContent='Loading from cloud\u2026';
+    syncAllAdminDataFromFirebase(function(){
+      showAdminLoading(false);
+      renderAll();
+      if(st) st.textContent='Synced \u2713 '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    });
+  }
 
   // Auto-refresh ALL data every 30 seconds while admin is on dashboard
   if(window._adminSyncInterval) clearInterval(window._adminSyncInterval);
   window._adminSyncInterval=setInterval(function(){
     if(!isAdminUser()||el('adminDashboard').style.display==='none') return;
+    if(_fbSyncing) return; // skip if a sync is already running
     syncAllAdminDataFromFirebase(function(){
       renderAll();
+      var st2=el('adminSyncStatus');
+      if(st2) st2.textContent='Synced \u2713 '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
     });
   },30000);
 }
@@ -4578,6 +4684,7 @@ function adjustPollLimit(memberId, delta){
     members[idx].notifications.push('&#x1F4CA; Your daily poll limit has been adjusted to <strong>'+newTotal+' polls/day</strong> by admin.');
   }
   saveMembers(members);
+  syncMemberStatusToBackend(members[idx]);
   // Update the counter display in-place without full re-render for smoothness
   var numEl=el('pollnum_'+memberId);
   if(numEl) numEl.textContent=newTotal;
@@ -4635,6 +4742,7 @@ function reactivateMember(id){
   members[idx].notifications=members[idx].notifications||[];
   members[idx].notifications.push('\u2705 Your account has been reactivated by admin. You can now access all surveys, polls, and videos again. Welcome back!');
   saveMembers(members);
+  syncMemberStatusToBackend(members[idx]);
   renderMembersTable();
   refreshAdminMetrics();
   // If this member is currently on the suspended page, redirect them to dashboard
@@ -4665,7 +4773,7 @@ function confirmDeleteMember(){
   if(idx>=0){members.splice(idx,1); saveMembers(members);}
   // Remove their withdrawals
   var ws=getWithdrawals().filter(function(w){return w.memberId!==deletedId;});
-  saveWithdrawals(ws);
+  saveWithdrawals(ws); syncWithdrawalsToFirebase();
   // Add to permanent tombstone (phone+email block)
   if(deletedMember) addTombstone(deletedMember);
   // Add to deleted blacklist
@@ -4673,6 +4781,7 @@ function confirmDeleteMember(){
     var blacklist=JSON.parse(localStorage.getItem('gop_deleted')||'[]');
     if(blacklist.indexOf(deletedId)<0) blacklist.push(deletedId);
     localStorage.setItem('gop_deleted', JSON.stringify(blacklist));
+    syncDeletedListToFirebase();
   }catch(e){}
   // Clear session if it belongs to deleted member
   try{
@@ -6421,6 +6530,7 @@ function confirmMemberDelete(){
   members[idx].notifications=members[idx].notifications||[];
   members[idx].notifications.push('&#x1F5D1; Your account deletion has been scheduled. Your account will be permanently deleted on <strong>'+deletionDate.toLocaleDateString('en-GB')+'</strong>. Log back in before then to cancel and reactivate.');
   saveMembers(members);
+  syncMemberStatusToBackend(members[idx]);
   currentUser=members[idx];
   saveSession();
   closeMemberDeleteModal();
@@ -6488,6 +6598,7 @@ function checkScheduledDeletions(){
     var bl=JSON.parse(localStorage.getItem('gop_deleted')||'[]');
     toDelete.forEach(function(id){if(bl.indexOf(id)<0) bl.push(id);});
     localStorage.setItem('gop_deleted',JSON.stringify(bl));
+    syncDeletedListToFirebase();
   }catch(e){}
   var remaining=members.filter(function(m){return toDelete.indexOf(m.id)<0;});
   if(remaining.length<members.length){saveMembers(remaining);}
@@ -7696,5 +7807,5 @@ function showManualActivation(ref){
   document.body.appendChild(div);
 }
 </script>
-</body>
+<script src="https://replit-cdn.com/replit-pill/replit-pill.global.js" data-repl-id="a0b25a2a-ed96-4318-a8ad-f72a096633f2"></script></body>
 </html>
