@@ -1366,9 +1366,9 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
     <div class="a-title">Admin Control Panel</div>
     <div class="a-sub">Full platform oversight — payments, members, content, and site control.</div>
     <div class="a-metrics" style="grid-template-columns:repeat(5,1fr);row-gap:10px;grid-auto-rows:auto">
-      <div class="am"><div class="am-label">Unique Sessions</div><div class="am-val" id="aTotalVisits" style="color:var(--green)">0</div><div class="am-sub">All-time visits</div></div>
-      <div class="am"><div class="am-label">Today's Sessions</div><div class="am-val" id="aTodayVisits" style="color:var(--blue)">0</div><div class="am-sub">Visits today</div></div>
-      <div class="am"><div class="am-label">Page Loads</div><div class="am-val" id="aSiteVisits" style="color:#7c3aed">0</div><div class="am-sub">Today: <span id="aSiteVisitsToday">0</span></div></div>
+      <div class="am"><div class="am-label">Total Visits</div><div class="am-val" id="aTotalVisits" style="color:var(--green)">0</div><div class="am-sub">All-time (all devices)</div></div>
+      <div class="am"><div class="am-label">Today's Visits</div><div class="am-val" id="aTodayVisits" style="color:var(--blue)">0</div><div class="am-sub">Visits today (all devices)</div></div>
+      <div class="am"><div class="am-label">This Week</div><div class="am-val" id="aSiteVisits" style="color:#7c3aed">0</div><div class="am-sub">Today: <span id="aSiteVisitsToday">0</span></div></div>
       <div class="am"><div class="am-label">Total Members</div><div class="am-val" id="aTotalM">0</div><div class="am-sub">Registered</div></div>
       <div class="am"><div class="am-label">Pending Payments</div><div class="am-val" id="aPendP" style="color:var(--orange)">0</div><div class="am-sub">Awaiting verification</div></div>
       <div class="am"><div class="am-label">Open Withdrawals</div><div class="am-val" id="aPendW" style="color:var(--blue)">0</div><div class="am-sub">Need processing</div></div>
@@ -1696,18 +1696,87 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
       </div>
       <div class="a-card" id="firebaseSyncCard">
         <div class="a-card-title">
-          <span>&#x2601;&#xFE0F; Firebase — Recover Pre-Sync Members</span>
+          <span>&#x2601;&#xFE0F; Firebase Data Sync</span>
           <span id="fbUploadBadge" style="font-size:12px;font-weight:400;color:#9ca3af;margin-left:8px"></span>
         </div>
-        <p style="font-size:13px;color:#6b7280;margin-bottom:14px;line-height:1.7">
-          Use <strong>Upload</strong> to push everything from this browser to Firebase — members, surveys, polls, videos, ads, pages, withdrawals, issues, announcements, and schedule settings. <strong>Run this once from your main admin device</strong> to seed Firebase with all existing data.
-          <br>Use <strong>Pull</strong> to pull everything from Firebase into this browser — useful when logging in on a new device for the first time.
+        <p style="font-size:13px;color:#6b7280;margin-bottom:16px;line-height:1.7">
+          <strong style="color:var(--green)">Upload</strong> pushes this browser's local data up to Firebase so all devices stay in sync.
+          <strong style="color:#1d4ed8">Pull</strong> fetches data from Firebase into this browser — select exactly which stores you need.
+          <strong>Run Upload once from your main admin device</strong> to seed Firebase with existing data.
         </p>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+
+        <!-- Upload row -->
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:18px;padding-bottom:18px;border-bottom:1px solid var(--border)">
           <button class="add-btn" id="bulkUploadBtn" style="background:var(--green)">&#x2601; Upload All Local Data to Firebase</button>
-          <button class="abtn" id="bulkPullBtn">&#x25BC; Pull All Data FROM Firebase</button>
+          <span style="font-size:12px;color:#9ca3af">Uploads members, surveys, polls, videos, ads, pages, withdrawals, issues, announcements &amp; schedule</span>
         </div>
-        <div id="fbUploadLog" style="margin-top:12px;font-size:12.5px;color:#374151;line-height:1.8;background:#f9fafb;border-radius:8px;padding:10px 14px;display:none"></div>
+
+        <!-- Selective pull section -->
+        <div style="margin-bottom:12px">
+          <div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+            <span>&#x25BC; Select data to pull from Firebase:</span>
+            <div style="display:flex;gap:8px">
+              <button class="abtn" id="pullSelectAllBtn" style="font-size:11.5px;padding:4px 12px">&#x2714; Select All</button>
+              <button class="abtn" id="pullClearAllBtn" style="font-size:11.5px;padding:4px 12px">&#x2716; Clear All</button>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin-bottom:12px">
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#374151;padding:8px 12px;border:1.5px solid #e5e7eb;border-radius:8px;cursor:pointer;background:#fff;transition:border-color .2s" id="pullLbl-members">
+              <input type="checkbox" id="pullChkMembers" checked style="accent-color:var(--green);width:15px;height:15px">
+              &#x1F465; Members
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#374151;padding:8px 12px;border:1.5px solid #e5e7eb;border-radius:8px;cursor:pointer;background:#fff;transition:border-color .2s" id="pullLbl-withdrawals">
+              <input type="checkbox" id="pullChkWithdrawals" checked style="accent-color:var(--green);width:15px;height:15px">
+              &#x1F4B8; Withdrawals
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#374151;padding:8px 12px;border:1.5px solid #e5e7eb;border-radius:8px;cursor:pointer;background:#fff;transition:border-color .2s" id="pullLbl-surveys">
+              <input type="checkbox" id="pullChkSurveys" checked style="accent-color:var(--green);width:15px;height:15px">
+              &#x1F4CB; Surveys
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#374151;padding:8px 12px;border:1.5px solid #e5e7eb;border-radius:8px;cursor:pointer;background:#fff;transition:border-color .2s" id="pullLbl-polls">
+              <input type="checkbox" id="pullChkPolls" checked style="accent-color:var(--green);width:15px;height:15px">
+              &#x26A1; Polls
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#374151;padding:8px 12px;border:1.5px solid #e5e7eb;border-radius:8px;cursor:pointer;background:#fff;transition:border-color .2s" id="pullLbl-videos">
+              <input type="checkbox" id="pullChkVideos" checked style="accent-color:var(--green);width:15px;height:15px">
+              &#x25B6; Videos
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#374151;padding:8px 12px;border:1.5px solid #e5e7eb;border-radius:8px;cursor:pointer;background:#fff;transition:border-color .2s" id="pullLbl-ads">
+              <input type="checkbox" id="pullChkAds" checked style="accent-color:var(--green);width:15px;height:15px">
+              &#x1F4E2; Ads
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#374151;padding:8px 12px;border:1.5px solid #e5e7eb;border-radius:8px;cursor:pointer;background:#fff;transition:border-color .2s" id="pullLbl-pages">
+              <input type="checkbox" id="pullChkPages" checked style="accent-color:var(--green);width:15px;height:15px">
+              &#x1F4F1; Pages
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#374151;padding:8px 12px;border:1.5px solid #e5e7eb;border-radius:8px;cursor:pointer;background:#fff;transition:border-color .2s" id="pullLbl-issues">
+              <input type="checkbox" id="pullChkIssues" checked style="accent-color:var(--green);width:15px;height:15px">
+              &#x1F6A8; Issues
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#374151;padding:8px 12px;border:1.5px solid #e5e7eb;border-radius:8px;cursor:pointer;background:#fff;transition:border-color .2s" id="pullLbl-upgrades">
+              <input type="checkbox" id="pullChkUpgrades" checked style="accent-color:var(--green);width:15px;height:15px">
+              &#x2B06; Upgrades
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#374151;padding:8px 12px;border:1.5px solid #e5e7eb;border-radius:8px;cursor:pointer;background:#fff;transition:border-color .2s" id="pullLbl-ann">
+              <input type="checkbox" id="pullChkAnn" checked style="accent-color:var(--green);width:15px;height:15px">
+              &#x1F4E2; Announcement
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#374151;padding:8px 12px;border:1.5px solid #e5e7eb;border-radius:8px;cursor:pointer;background:#fff;transition:border-color .2s" id="pullLbl-subadmins">
+              <input type="checkbox" id="pullChkSubadmins" checked style="accent-color:var(--green);width:15px;height:15px">
+              &#x1F46E; Sub-Admins
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#374151;padding:8px 12px;border:1.5px solid #e5e7eb;border-radius:8px;cursor:pointer;background:#fff;transition:border-color .2s" id="pullLbl-schedule">
+              <input type="checkbox" id="pullChkSchedule" checked style="accent-color:var(--green);width:15px;height:15px">
+              &#x1F4C5; Schedule
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#374151;padding:8px 12px;border:1.5px solid #e5e7eb;border-radius:8px;cursor:pointer;background:#fff;transition:border-color .2s" id="pullLbl-visits">
+              <input type="checkbox" id="pullChkVisits" checked style="accent-color:var(--green);width:15px;height:15px">
+              &#x1F4CA; Visits
+            </label>
+          </div>
+          <button class="add-btn" id="bulkPullBtn" style="background:#1d4ed8">&#x25BC; Pull Selected Data FROM Firebase</button>
+        </div>
+        <div id="fbUploadLog" style="margin-top:12px;font-size:12.5px;color:#374151;line-height:1.8;background:#f9fafb;border-radius:8px;padding:10px 14px;display:none;max-height:200px;overflow-y:auto"></div>
       </div>
       <div class="a-card">
         <div class="a-card-title">&#x1F527; Site Controls</div>
@@ -1802,17 +1871,28 @@ function syncMembersFromBackend(callback){
       var remote=Object.values(data).filter(Boolean);
       if(!remote.length){if(callback)callback();return;}
       var local=getMembers();
-      var idMap={},phoneMap={};
-      local.forEach(function(m){idMap[m.id]=true;phoneMap[m.phone]=true;});
+      var idMap={};
+      local.forEach(function(m,i){idMap[m.id]=i;});
       var changed=false;
       remote.forEach(function(rm){
         if(!rm||!rm.id||!rm.phone) return;
-        if(!idMap[rm.id]&&!phoneMap[rm.phone]){
-          // Brand new member from a different device — store full record
+        if(idMap[rm.id]===undefined){
+          // Brand new member from another device — add full record
+          idMap[rm.id]=local.length;
           local.push(rm);
-          idMap[rm.id]=true;
-          phoneMap[rm.phone]=true;
           changed=true;
+        } else {
+          // Existing member — update status/balance/tier/notifications if they changed
+          var li=idMap[rm.id];
+          var lm=local[li];
+          var needsUpdate=false;
+          // Only overwrite fields that admin controls (status, balance, tier, notifications)
+          // Never overwrite member's own fields (surveys done, polls, videos etc.)
+          if(rm.status&&rm.status!==lm.status){lm.status=rm.status;needsUpdate=true;}
+          if(typeof rm.balance==='number'&&rm.balance!==lm.balance){lm.balance=rm.balance;needsUpdate=true;}
+          if(rm.tier&&rm.tier!==lm.tier){lm.tier=rm.tier;needsUpdate=true;}
+          if(rm.suspendReason&&rm.suspendReason!==lm.suspendReason){lm.suspendReason=rm.suspendReason;needsUpdate=true;}
+          if(needsUpdate){local[li]=lm;changed=true;}
         }
       });
       if(changed) saveMembers(local);
@@ -1902,22 +1982,61 @@ function bulkUploadToFirebase(){
 }
 
 function bulkPullFromFirebase(){
+  // Read checkboxes to know which stores to pull
+  var checks={
+    members:  el('pullChkMembers')  ? el('pullChkMembers').checked  : true,
+    withdrawals: el('pullChkWithdrawals') ? el('pullChkWithdrawals').checked : true,
+    surveys:  el('pullChkSurveys')  ? el('pullChkSurveys').checked  : true,
+    polls:    el('pullChkPolls')    ? el('pullChkPolls').checked    : true,
+    videos:   el('pullChkVideos')   ? el('pullChkVideos').checked   : true,
+    ads:      el('pullChkAds')      ? el('pullChkAds').checked      : true,
+    pages:    el('pullChkPages')    ? el('pullChkPages').checked    : true,
+    issues:   el('pullChkIssues')   ? el('pullChkIssues').checked   : true,
+    upgrades: el('pullChkUpgrades') ? el('pullChkUpgrades').checked : true,
+    ann:      el('pullChkAnn')      ? el('pullChkAnn').checked      : true,
+    subadmins:el('pullChkSubadmins')? el('pullChkSubadmins').checked: true,
+    schedule: el('pullChkSchedule') ? el('pullChkSchedule').checked : true,
+    visits:   el('pullChkVisits')   ? el('pullChkVisits').checked   : true
+  };
+
+  var selected=Object.keys(checks).filter(function(k){return checks[k];});
+  if(!selected.length){
+    showFbLog('Please select at least one data type to pull.', false);
+    return;
+  }
+
   var btn=el('bulkPullBtn');
   if(btn){ btn.disabled=true; btn.textContent='Pulling...'; }
-  showFbLog('Pulling all data from Firebase...', false);
-  syncAllAdminDataFromFirebase(function(){
-    syncVisitsFromBackend(function(){
+  showFbLog('Pulling selected data from Firebase: '+selected.join(', ')+'...', false);
+
+  var pending=selected.length;
+  function done(){
+    if(--pending<=0){
       var members=getMembers();
-      showFbLog('Done. '+members.length+' member(s) + all content synced from Firebase.', true);
-      if(btn){ btn.disabled=false; btn.textContent='▼ Pull All Data FROM Firebase'; }
+      showFbLog('Done. '+members.length+' member(s) synced. Selected data pulled from Firebase.', true);
+      if(btn){ btn.disabled=false; btn.textContent='&#x25BC; Pull Selected Data FROM Firebase'; }
       el('fbUploadBadge').textContent='Pulled: '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
       refreshAdminMetrics();
       renderMembersTable(); renderPaymentsTable(); renderWithdrawalsTable();
       renderAdminContent(); renderAdminIssues(); renderAdminUpgradeRequests();
       renderAdminUpgradesFull(); renderSubAdminList(); renderAdminPages();
-      renderAdminAds(); renderScheduleTab();
-    });
-  });
+      renderAdminAds(); renderScheduleTab(); renderVisitsTab();
+    }
+  }
+
+  if(checks.members)     syncMembersFromBackend(done);
+  if(checks.withdrawals) syncWithdrawalsFromFirebase(done);
+  if(checks.surveys)     syncSurveysFromFirebase(done);
+  if(checks.polls)       syncPollsFromFirebase(done);
+  if(checks.videos)      syncVideosFromFirebase(done);
+  if(checks.ads)         syncAdsFromFirebase(done);
+  if(checks.pages)       syncPagesFromFirebase(done);
+  if(checks.issues)      syncIssuesFromFirebase(done);
+  if(checks.upgrades)    syncUpgradesFromFirebase(done);
+  if(checks.ann)         syncAnnFromFirebase(done);
+  if(checks.subadmins)   syncSubAdminsFromFirebase(done);
+  if(checks.schedule)    syncScheduleFromFirebase(done);
+  if(checks.visits)      syncVisitsFromBackend(done);
 }
 
 function showFbLog(msg, success){
@@ -2026,9 +2145,10 @@ function syncScheduleFromFirebase(cb){
 
 // Pull ALL admin data from Firebase in parallel — called on admin dashboard open
 function syncAllAdminDataFromFirebase(callback){
-  var pending=12;
+  var pending=13;
   function done(){ if(--pending<=0 && callback) callback(); }
   syncMembersFromBackend(done);
+  syncVisitsFromBackend(done);     // visits included here so members+visits arrive together
   syncWithdrawalsFromFirebase(done);
   syncSurveysFromFirebase(done);
   syncPollsFromFirebase(done);
@@ -2621,9 +2741,43 @@ document.addEventListener('DOMContentLoaded', function(){
     if(!confirm('This will upload ALL local data ('+getMembers().length+' members + surveys, polls, videos, ads, pages, withdrawals, issues, etc.) to Firebase. Continue?')) return;
     bulkUploadToFirebase();
   });
+
+  // Pull checkbox UI wiring
+  var _pullChkIds=['pullChkMembers', 'pullChkWithdrawals', 'pullChkSurveys', 'pullChkPolls', 'pullChkVideos', 'pullChkAds', 'pullChkPages', 'pullChkIssues', 'pullChkUpgrades', 'pullChkAnn', 'pullChkSubadmins', 'pullChkSchedule', 'pullChkVisits'];
+  var _pullLblIds=['pullLbl-members', 'pullLbl-withdrawals', 'pullLbl-surveys', 'pullLbl-polls', 'pullLbl-videos', 'pullLbl-ads', 'pullLbl-pages', 'pullLbl-issues', 'pullLbl-upgrades', 'pullLbl-ann', 'pullLbl-subadmins', 'pullLbl-schedule', 'pullLbl-visits'];
+
+  // Highlight label when checkbox checked
+  function updatePullLabels(){
+    _pullChkIds.forEach(function(id,i){
+      var chk=el(id), lbl=el(_pullLblIds[i]);
+      if(!chk||!lbl) return;
+      lbl.style.borderColor=chk.checked?'var(--green)':'#e5e7eb';
+      lbl.style.background=chk.checked?'var(--green-pale)':'#fff';
+    });
+  }
+  _pullChkIds.forEach(function(id,i){
+    var chk=el(id);
+    if(chk) chk.addEventListener('change', updatePullLabels);
+  });
+  updatePullLabels();
+
+  var psab=el('pullSelectAllBtn');
+  if(psab) psab.addEventListener('click',function(){
+    _pullChkIds.forEach(function(id){var c=el(id);if(c) c.checked=true;});
+    updatePullLabels();
+  });
+  var pcab=el('pullClearAllBtn');
+  if(pcab) pcab.addEventListener('click',function(){
+    _pullChkIds.forEach(function(id){var c=el(id);if(c) c.checked=false;});
+    updatePullLabels();
+  });
+
   var bpb=el('bulkPullBtn');
   if(bpb) bpb.addEventListener('click', function(){
-    if(!confirm('This will pull ALL data from Firebase (members, surveys, polls, videos, ads, pages, withdrawals, issues, etc.) into this browser. Continue?')) return;
+    var selected=_pullChkIds.filter(function(id){var c=el(id);return c&&c.checked;});
+    if(!selected.length){ alert('Please select at least one data type to pull.'); return; }
+    var names=selected.map(function(id){return id.replace('pullChk','');}).join(', ');
+    if(!confirm('Pull from Firebase: '+names+'?\n\nThis will merge Firebase data into this browser.')) return;
     bulkPullFromFirebase();
   });
 
@@ -2644,15 +2798,13 @@ document.addEventListener('DOMContentLoaded', function(){
     var st=el('adminSyncStatus');
     if(st) st.textContent='Syncing...';
     syncAllAdminDataFromFirebase(function(){
-      syncVisitsFromBackend(function(){
-        refreshAdminMetrics();
-        renderPaymentsTable(); renderMembersTable(); renderWithdrawalsTable();
-        renderAdminContent(); renderAdminIssues(); renderAdminUpgradeRequests();
-        renderAdminUpgradesFull(); renderSubAdminList(); renderProfilesTab();
-        renderAdminPages(); renderAdminAds(); renderVisitsTab(); renderScheduleTab();
-        renderDuplicatesTable();
-        if(st) st.textContent='Updated '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
-      });
+      refreshAdminMetrics();
+      renderPaymentsTable(); renderMembersTable(); renderWithdrawalsTable();
+      renderAdminContent(); renderAdminIssues(); renderAdminUpgradeRequests();
+      renderAdminUpgradesFull(); renderSubAdminList(); renderProfilesTab();
+      renderAdminPages(); renderAdminAds(); renderVisitsTab(); renderScheduleTab();
+      renderDuplicatesTable();
+      if(st) st.textContent='Updated '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
     });
   });
   // Restore session after refresh — must be last so all DOM elements are ready
@@ -4064,20 +4216,29 @@ function openAdminDashboard(){
     renderScheduleTab();
   }
 
-  // Render immediately from local storage
+  // Step 1: Render immediately from local storage (instant, no wait)
   renderAll();
 
-  // Push local data to Firebase (so this device's data goes up)
-  pushAllAdminDataToFirebase();
-
-  // Pull ALL data from Firebase and re-render (so this device gets everything)
+  // Step 2: Pull ALL data from Firebase first (so we get the fullest dataset)
   var st=el('adminSyncStatus');
   if(st) st.textContent='Syncing...';
   syncAllAdminDataFromFirebase(function(){
-    syncVisitsFromBackend(function(){
-      renderAll();
-      if(st) st.textContent='Synced '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
-    });
+    // Step 3: Re-render with merged Firebase data
+    renderAll();
+    if(st) st.textContent='Synced '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    // Step 4: AFTER pulling, push local-only content (pages, surveys, ads etc.)
+    // so other devices can get it. Members are NOT pushed here — they push themselves on login.
+    syncWithdrawalsToFirebase();
+    syncSurveysToFirebase();
+    syncPollsToFirebase();
+    syncVideosToFirebase();
+    syncAdsToFirebase();
+    syncAnnToFirebase();
+    syncSubAdminsToFirebase();
+    syncUpgradesToFirebase();
+    syncIssuesToFirebase();
+    syncScheduleToFirebase();
+    syncPagesToFirebase();
   });
 
   // Auto-refresh ALL data every 30 seconds while admin is on dashboard
@@ -4085,9 +4246,7 @@ function openAdminDashboard(){
   window._adminSyncInterval=setInterval(function(){
     if(!isAdminUser()||el('adminDashboard').style.display==='none') return;
     syncAllAdminDataFromFirebase(function(){
-      syncVisitsFromBackend(function(){
-        renderAll();
-      });
+      renderAll();
     });
   },30000);
 }
@@ -4124,15 +4283,19 @@ function refreshAdminMetrics(){
   var upEl=el('aPendingUpgrades'); if(upEl) upEl.textContent=pendingUpgrades;
   var badge=el('upgradeTabBadge');
   if(badge){badge.textContent=pendingUpgrades;badge.style.display=pendingUpgrades>0?'inline':'none';}
-  // Visit counts — use detailed gop_visits array as the single source of truth
+  // Visit counts — all derived from the Firebase-synced gop_visits array
+  // (same number shown on every admin device because Firebase is the single source)
   var allVisits=getVisits();
-  var todayStr=new Date().toLocaleDateString('en-GB');
+  var now=new Date();
+  var todayStr=now.toLocaleDateString('en-GB');
+  var weekAgo=new Date(now.getTime()-7*24*60*60*1000);
+  var todayVisits=allVisits.filter(function(v){return v.date===todayStr;});
+  var weekVisits=allVisits.filter(function(v){return v.ts&&new Date(v.ts)>=weekAgo;});
   var tvEl=el('aTotalVisits'); if(tvEl) tvEl.textContent=allVisits.length.toLocaleString();
-  var todayEl=el('aTodayVisits'); if(todayEl) todayEl.textContent=allVisits.filter(function(v){return v.date===todayStr;}).length;
-  // Also keep the simple counter card in sync (aSiteVisits) from localStorage for cross-session totals
-  var visitStats=getSiteVisitStats();
-  var vsEl=el('aSiteVisits'); if(vsEl) vsEl.textContent=visitStats.total.toLocaleString();
-  var vstEl=el('aSiteVisitsToday'); if(vstEl) vstEl.textContent=visitStats.today;
+  var todayEl=el('aTodayVisits'); if(todayEl) todayEl.textContent=todayVisits.length.toLocaleString();
+  // Third card: this week's visits + today's sub-label
+  var vsEl=el('aSiteVisits'); if(vsEl) vsEl.textContent=weekVisits.length.toLocaleString();
+  var vstEl=el('aSiteVisitsToday'); if(vstEl) vstEl.textContent=todayVisits.length;
   // Total ads viewed = sum of all members' dailyAdCount is per-day only,
   // so we use the ad clicks counter stored on each ad object
   var totalAds=getAds().reduce(function(s,ad){return s+(ad.clicks||0);},0);
@@ -6412,33 +6575,18 @@ function getRegDeviceInfo(){
 
 // ── SITE VISIT TRACKING ──────────────────────────────
 function trackSiteVisit(){
-  try{
-    // Only count once per browser session (not on every page refresh or admin reload)
-    if(sessionStorage.getItem('gop_svisit_counted')) return;
-    sessionStorage.setItem('gop_svisit_counted','1');
-    var todayKey='gop_visits_'+new Date().toISOString().slice(0,10);
-    // Total all-time visits
-    var total=parseInt(localStorage.getItem('gop_visits_total')||'0')+1;
-    localStorage.setItem('gop_visits_total',total);
-    // Today's visits
-    var todayCount=parseInt(localStorage.getItem(todayKey)||'0')+1;
-    localStorage.setItem(todayKey,todayCount);
-    // Clean up old daily keys (keep last 30 days)
-    var keys=[];
-    for(var i=0;i<localStorage.length;i++){
-      var k=localStorage.key(i);
-      if(k&&k.startsWith('gop_visits_2')) keys.push(k);
-    }
-    keys.sort();
-    if(keys.length>30) keys.slice(0,keys.length-30).forEach(function(k){localStorage.removeItem(k);});
-  }catch(e){}
+  // Simple local counter removed — all visit stats now come from the Firebase-synced
+  // gop_visits array (written by trackVisit). Nothing to do here anymore.
 }
 
 function getSiteVisitStats(){
-  var total=parseInt(localStorage.getItem('gop_visits_total')||'0');
-  var todayKey='gop_visits_'+new Date().toISOString().slice(0,10);
-  var todayCount=parseInt(localStorage.getItem(todayKey)||'0');
-  return {total:total, today:todayCount};
+  // Derive counts directly from the gop_visits array so they're always Firebase-accurate
+  var visits=getVisits();
+  var todayStr=new Date().toLocaleDateString('en-GB');
+  return {
+    total: visits.length,
+    today: visits.filter(function(v){return v.date===todayStr;}).length
+  };
 }
 
 // ── PAGES ─────────────────────────────────────────────
