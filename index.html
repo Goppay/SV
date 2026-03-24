@@ -855,6 +855,32 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
   </div>
 </div>
 
+<!-- SUSPEND MEMBER MODAL -->
+<div class="modal-overlay" id="suspendModal">
+  <div class="modal modal-sm">
+    <button class="modal-close" id="closeSuspendBtn">&#x2715;</button>
+    <h2 style="color:var(--orange)">&#x26A0; Suspend Member Account</h2>
+    <p style="font-size:13.5px;color:var(--text-muted);margin-bottom:16px">The member will be notified with the reason. They can still contact support while suspended.</p>
+    <div class="fg"><label>Member</label><div style="padding:9px 12px;background:var(--warm-gray);border-radius:9px;font-size:13.5px;font-weight:600" id="suspendMemberName">—</div></div>
+    <div class="fg">
+      <label>Reason for Suspension *</label>
+      <select id="suspendReasonSelect" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:9px;font-size:13.5px;background:#fff;color:var(--text);outline:none;margin-bottom:8px">
+        <option value="">Select a reason...</option>
+        <option value="Suspicious activity detected on account">Suspicious activity detected</option>
+        <option value="Multiple duplicate accounts found">Multiple duplicate accounts found</option>
+        <option value="Fake or invalid survey responses submitted">Fake survey responses</option>
+        <option value="Violation of GhanaOpinionPay terms of service">Terms of service violation</option>
+        <option value="Fraudulent withdrawal attempt">Fraudulent withdrawal attempt</option>
+        <option value="Unverified payment — account under review">Unverified payment — under review</option>
+        <option value="Other">Other (enter below)</option>
+      </select>
+      <textarea id="suspendReason" rows="3" style="resize:vertical" placeholder="Add details or enter custom reason here..."></textarea>
+    </div>
+    <div class="err-box" id="suspendError"></div>
+    <button class="sbtn" style="background:var(--orange)" id="doSuspendBtn">&#x26A0; Suspend Account &#x2192;</button>
+  </div>
+</div>
+
 <!-- PENALTY MODAL -->
 <div class="modal-overlay" id="penaltyModal">
   <div class="modal modal-sm">
@@ -1330,7 +1356,11 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
 <div id="adminDashboard">
   <nav class="a-nav">
     <div class="a-nav-logo" id="aNavLogo">Ghana<span style="color:var(--gold)">OpinionPay</span><span class="a-badge">Admin</span></div>
-    <button class="a-logout" id="aLogoutBtn">Log Out</button>
+    <div style="display:flex;align-items:center;gap:10px">
+      <span id="adminSyncStatus" style="font-size:11px;color:rgba(255,255,255,.5)"></span>
+      <button id="adminRefreshBtn" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#fff;font-size:12px;padding:5px 13px;border-radius:7px;cursor:pointer;font-family:var(--font-body)">&#x21BB; Refresh</button>
+      <button class="a-logout" id="aLogoutBtn">Log Out</button>
+    </div>
   </nav>
   <div class="a-body">
     <div class="a-title">Admin Control Panel</div>
@@ -1440,7 +1470,7 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
     <div class="a-section" id="atab-duplicates">
       <div class="a-card">
         <div class="a-card-title"><span>&#x26A0; Duplicate Account Detection</span><button class="add-btn" id="refreshDupBtn" style="font-size:12px;padding:6px 14px">&#x1F504; Refresh Scan</button></div>
-        <p style="font-size:13px;color:#6b7280;margin-bottom:14px">Members flagged by matching full name, same email, or same first name + region + join date.</p>
+        <p style="font-size:13px;color:#6b7280;margin-bottom:14px;line-height:1.7">Members flagged by advanced multi-factor analysis: identical email/phone, same full name, same device fingerprint, browser fingerprint, referral abuse, email aliases, and fuzzy name matching. Pairs are <strong>risk-scored</strong> — HIGH (&ge;5), MEDIUM (&ge;3), LOW (&ge;2).</p>
         <div id="duplicatesWrap"><p class="empty-row">Click "Refresh Scan" to run duplicate detection.</p></div>
       </div>
     </div>
@@ -1713,6 +1743,111 @@ var ADMIN_PASS  = '123Akati@';
 var MERCHANT    = '0203910730';
 // ── RENDER BACKEND URL ───────────────────────────────────
 var MAKE_WEBHOOK_URL = 'https://goppay-backend.onrender.com';
+
+// ── CROSS-DEVICE SYNC (Firebase Realtime Database REST) ──
+// Free, no SDK needed. Uses plain fetch() against Firebase REST API.
+// SETUP (one-time, 2 minutes):
+//   1. Go to console.firebase.google.com → Add project (free)
+//   2. Build → Realtime Database → Create database → Start in TEST mode
+//   3. Copy your database URL (e.g. https://YOUR-PROJECT-default-rtdb.firebaseio.com)
+//   4. Paste it into FB_URL below and redeploy this file — done.
+var FB_URL = 'https://goppay-6c8b0-default-rtdb.asia-southeast1.firebasedatabase.app';
+
+// Write a member record to Firebase (keyed by sanitised member id)
+function syncMemberToBackend(member){
+  try{
+    var key=member.id.replace(/[^a-zA-Z0-9_-]/g,'_');
+    fetch(FB_URL+'/members/'+key+'.json',{
+      method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(member)
+    }).catch(function(){});
+  }catch(e){}
+}
+
+// Write a visit record to Firebase (keyed by visit id)
+function syncVisitToBackend(visit){
+  try{
+    var key=visit.id.replace(/[^a-zA-Z0-9_-]/g,'_');
+    fetch(FB_URL+'/visits/'+key+'.json',{
+      method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(visit)
+    }).catch(function(){});
+  }catch(e){}
+}
+
+// Pull all members from Firebase and merge into localStorage (full data capture)
+function syncMembersFromBackend(callback){
+  try{
+    fetch(FB_URL+'/members.json')
+    .then(function(r){return r.ok?r.json():null;})
+    .then(function(data){
+      if(!data||typeof data!=='object'){if(callback)callback();return;}
+      var remote=Object.values(data).filter(Boolean);
+      if(!remote.length){if(callback)callback();return;}
+      var local=getMembers();
+      var idMap={},phoneMap={};
+      local.forEach(function(m){idMap[m.id]=true;phoneMap[m.phone]=true;});
+      var changed=false;
+      remote.forEach(function(rm){
+        if(!rm||!rm.id||!rm.phone) return;
+        if(!idMap[rm.id]&&!phoneMap[rm.phone]){
+          // Brand new member from a different device — store full record
+          local.push(rm);
+          idMap[rm.id]=true;
+          phoneMap[rm.phone]=true;
+          changed=true;
+        }
+      });
+      if(changed) saveMembers(local);
+      if(callback) callback();
+    }).catch(function(){if(callback)callback();});
+  }catch(e){if(callback)callback();}
+}
+
+// Pull all visits from Firebase and merge into localStorage
+function syncVisitsFromBackend(callback){
+  try{
+    fetch(FB_URL+'/visits.json')
+    .then(function(r){return r.ok?r.json():null;})
+    .then(function(data){
+      if(!data||typeof data!=='object'){if(callback)callback();return;}
+      var remote=Object.values(data).filter(Boolean);
+      if(!remote.length){if(callback)callback();return;}
+      var local=getVisits();
+      var ids={};
+      local.forEach(function(v){ids[v.id]=true;});
+      var added=false;
+      remote.forEach(function(rv){
+        if(rv&&rv.id&&!ids[rv.id]){local.push(rv);added=true;}
+      });
+      if(added){
+        local.sort(function(a,b){return (a.ts||'').localeCompare(b.ts||'');});
+        if(local.length>2000) local=local.slice(-2000);
+        saveVisits(local);
+      }
+      if(callback) callback();
+    }).catch(function(){if(callback)callback();});
+  }catch(e){if(callback)callback();}
+}
+
+// Sync member status/balance updates back to Firebase after admin actions
+function syncMemberStatusToBackend(member){
+  try{
+    var key=member.id.replace(/[^a-zA-Z0-9_-]/g,'_');
+    fetch(FB_URL+'/members/'+key+'.json',{
+      method:'PATCH',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        status:member.status,
+        balance:member.balance,
+        tier:member.tier,
+        notifications:member.notifications
+      })
+    }).catch(function(){});
+  }catch(e){}
+}
 
 var TIER_DAILY  = {Free:1, Bronze:3, Silver:6, Gold:10};
 var TIER_MINW   = {Free:10, Bronze:30, Silver:75, Gold:100};
@@ -2218,6 +2353,32 @@ document.addEventListener('DOMContentLoaded', function(){
   checkScheduledDeletions();
   // Track this page visit
   trackVisit();
+  // Suspend modal buttons
+  var csb=el('closeSuspendBtn');
+  if(csb) csb.addEventListener('click', closeSuspendModal);
+  var dsb=el('doSuspendBtn');
+  if(dsb) dsb.addEventListener('click', doSuspendMember);
+  var srs=el('suspendReasonSelect');
+  if(srs) srs.addEventListener('change',function(){
+    if(srs.value && srs.value!=='Other') setVal('suspendReason','');
+  });
+
+  // Admin manual refresh button
+  var arb=el('adminRefreshBtn');
+  if(arb) arb.addEventListener('click',function(){
+    if(!isAdminUser()) return;
+    var st=el('adminSyncStatus');
+    if(st) st.textContent='Syncing...';
+    syncMembersFromBackend(function(){
+      syncVisitsFromBackend(function(){
+        refreshAdminMetrics();
+        renderPaymentsTable();
+        renderMembersTable();
+        renderVisitsTab();
+        if(st) st.textContent='Updated '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+      });
+    });
+  });
   // Restore session after refresh — must be last so all DOM elements are ready
   restoreSession();
   // Paystack payment callback check
@@ -2231,7 +2392,7 @@ function bindClose(id, fn){var b=el(id);if(b) b.addEventListener('click',functio
 document.addEventListener('click',function(e){
   if(e.target.classList.contains('modal-overlay')) {
     closeLoginModal(); closeRegisterModal(); closeDeleteModal(); closeAddContentModal();
-    ['aboutModal','termsModal','privacyModal','contactModal','penaltyModal','memberDeleteModal','forgotPwModal','denyUpgradeModal'].forEach(function(id){
+    ['aboutModal','termsModal','privacyModal','contactModal','penaltyModal','memberDeleteModal','forgotPwModal','denyUpgradeModal','suspendModal'].forEach(function(id){
       var m=el(id); if(m) m.classList.remove('open');
     });
     var sm=el('surveyModal');
@@ -3535,6 +3696,7 @@ function logout(){
   currentUser=null; pendingReg=null;
   saveSession(); // clears localStorage session
   if(waitInterval) clearInterval(waitInterval);
+  if(window._adminSyncInterval){clearInterval(window._adminSyncInterval);window._adminSyncInterval=null;}
   stopIdleTracking();
   hide('memberDashboard');
   hide('adminDashboard');
@@ -3569,20 +3731,51 @@ function openAdminDashboard(){
       btn.style.display='';
     }
   });
-  refreshAdminMetrics();
-  renderPaymentsTable();
-  renderMembersTable();
-  renderWithdrawalsTable();
-  renderAdminContent();
-  renderDuplicatesTable();
-  renderAdminIssues();
-  renderAdminUpgradeRequests();
-  renderSubAdminList();
-  renderProfilesTab();
-  renderAdminPages();
-  renderAdminUpgradesFull();
-  renderVisitsTab();
-  renderScheduleTab();
+
+  // Show dashboard immediately from local data, then re-render after backend sync
+  function renderAll(){
+    refreshAdminMetrics();
+    renderPaymentsTable();
+    renderMembersTable();
+    renderWithdrawalsTable();
+    renderAdminContent();
+    renderDuplicatesTable();
+    renderAdminIssues();
+    renderAdminUpgradeRequests();
+    renderSubAdminList();
+    renderProfilesTab();
+    renderAdminPages();
+    renderAdminUpgradesFull();
+    renderVisitsTab();
+    renderScheduleTab();
+  }
+
+  // Render immediately from local storage
+  renderAll();
+
+  // Pull fresh data from backend and re-render
+  var st=el('adminSyncStatus');
+  if(st) st.textContent='Syncing...';
+  syncMembersFromBackend(function(){
+    syncVisitsFromBackend(function(){
+      renderAll();
+      if(st) st.textContent='Synced '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    });
+  });
+
+  // Auto-refresh from backend every 30 seconds while admin is on dashboard
+  if(window._adminSyncInterval) clearInterval(window._adminSyncInterval);
+  window._adminSyncInterval=setInterval(function(){
+    if(!isAdminUser()||el('adminDashboard').style.display==='none') return;
+    syncMembersFromBackend(function(){
+      syncVisitsFromBackend(function(){
+        refreshAdminMetrics();
+        renderPaymentsTable();
+        renderMembersTable();
+        renderVisitsTab();
+      });
+    });
+  },30000);
 }
 
 function refreshAdminMetrics(){
@@ -3592,17 +3785,21 @@ function refreshAdminMetrics(){
   setText('aPendW', ws.filter(function(w){return w.phase!=='Complete';}).length);
   var paid=ws.filter(function(w){return w.phase==='Complete';}).reduce(function(s,w){return s+parseFloat(w.amount);},0);
   setText('aTotalPaid','GHS '+paid.toFixed(2));
-  // count duplicates
+  // count duplicates — use same scoring as renderDuplicatesTable (score>=2)
   var seen={}, cnt=0;
   members.forEach(function(m,i){
-    var fn=(m.firstName+' '+m.lastName).toLowerCase().trim();
-    var em=(m.email||'').toLowerCase().trim();
     members.forEach(function(n,j){
       if(i>=j) return;
-      var nfn=(n.firstName+' '+n.lastName).toLowerCase().trim();
-      var nem=(n.email||'').toLowerCase().trim();
-      var match=(fn===nfn&&fn!=='')||(em&&nem&&em===nem)||(m.firstName.toLowerCase()===n.firstName.toLowerCase()&&m.region===n.region&&m.joinedDate===n.joinedDate);
-      if(match){var k=[m.id,n.id].sort().join('|');if(!seen[k]){seen[k]=true;cnt++;}}
+      var score=0;
+      var mEm=(m.email||'').toLowerCase().trim(), nEm=(n.email||'').toLowerCase().trim();
+      var mFull=(m.firstName+' '+m.lastName).toLowerCase().trim();
+      var nFull=(n.firstName+' '+n.lastName).toLowerCase().trim();
+      if(mEm&&nEm&&mEm===nEm) score+=3;
+      if(mFull===nFull&&mFull.length>3) score+=2;
+      if(m.firstName.toLowerCase()===n.firstName.toLowerCase()&&m.region===n.region&&m.joinedDate===n.joinedDate&&m.age===n.age) score+=2;
+      if(m.regDeviceModel&&n.regDeviceModel&&m.regDeviceModel!=='—'&&m.regDeviceModel===n.regDeviceModel&&m.regBrowser===n.regBrowser) score+=2;
+      if(m.referredBy&&n.referredBy&&m.referredBy===n.referredBy&&m.joinedDate===n.joinedDate) score+=1;
+      if(score>=2){var k=[m.id,n.id].sort().join('|');if(!seen[k]){seen[k]=true;cnt++;}}
     });
   });
   setText('aDupCount', cnt);
@@ -3691,6 +3888,7 @@ function verifyPayment(id){
   members[idx].notifications=members[idx].notifications||[];
   members[idx].notifications.push('\u2705 Account activated! Your '+members[idx].tier+' account is now active with a GHS '+bonus.toFixed(2)+' welcome bonus. Complete the Ghana Affairs Survey for another GHS 1.00 instantly!');
   saveMembers(members);
+  syncMemberStatusToBackend(members[idx]);
   if(currentUser&&currentUser!=='admin'&&currentUser.id===id){currentUser=members[idx];saveSession();setTimeout(function(){openMemberDashboard(currentUser);},400);}
   renderPaymentsTable(); renderMembersTable(); refreshAdminMetrics();
   adminAlert('Member activated with GHS '+bonus.toFixed(2)+' welcome bonus.');
@@ -3706,6 +3904,7 @@ function failPayment(id){
   members[idx].notifications=members[idx].notifications||[];
   members[idx].notifications.push('\u274C Payment Verification Failed: '+reason+' — Please log in and retry your payment.');
   saveMembers(members);
+  syncMemberStatusToBackend(members[idx]);
   if(currentUser&&currentUser!=='admin'&&currentUser.id===id){currentUser=members[idx];showPaymentFailed(reason);}
   renderPaymentsTable(); renderMembersTable(); refreshAdminMetrics();
   adminAlert('Payment marked as failed. Member notified.');
@@ -3812,7 +4011,11 @@ function renderMembersTable(){
       html+='<td>'+m.phone+'</td>';
       html+='<td>'+m.region+'</td>';
       html+='<td><span style="font-size:11px;font-weight:700;padding:2px 7px;border-radius:8px;background:'+tierColor+';color:'+tierTextColor+'">'+m.tier+'</span></td>';
-      html+='<td>'+sb+'</td>';
+      var sbCell=sb;
+      if(m.status==='suspended'&&m.suspendReason){
+        sbCell+='<div style="font-size:10px;color:var(--red);margin-top:3px;max-width:120px;word-break:break-word;line-height:1.4">Reason: '+m.suspendReason+'</div>';
+      }
+      html+='<td>'+sbCell+'</td>';
       html+='<td style="font-weight:600;color:var(--green)">GHS '+(m.balance||0).toFixed(2)+'</td>';
       html+='<td style="font-weight:600;color:#374151">GHS '+(m.monthEarned||0).toFixed(2)+'</td>';
       // Surveys completed
@@ -3896,16 +4099,46 @@ function adjustPollLimit(memberId, delta){
   renderMembersTable();
 }
 
+var _pendingSuspendId=null;
 function suspendMember(id){
-  var members=getMembers(), idx=members.findIndex(function(m){return m.id===id;});
-  if(idx<0) return;
+  var members=getMembers();
+  var m=members.find(function(x){return x.id===id;});
+  if(!m) return;
+  _pendingSuspendId=id;
+  setText('suspendMemberName', m.firstName+' '+m.lastName+' ('+m.phone+')');
+  setVal('suspendReasonSelect','');
+  setVal('suspendReason','');
+  hideErr('suspendError');
+  el('suspendModal').classList.add('open');
+}
+function closeSuspendModal(){
+  el('suspendModal').classList.remove('open');
+  _pendingSuspendId=null;
+}
+function doSuspendMember(){
+  if(!_pendingSuspendId) return;
+  var select=val('suspendReasonSelect');
+  var custom=(val('suspendReason')||'').trim();
+  var reason=select==='Other'?custom:(custom?(select?select+' — '+custom:custom):select);
+  if(!reason||!select){showErr('suspendError','Please select a reason for suspension.'); return;}
+  var members=getMembers();
+  var idx=members.findIndex(function(m){return m.id===_pendingSuspendId;});
+  if(idx<0){closeSuspendModal();return;}
+  var sid=_pendingSuspendId;
   members[idx].status='suspended';
+  members[idx].suspendReason=reason;
+  members[idx].suspendedAt=new Date().toISOString();
   members[idx].notifications=members[idx].notifications||[];
-  members[idx].notifications.push('\u26A0\uFE0F Your account has been suspended. Contact support for assistance.');
+  members[idx].notifications.push('\u26A0\uFE0F Your account has been suspended. Reason: <strong>'+reason+'</strong>. Contact support if you believe this is an error.');
   saveMembers(members);
+  syncMemberStatusToBackend(members[idx]);
+  closeSuspendModal();
+  if(currentUser&&!isAdminUser()&&currentUser.id===sid){
+    currentUser=members[idx]; saveSession(); showSuspendedPage(members[idx]);
+  }
   renderMembersTable();
   refreshAdminMetrics();
-  adminAlert('Member suspended.');
+  adminAlert('Member suspended. Reason: "'+reason+'"');
 }
 
 function reactivateMember(id){
@@ -4026,42 +4259,136 @@ function updateWithdrawalPhase(wid, newPhase){
   renderWithdrawalsTable(); refreshAdminMetrics();
 }
 
-// ── ADMIN: DUPLICATE DETECTION ────────────────────────
+// ── ADMIN: DUPLICATE DETECTION (Advanced) ─────────────
+// Scoring: each factor adds weight. Score>=2 = flagged pair.
 function renderDuplicatesTable(){
   var members=getMembers(), groups=[], seen={};
+
+  // Helper: Levenshtein similarity ratio (0-1)
+  function strSim(a,b){
+    a=(a||'').toLowerCase().trim(); b=(b||'').toLowerCase().trim();
+    if(!a||!b) return 0;
+    if(a===b) return 1;
+    var la=a.length, lb=b.length;
+    var dp=[];
+    for(var i=0;i<=la;i++){dp[i]=[i];}
+    for(var j=0;j<=lb;j++){dp[0][j]=j;}
+    for(var i=1;i<=la;i++) for(var j=1;j<=lb;j++)
+      dp[i][j]=a[i-1]===b[j-1]?dp[i-1][j-1]:1+Math.min(dp[i-1][j],dp[i][j-1],dp[i-1][j-1]);
+    return 1 - dp[la][lb]/Math.max(la,lb);
+  }
+
+  // Normalise phone: strip spaces/dashes, expand 0X -> 233X
+  function normPhone(p){
+    p=(p||'').replace(/[\s\-]/g,'');
+    if(p.startsWith('0')) p='233'+p.slice(1);
+    return p;
+  }
+
   members.forEach(function(m,i){
-    var fn=(m.firstName+' '+m.lastName).toLowerCase().trim();
-    var em=(m.email||'').toLowerCase().trim();
     members.forEach(function(n,j){
       if(i>=j) return;
-      var nfn=(n.firstName+' '+n.lastName).toLowerCase().trim();
-      var nem=(n.email||'').toLowerCase().trim();
-      var reasons=[];
-      if(fn===nfn&&fn!=='') reasons.push('Same full name');
-      if(em&&nem&&em===nem) reasons.push('Same email address');
-      if(m.firstName.toLowerCase()===n.firstName.toLowerCase()&&m.region===n.region&&m.joinedDate===n.joinedDate) reasons.push('Same first name + region + join date');
-      if(reasons.length){var k=[m.id,n.id].sort().join('|');if(!seen[k]){seen[k]=true;groups.push({a:m,b:n,reasons:reasons});}}
+      var reasons=[], score=0;
+
+      var mFN=(m.firstName||'').toLowerCase().trim();
+      var nFN=(n.firstName||'').toLowerCase().trim();
+      var mLN=(m.lastName||'').toLowerCase().trim();
+      var nLN=(n.lastName||'').toLowerCase().trim();
+      var mFull=mFN+' '+mLN, nFull=nFN+' '+nLN;
+      var mEm=(m.email||'').toLowerCase().trim();
+      var nEm=(n.email||'').toLowerCase().trim();
+      var mPh=normPhone(m.phone), nPh=normPhone(n.phone);
+
+      // ── Hard matches (weight 3) ──────────────────────────
+      if(mEm&&nEm&&mEm===nEm){reasons.push('Identical email address');score+=3;}
+      if(mPh&&nPh&&mPh===nPh){reasons.push('Identical phone number');score+=3;}
+
+      // ── Strong matches (weight 2) ────────────────────────
+      if(mFull===nFull&&mFull.length>3){reasons.push('Same full name');score+=2;}
+      if(mFN&&nFN&&mFN===nFN&&mLN&&nLN&&mLN===nLN&&m.region===n.region){reasons.push('Same name + region');score+=2;}
+      if(m.joinedDate&&n.joinedDate&&m.joinedDate===n.joinedDate&&mFN===nFN&&m.age===n.age){reasons.push('Same first name + age + join date');score+=2;}
+      // Same device model + browser (registered from exact same physical device)
+      if(m.regDeviceModel&&n.regDeviceModel&&m.regDeviceModel!=='—'&&
+         m.regDeviceModel===n.regDeviceModel&&m.regBrowser===n.regBrowser&&m.regOS===n.regOS){
+        reasons.push('Same device model & browser at registration');score+=2;
+      }
+      // Same device name + OS + screen size
+      if(m.regDeviceName&&n.regDeviceName&&m.regDeviceName===n.regDeviceName&&
+         m.regOS===n.regOS&&m.regScreen&&m.regScreen===n.regScreen){
+        reasons.push('Same device fingerprint (name+OS+screen)');score+=2;
+      }
+
+      // ── Moderate matches (weight 1) ──────────────────────
+      // Similar name (Levenshtein >90%)
+      if(score<2&&strSim(mFull,nFull)>=0.9&&mFull.length>4){reasons.push('Very similar full name ('+Math.round(strSim(mFull,nFull)*100)+'% match)');score+=1;}
+      // Same IP-equivalent: same registration screen + OS + browser (no model but same fingerprint)
+      if(m.regScreen&&n.regScreen&&m.regScreen===n.regScreen&&m.regOS===n.regOS&&m.regBrowser===n.regBrowser&&m.regDeviceName===n.regDeviceName){
+        if(!reasons.find(function(r){return r.indexOf('device')>=0;})){reasons.push('Same browser fingerprint at registration');score+=1;}
+      }
+      // Same first name + region + age bucket
+      if(mFN&&nFN&&mFN===nFN&&m.region===n.region&&m.age===n.age&&m.age){reasons.push('Same first name + region + age');score+=1;}
+      // Referral chain abuse: both referred by same account and joined same day
+      if(m.referredBy&&n.referredBy&&m.referredBy===n.referredBy&&m.joinedDate===n.joinedDate){reasons.push('Same referrer + same join date');score+=1;}
+      // Similar email (local-part match ignoring dots/+aliases)
+      if(mEm&&nEm&&mEm!==nEm){
+        var mLocal=mEm.split('@')[0].replace(/[.\+]/g,'');
+        var nLocal=nEm.split('@')[0].replace(/[.\+]/g,'');
+        if(mLocal&&nLocal&&mLocal===nLocal){reasons.push('Same email (alias detected)');score+=1;}
+      }
+
+      if(score>=2){
+        var k=[m.id,n.id].sort().join('|');
+        if(!seen[k]){seen[k]=true;groups.push({a:m,b:n,reasons:reasons,score:score});}
+      }
     });
   });
-  if(!groups.length){setHTML('duplicatesWrap','<div style="text-align:center;padding:32px"><div style="font-size:32px;margin-bottom:10px">&#x2705;</div><p style="font-size:14px;color:#6b7280">No duplicate accounts detected.</p></div>');return;}
-  var html='<p style="font-size:13px;color:#b45309;font-weight:600;margin-bottom:12px">&#x26A0; '+groups.length+' potential duplicate pair'+(groups.length>1?'s':'')+' detected.</p>';
-  html+='<div style="overflow-x:auto"><table class="atable"><thead><tr><th>#</th><th>Account A</th><th>Account B</th><th>Reason Flagged</th><th>Actions</th></tr></thead><tbody>';
+
+  // Sort by descending risk score
+  groups.sort(function(a,b){return b.score-a.score;});
+
+  if(!groups.length){
+    setHTML('duplicatesWrap','<div style="text-align:center;padding:32px"><div style="font-size:32px;margin-bottom:10px">&#x2705;</div><p style="font-size:14px;color:#6b7280">No duplicate accounts detected.</p></div>');
+    return;
+  }
+
+  var html='<p style="font-size:13px;color:#b45309;font-weight:600;margin-bottom:12px">&#x26A0; '+groups.length+' potential duplicate pair'+(groups.length>1?'s':'')+' detected — sorted by risk score.</p>';
+  html+='<div style="overflow-x:auto"><table class="atable"><thead><tr><th>#</th><th>Risk</th><th>Account A</th><th>Account B</th><th>Signals Detected</th><th>Actions</th></tr></thead><tbody>';
+
   groups.forEach(function(g,i){
+    var riskColor=g.score>=5?'var(--red)':g.score>=3?'var(--orange)':'#b45309';
+    var riskLabel=g.score>=5?'HIGH':g.score>=3?'MEDIUM':'LOW';
+    var riskBg=g.score>=5?'#fdeaec':g.score>=3?'#fff3e0':'#fef9c3';
     var stA=g.a.status==='active'?'<span class="s-active">Active</span>':g.a.status==='suspended'?'<span class="s-suspended">Suspended</span>':'<span class="s-pending">'+g.a.status+'</span>';
     var stB=g.b.status==='active'?'<span class="s-active">Active</span>':g.b.status==='suspended'?'<span class="s-suspended">Suspended</span>':'<span class="s-pending">'+g.b.status+'</span>';
-    html+='<tr><td style="font-weight:700;color:#b45309">'+(i+1)+'</td>';
-    html+='<td><strong>'+g.a.firstName+' '+g.a.lastName+'</strong><br><span style="font-size:11px;color:#6b7280">'+g.a.phone+' · '+g.a.region+'</span><br>'+stA+'</td>';
-    html+='<td><strong>'+g.b.firstName+' '+g.b.lastName+'</strong><br><span style="font-size:11px;color:#6b7280">'+g.b.phone+' · '+g.b.region+'</span><br>'+stB+'</td>';
-    html+='<td>'+ g.reasons.map(function(r){return '<span style="font-size:11px;font-weight:600;background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:8px;display:inline-block;margin:2px">&#x26A0; '+r+'</span>';}).join('') +'</td>';
+    html+='<tr>';
+    html+='<td style="font-weight:700;color:#b45309">'+(i+1)+'</td>';
+    html+='<td><span style="font-size:11px;font-weight:800;background:'+riskBg+';color:'+riskColor+';padding:3px 9px;border-radius:8px;display:inline-block">'+riskLabel+'<br><span style="font-size:10px;font-weight:600">Score: '+g.score+'</span></span></td>';
+    html+='<td><strong>'+g.a.firstName+' '+g.a.lastName+'</strong><br>';
+    html+='<span style="font-size:11px;color:#6b7280">'+g.a.phone+'</span><br>';
+    html+='<span style="font-size:11px;color:#6b7280">'+g.a.region+' · '+(g.a.age||'?')+' · '+g.a.tier+'</span><br>';
+    if(g.a.regDeviceModel&&g.a.regDeviceModel!=='—') html+='<span style="font-size:10.5px;color:#9ca3af">'+g.a.regDeviceModel+'</span><br>';
+    html+=stA+'</td>';
+    html+='<td><strong>'+g.b.firstName+' '+g.b.lastName+'</strong><br>';
+    html+='<span style="font-size:11px;color:#6b7280">'+g.b.phone+'</span><br>';
+    html+='<span style="font-size:11px;color:#6b7280">'+g.b.region+' · '+(g.b.age||'?')+' · '+g.b.tier+'</span><br>';
+    if(g.b.regDeviceModel&&g.b.regDeviceModel!=='—') html+='<span style="font-size:10.5px;color:#9ca3af">'+g.b.regDeviceModel+'</span><br>';
+    html+=stB+'</td>';
+    html+='<td>'+g.reasons.map(function(r){
+      var isHard=r.indexOf('Identical')>=0||r.indexOf('Same device model')>=0;
+      var bg=isHard?'#fdeaec':'#fef3c7';
+      var col=isHard?'#991b1b':'#92400e';
+      return '<span style="font-size:11px;font-weight:600;background:'+bg+';color:'+col+';padding:2px 8px;border-radius:8px;display:inline-block;margin:2px">&#x26A0; '+r+'</span>';
+    }).join('')+'</td>';
     html+='<td><div style="display:flex;flex-direction:column;gap:5px">';
     if(g.a.status==='active') html+='<button class="abtn" style="font-size:11px" data-suspend="'+g.a.id+'">&#x26A0; Suspend A</button>';
     if(g.b.status==='active') html+='<button class="abtn" style="font-size:11px" data-suspend="'+g.b.id+'">&#x26A0; Suspend B</button>';
     html+='<button class="abtn danger" style="font-size:11px" data-del="'+g.a.id+'" data-delname="'+g.a.firstName+' '+g.a.lastName+'">&#x1F5D1; Delete A</button>';
-    html+='<button class="abtn danger" style="font-size:11px" data-del="'+g.b.id+'" data-delname="'+g.b.firstName+' '+g.b.lastName+'">&#x1F5D1; Delete B</button></div></td></tr>';
+    html+='<button class="abtn danger" style="font-size:11px" data-del="'+g.b.id+'" data-delname="'+g.b.firstName+' '+g.b.lastName+'">&#x1F5D1; Delete B</button>';
+    html+='</div></td></tr>';
   });
   html+='</tbody></table></div>';
   setHTML('duplicatesWrap', html);
-  el('duplicatesWrap').querySelectorAll('[data-suspend]').forEach(function(b){b.addEventListener('click',function(){suspendMember(b.dataset.suspend);renderDuplicatesTable();});});
+  el('duplicatesWrap').querySelectorAll('[data-suspend]').forEach(function(b){b.addEventListener('click',function(){suspendMember(b.dataset.suspend);});});
   el('duplicatesWrap').querySelectorAll('[data-del]').forEach(function(b){b.addEventListener('click',function(){openDeleteModal(b.dataset.del, b.dataset.delname);});});
 }
 
@@ -6277,6 +6604,8 @@ function trackVisit(){
   if(visits.length>=2000) visits=visits.slice(-1999);
   visits.push(visit);
   saveVisits(visits);
+  // Sync to backend so admin sees visits from all devices
+  syncVisitToBackend(visit);
 }
 
 function renderVisitsTab(){
@@ -6769,6 +7098,8 @@ function confirmPayment(){
       if(refIdx>=0){mFree.referredBy=reg.referredBy;}
     }
     var mems=getMembers(); mems.push(mFree); saveMembers(mems);
+    // Sync to backend so admin sees this registration from any device
+    syncMemberToBackend(mFree);
     currentUser=mFree; saveSession();
     try{sessionStorage.setItem('gop_session_active','1');}catch(e){}
     hide('paymentPage');
@@ -6873,6 +7204,8 @@ function createMemberAccount(reg, tier, ref){
   };
   members.push(m);
   saveMembers(members);
+  // Sync to backend so admin sees this registration from any device
+  syncMemberToBackend(m);
   currentUser=m;
   saveSession();
   showPaymentWaiting(m);
