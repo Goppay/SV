@@ -1919,6 +1919,42 @@ function appendFbLog(line){
   log.scrollTop=log.scrollHeight;
 }
 
+// ── PAGES FIREBASE SYNC ──────────────────────────────
+// Push the full pages array to Firebase whenever admin changes it
+function syncPagesToFirebase(){
+  try{
+    var pages=getPages();
+    fetch(FB_URL+'/pages.json',{
+      method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(pages)
+    }).catch(function(){});
+  }catch(e){}
+}
+
+// Pull pages from Firebase into localStorage — used when member opens dashboard
+function syncPagesFromFirebase(callback){
+  try{
+    fetch(FB_URL+'/pages.json')
+    .then(function(r){return r.ok?r.json():null;})
+    .then(function(data){
+      if(!data) { if(callback) callback(); return; }
+      // Firebase may return array or null
+      var remote=Array.isArray(data)?data:Object.values(data).filter(Boolean);
+      if(remote.length){
+        // Merge: keep local pages that don't exist remotely, add all remote ones
+        var local=getPages();
+        var remoteIds={};
+        remote.forEach(function(p){if(p&&p.id) remoteIds[p.id]=true;});
+        var localOnly=local.filter(function(p){return !remoteIds[p.id];});
+        var merged=remote.concat(localOnly);
+        savePages(merged);
+      }
+      if(callback) callback();
+    }).catch(function(){if(callback) callback();});
+  }catch(e){if(callback) callback();}
+}
+
 // Sync member status/balance updates back to Firebase after admin actions
 function syncMemberStatusToBackend(member){
   try{
@@ -2808,8 +2844,11 @@ function openMemberDashboard(member){
     }
   }
   renderDashAds(member);
-  // Nudge for unclaimed pages
-  renderDashPages(member);
+  // Pull latest pages from Firebase then render the pages nudge and tab
+  syncPagesFromFirebase(function(){
+    renderDashPages(currentUser||member);
+    renderMemberPages(currentUser||member);
+  });
   // Check if today is a withdrawal day
   checkWithdrawalDay();
   // Load any admin-customised Ghana Affairs questions into session ghQs
@@ -2909,7 +2948,12 @@ function switchDashTab(name, btn){
   if(btn) btn.classList.add('active');
   // Refresh ads tab when opened
   if(name==='ads' && currentUser && !isAdminUser()) renderMemberAdsTab(currentUser);
-  if(name==='pages' && currentUser && !isAdminUser()) renderMemberPages(currentUser);
+  if(name==='pages' && currentUser && !isAdminUser()){
+    // Pull latest pages from Firebase first, then render
+    syncPagesFromFirebase(function(){
+      renderMemberPages(currentUser);
+    });
+  }
   if(name==='withdraw' && currentUser && !isAdminUser()) checkWithdrawalDay();
   if(name==='withdraw' && currentUser && !isAdminUser()){
     populateWithdrawCard(currentUser);
@@ -3833,6 +3877,9 @@ function openAdminDashboard(){
       btn.style.display='';
     }
   });
+
+  // Push current pages to Firebase whenever admin opens dashboard (keeps pages in sync)
+  syncPagesToFirebase();
 
   // Show dashboard immediately from local data, then re-render after backend sync
   function renderAll(){
@@ -6270,7 +6317,7 @@ function renderAdminPages(){
   el2.querySelectorAll('[data-pgtoggle]').forEach(function(b){
     b.addEventListener('click',function(){
       var p=getPages(); p[parseInt(b.dataset.pgtoggle)].active=!p[parseInt(b.dataset.pgtoggle)].active;
-      savePages(p); renderAdminPages();
+      savePages(p); syncPagesToFirebase(); renderAdminPages();
     });
   });
   el2.querySelectorAll('[data-pgsaveearn]').forEach(function(b){
@@ -6279,14 +6326,14 @@ function renderAdminPages(){
       var inp=el2.querySelectorAll('[data-pgearnidx="'+idx+'"]')[0];
       var earn=inp?parseFloat(inp.value):0;
       if(!earn||earn<0.10){adminAlert('Earn must be at least GHS 0.10');return;}
-      var p=getPages(); p[idx].earn=earn; savePages(p); renderAdminPages();
+      var p=getPages(); p[idx].earn=earn; savePages(p); syncPagesToFirebase(); renderAdminPages();
       adminAlert('Page earn updated to GHS '+earn.toFixed(2));
     });
   });
   el2.querySelectorAll('[data-pgremove]').forEach(function(b){
     b.addEventListener('click',function(){
       if(confirm('Remove this page?')){
-        var p=getPages(); p.splice(parseInt(b.dataset.pgremove),1); savePages(p); renderAdminPages();
+        var p=getPages(); p.splice(parseInt(b.dataset.pgremove),1); savePages(p); syncPagesToFirebase(); renderAdminPages();
       }
     });
   });
@@ -6303,6 +6350,7 @@ function addPage(){
   var pages=getPages();
   pages.push({id:'PG'+Date.now(),name:name,platform:platform,url:url,earn:earn,desc:desc,active:true,created:today()});
   savePages(pages);
+  syncPagesToFirebase();
   // Reset form
   setVal('pgName',''); setVal('pgUrl',''); setVal('pgDesc',''); setVal('pgEarn','0.50');
   el('addPageForm').style.display='none';
