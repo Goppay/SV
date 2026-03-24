@@ -1455,8 +1455,8 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
         <!-- Search -->
         <div class="search-bar"><input type="text" placeholder="&#x1F50D; Search name or phone..." id="memberSearch"/></div>
         <div style="overflow-x:auto"><table class="atable">
-          <thead><tr><th>#</th><th>Name</th><th>Phone</th><th>Region</th><th>Tier</th><th>Status</th><th>Balance</th><th>Total Earned</th><th>Surveys</th><th>Videos</th><th>Daily Polls</th><th>Joined</th><th>Actions</th></tr></thead>
-          <tbody id="aMembersBody"><tr><td colspan="13" class="empty-row">No members yet.</td></tr></tbody>
+          <thead><tr><th>#</th><th>Name</th><th>Phone</th><th>Region</th><th>Tier</th><th>Status</th><th>Balance</th><th>Total Earned</th><th>Surveys</th><th>Videos</th><th>Daily Polls</th><th>Joined</th><th>Last Login</th><th>Actions</th></tr></thead>
+          <tbody id="aMembersBody"><tr><td colspan="14" class="empty-row">No members yet.</td></tr></tbody>
         </table></div>
       </div>
     </div>
@@ -3005,11 +3005,35 @@ function doLogin(){
     closeLoginModal(); currentUser={role:'subadmin',name:sub.name,phone:sub.phone,id:sub.id}; saveSession(); openAdminDashboard(); startIdleTracking(); return;
   }
   var m = getMembers().find(function(x){return x.phone===phone && x.password===pass;});
-  if(!m){showErr('loginError','Incorrect phone number or password.'); return;}
+  if(!m){
+    // Member not found locally — try Firebase (handles fresh-device / cross-browser login)
+    try{
+      fetch(FB_URL+'/members.json')
+      .then(function(r){return r.ok?r.json():null;})
+      .then(function(data){
+        var remote=data&&typeof data==='object'?Object.values(data).filter(Boolean):[];
+        var fm=remote.find(function(x){return x&&x.phone===phone&&x.password===pass;});
+        if(!fm){showErr('loginError','Incorrect phone number or password.'); return;}
+        // Save newly discovered member into local store
+        var local=getMembers();
+        if(!local.find(function(x){return x.id===fm.id;})){
+          local.push(fm);
+          saveMembers(local);
+        }
+        // Proceed with the same login flow using the Firebase record
+        doLoginWithMember(fm, phone);
+      }).catch(function(){showErr('loginError','Incorrect phone number or password.');});
+    }catch(e){showErr('loginError','Incorrect phone number or password.');}
+    return;
+  }
+  doLoginWithMember(m, phone);
+}
+
+function doLoginWithMember(m, phone){
   // Check if account was deleted
   try{
     var bl=JSON.parse(localStorage.getItem('gop_deleted')||'[]');
-    if(bl.indexOf(m.id)>=0||isTombstoned(phone,m.email)){showErr('loginError','This account has been permanently deleted and cannot be accessed. Contact support if you believe this is an error.'); return;}
+    if(bl.indexOf(m.id)>=0||isTombstoned(phone||m.phone,m.email)){showErr('loginError','This account has been permanently deleted and cannot be accessed. Contact support if you believe this is an error.'); return;}
   }catch(e){}
   if(m.status==='awaiting_verification'){
     closeLoginModal(); currentUser=m; saveSession(); showPaymentWaiting(m); return;
@@ -3026,6 +3050,23 @@ function doLogin(){
     closeLoginModal(); currentUser=m; saveSession(); showPendingDeletionPage(m); startIdleTracking(); return;
   }
   if(m.status!=='active'){showErr('loginError','Your account is not active. Contact support.'); return;}
+  // Record login details and sync to admin dashboard / Firebase
+  try{
+    var devInfo=getRegDeviceInfo();
+    m.lastLoginAt=new Date().toISOString();
+    m.lastLoginDevice=devInfo.deviceName+' ('+devInfo.device+')';
+    m.lastLoginDeviceModel=devInfo.deviceModel;
+    m.lastLoginBrowser=devInfo.browser;
+    m.lastLoginOS=devInfo.os;
+    m.lastLoginScreen=devInfo.screen;
+    m.loginCount=(m.loginCount||0)+1;
+    // Update in localStorage
+    var ms=getMembers();
+    var idx=ms.findIndex(function(x){return x.id===m.id;});
+    if(idx>=0){ms[idx]=m; saveMembers(ms);}
+    // Push updated record to Firebase so admin sees it immediately
+    syncMemberToBackend(m);
+  }catch(e){}
   currentUser=m; saveSession(); closeLoginModal(); openMemberDashboard(m); startIdleTracking();
   try{sessionStorage.setItem('gop_session_active','1');}catch(e){}
 }
@@ -4560,7 +4601,7 @@ function renderMembersTable(){
   }
 
   if(!filtered.length){
-    setHTML('aMembersBody','<tr><td colspan="13" class="empty-row">No members found for this filter.</td></tr>');
+    setHTML('aMembersBody','<tr><td colspan="14" class="empty-row">No members found for this filter.</td></tr>');
     return;
   }
 
@@ -4593,7 +4634,7 @@ function renderMembersTable(){
     var tierTextColor=tierName==='Bronze'?'#7a4515':tierName==='Silver'?'#495057':tierName==='Gold'?'#856e00':'#374151';
 
     html+='<tr style="background:'+tierColor+';border-top:2px solid '+tierBorder+';border-bottom:1px solid '+tierBorder+'">';
-    html+='<td colspan="13" style="padding:10px 14px">';
+    html+='<td colspan="14" style="padding:10px 14px">';
     html+='<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">';
     html+='<span style="font-size:14px;font-weight:700;color:'+tierTextColor+'">'+tierIcon+' '+tierName+' Tier &nbsp;&mdash;&nbsp; '+grp.length+' member'+(grp.length!==1?'s':'')+' &nbsp;|&nbsp; '+grpActive+' active</span>';
     html+='<span style="font-size:12px;color:#6b7280">Balance held: <strong style="color:#0d1117">GHS '+grpBal.toFixed(2)+'</strong> &nbsp;&middot;&nbsp; Month earned: <strong style="color:var(--green)">GHS '+grpEarned.toFixed(2)+'</strong></span>';
@@ -4650,6 +4691,13 @@ function renderMembersTable(){
       if(extraPolls!==0) html+='<div style="font-size:10.5px;color:'+(extraPolls>0?'var(--green)':'var(--red)')+'">base '+basePolls+(extraPolls>0?' +'+extraPolls:' '+extraPolls)+'</div>';
       html+='</td>';
       html+='<td style="white-space:nowrap;font-size:12px">'+m.joinedDate+'</td>';
+      var lastLoginStr=m.lastLoginAt
+        ?new Date(m.lastLoginAt).toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:true})
+        :'Never';
+      var lastLoginSub=m.lastLoginDevice||'—';
+      html+='<td style="white-space:nowrap;font-size:11.5px"><strong>'+lastLoginStr+'</strong>';
+      if(m.lastLoginDevice) html+='<br><span style="color:#9ca3af;font-size:10.5px">'+lastLoginSub+'</span>';
+      html+='</td>';
       html+='<td style="min-width:120px">';
       html+='<div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center">';
       if(m.status==='awaiting_verification') html+='<button class="abtn vbtn" data-verify="'+m.id+'">&#x2705; Verify</button>';
@@ -6486,6 +6534,10 @@ function renderProfilesTab(){
       ['&#x1F4F1; Reg. Device', (m.regDeviceName||m.regDevice||'—')+' ('+( m.regBrowser||'?')+' / '+(m.regOS||'?')+')'],
       ['&#x1F50D; Device Model', m.regDeviceModel||'—'],
       ['&#x1F5A5; Reg. Screen', m.regScreen||'—'],
+      ['&#x1F550; Last Login', m.lastLoginAt?new Date(m.lastLoginAt).toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:true}):'Never'],
+      ['&#x1F4F2; Last Login Device', m.lastLoginDevice||(m.lastLoginBrowser?m.lastLoginBrowser+' / '+(m.lastLoginOS||'?'):'—')],
+      ['&#x1F4BB; Last Login Model', m.lastLoginDeviceModel||'—'],
+      ['&#x1F522; Total Logins', (m.loginCount||0)+' time'+(m.loginCount!==1?'s':'')],
     ];
     rows.forEach(function(r){
       html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #f3f4f6;font-size:12.5px">';
