@@ -2667,6 +2667,10 @@ document.addEventListener('DOMContentLoaded', function(){
   bindClick('clearVisitsBtn',function(){
     if(confirm('Clear all visit records? This cannot be undone.')){
       saveVisits([]);
+      // Also wipe from Firebase so other devices don't restore old visits on next sync
+      try{
+        fetch(FB_URL+'/visits.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:'null'}).catch(function(){});
+      }catch(e){}
       renderVisitsTab();
       refreshAdminMetrics();
     }
@@ -7115,6 +7119,11 @@ function getVisits(){try{return JSON.parse(localStorage.getItem('gop_visits')||'
 function saveVisits(v){try{localStorage.setItem('gop_visits',JSON.stringify(v));}catch(e){}}
 
 function trackVisit(){
+  // Never count admin or sub-admin sessions as visits
+  try{
+    var sess=JSON.parse(localStorage.getItem('gop_session')||'null');
+    if(sess && (sess.role==='superadmin' || sess.role==='subadmin')) return;
+  }catch(e){}
   // Only count once per browser session (not on every refresh)
   try{
     if(sessionStorage.getItem('gop_visited')) return;
