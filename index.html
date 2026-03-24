@@ -233,6 +233,7 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
 #ppWaiting{display:none;text-align:center;padding:30px 10px}
 .pp-spinner{width:52px;height:52px;border:5px solid var(--green-pale);border-top-color:var(--green);border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 18px}
 @keyframes spin{to{transform:rotate(360deg)}}
+@keyframes adReturnBar{from{width:0}to{width:100%}}
 #ppWaiting h3{font-size:18px;font-weight:600;color:var(--text);margin-bottom:8px}
 #ppWaiting p{font-size:13.5px;color:var(--text-muted);line-height:1.6}
 .wait-timer{display:inline-block;background:var(--gold-pale);border:1px solid var(--gold-dark);color:var(--gold-dark);font-size:13px;font-weight:700;padding:5px 14px;border-radius:20px;margin-top:10px}
@@ -3636,34 +3637,36 @@ function renderVideoList(member){
     }
     html+='</div></div>';
     if(hasAnyLink&&!watched){
+      // Build list of available watch URLs
+      var vidUrls2=[];
+      if(hasUrl) vidUrls2.push({url:v.videoUrl,label:'&#x25B6; Watch on YouTube',bg:'#cc0000'});
+      if(hasFb2) vidUrls2.push({url:v.fbUrl,label:'&#x1F7E6; Watch on Facebook',bg:'#1877f2'});
+      if(hasTt2) vidUrls2.push({url:v.ttUrl,label:'&#x25FC; Watch on TikTok',bg:'#000000'});
+      (v.extraUrls||[]).forEach(function(eu){if(eu.url) vidUrls2.push({url:eu.url,label:'&#x1F517; '+(eu.label||'Watch Video'),bg:'#374151'});});
       html+='<div id="vplayer_'+v.id+'" style="display:none;border-radius:10px;overflow:hidden;border:2px solid var(--green)">';
-      // Source tabs if multiple platforms
-      var srcCount2=(hasUrl?1:0)+(hasFb2?1:0)+(hasTt2?1:0)+((v.extraUrls||[]).filter(function(eu){return eu.url;}).length);
-      if(srcCount2>1){
-        html+='<div style="display:flex;gap:0;background:#f9fafb;border-bottom:1px solid #e5e7eb">';
-        if(hasUrl) html+='<button class="c-btn" data-vid="'+v.id+'" data-vsrc="yt" style="border-radius:0;background:#fff;color:var(--green);border:none;border-right:1px solid #e5e7eb;font-size:12px;padding:8px 14px">&#x25B6; YouTube</button>';
-        if(hasFb2) html+='<button class="c-btn" data-vid="'+v.id+'" data-vsrc="fb" style="border-radius:0;background:none;color:#1877f2;border:none;border-right:1px solid #e5e7eb;font-size:12px;padding:8px 14px">&#x1F7E6; Facebook</button>';
-        if(hasTt2) html+='<button class="c-btn" data-vid="'+v.id+'" data-vsrc="tt" style="border-radius:0;background:none;color:#000;border:none;font-size:12px;padding:8px 14px">&#x25FC; TikTok</button>';
-        // Extra URLs tabs
-        (v.extraUrls||[]).forEach(function(eu,ei){
-          if(eu.url) html+='<button class="c-btn" data-vid="'+v.id+'" data-vsrc="ex'+ei+'" style="border-radius:0;background:none;color:#374151;border:none;border-left:1px solid #e5e7eb;font-size:12px;padding:8px 14px">&#x1F517; '+(eu.label||'Link '+(ei+1))+'</button>';
-        });
-        html+='</div>';
-      }
-      // Default frame area
-      html+='<div id="vframe_'+v.id+'">';
-      if(hasUrl){
-        html+='<iframe src="'+v.videoUrl+'?autoplay=1&rel=0" width="100%" height="260" frameborder="0" allow="autoplay;encrypted-media" allowfullscreen style="display:block"></iframe>';
-      } else if(hasFb2){
-        html+='<div style="padding:20px;text-align:center;background:#f0f4ff"><a href="'+v.fbUrl+'" target="_blank" rel="noopener" class="c-btn" style="display:inline-block;background:#1877f2;color:#fff;text-decoration:none;padding:12px 24px;border-radius:9px;font-size:14px">&#x1F7E6; Open on Facebook to Watch</a><p style="font-size:12px;color:#6b7280;margin-top:8px">Opens in a new tab. Come back and click Claim when done.</p></div>';
-      } else {
-        html+='<div style="padding:20px;text-align:center;background:#f9f9f9"><a href="'+v.ttUrl+'" target="_blank" rel="noopener" class="c-btn" style="display:inline-block;background:#000;color:#fff;text-decoration:none;padding:12px 24px;border-radius:9px;font-size:14px">&#x25FC; Open on TikTok to Watch</a><p style="font-size:12px;color:#6b7280;margin-top:8px">Opens in a new tab. Come back and click Claim when done.</p></div>';
-      }
+      // Step 1: source buttons
+      html+='<div id="vvisit_'+v.id+'" style="padding:22px;text-align:center;background:#f9fafb">';
+      html+='<div style="font-size:14px;font-weight:600;color:#0d1117;margin-bottom:14px">&#x1F446; Click to open the video — your 25-second timer starts automatically</div>';
+      vidUrls2.forEach(function(vu){
+        html+='<button class="c-btn" data-vid="'+v.id+'" data-vwatch="'+encodeURIComponent(vu.url)+'" style="background:'+vu.bg+';color:#fff;font-size:14px;padding:12px 22px;margin:4px">'+vu.label+'</button>';
+      });
+      html+='<p style="font-size:12px;color:#6b7280;margin-top:12px">Opens in a new tab &middot; Stay for 25 seconds &middot; Reward auto-claimed</p>';
       html+='</div>';
-      html+='<div style="background:var(--green-pale);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">';
-      html+='<span style="font-size:13px;color:var(--green)">&#x23F1; Watch the full video to earn <strong>GHS '+v.earn.toFixed(2)+'</strong></span>';
-      html+='<button class="c-btn" data-vid="'+v.id+'" data-vaction="claim" style="background:var(--green)">&#x2705; I\'ve watched — Claim GHS '+v.earn.toFixed(2)+'</button>';
-      html+='</div></div>';
+      // Step 2: countdown
+      html+='<div id="vcountdown_'+v.id+'" style="display:none;padding:20px;text-align:center;background:#fff9e6;border-top:2px solid #fde68a">';
+      html+='<div style="font-size:13.5px;font-weight:600;color:#92400e;margin-bottom:6px">&#x23F1; Timer running — please stay on the video for 25 seconds</div>';
+      html+='<div id="vsecs_'+v.id+'" style="font-size:40px;font-weight:800;color:var(--gold-dark);line-height:1.1">25</div>';
+      html+='<div style="background:#fde68a;border-radius:99px;height:8px;margin:12px auto 4px;max-width:260px;overflow:hidden"><div id="vprog_'+v.id+'" style="height:100%;background:var(--gold-dark);width:0;transition:width 1s linear"></div></div>';
+      html+='<div style="font-size:11.5px;color:#92400e;margin-top:4px">Reward of GHS '+v.earn.toFixed(2)+' will be claimed automatically when the timer ends</div>';
+      html+='</div>';
+      // Step 3: success
+      html+='<div id="vsuccess_'+v.id+'" style="display:none;padding:24px;text-align:center;background:#d1fae5">';
+      html+='<div style="font-size:30px">&#x1F389;</div>';
+      html+='<div style="font-size:16px;font-weight:700;color:var(--green);margin-top:8px">Video Watched — Reward Earned!</div>';
+      html+='<div style="font-size:13.5px;color:#374151;margin-top:4px">GHS '+v.earn.toFixed(2)+' has been added to your balance</div>';
+      html+='<div style="font-size:12px;color:#6b7280;margin-top:8px">Returning to video list…</div>';
+      html+='</div>';
+      html+='</div>';
     }
     html+='</div>';
   });
@@ -3671,7 +3674,7 @@ function renderVideoList(member){
   el('videoListWrap').querySelectorAll('[data-vid]').forEach(function(btn){
     btn.addEventListener('click',function(){
       if(btn.dataset.vaction==='open') openVideoPlayer(btn.dataset.vid, btn);
-      else if(btn.dataset.vaction==='claim') claimVideoEarn(btn.dataset.vid);
+      else if(btn.dataset.vwatch) startVideoTimer(btn.dataset.vid, decodeURIComponent(btn.dataset.vwatch));
     });
   });
 }
@@ -3682,31 +3685,56 @@ function openVideoPlayer(vid, btn){
     player.style.display='block';
     btn.textContent='Watching…'; btn.disabled=true; btn.style.background='#555';
     player.scrollIntoView({behavior:'smooth',block:'nearest'});
-    // Wire source switcher buttons
-    player.querySelectorAll('[data-vsrc]').forEach(function(sb){
-      sb.addEventListener('click',function(){
-        var videos=getVideos();
-        var v=videos.find(function(x){return x.id===vid;});
-        if(!v) return;
-        var frameDiv=el('vframe_'+vid);
-        if(!frameDiv) return;
-        var src=sb.dataset.vsrc;
-        if(src==='yt'&&v.videoUrl){
-          frameDiv.innerHTML='<iframe src="'+v.videoUrl+'?autoplay=1&rel=0" width="100%" height="260" frameborder="0" allow="autoplay;encrypted-media" allowfullscreen style="display:block"></iframe>';
-        } else if(src==='fb'&&v.fbUrl){
-          frameDiv.innerHTML='<div style="padding:20px;text-align:center;background:#f0f4ff"><a href="'+v.fbUrl+'" target="_blank" rel="noopener" class="c-btn" style="display:inline-block;background:#1877f2;color:#fff;text-decoration:none;padding:12px 24px;border-radius:9px;font-size:14px">&#x1F7E6; Open on Facebook to Watch</a><p style="font-size:12px;color:#6b7280;margin-top:8px">Facebook videos open in a new tab. Come back and click Claim when done.</p></div>';
-        } else if(src==='tt'&&v.ttUrl){
-          frameDiv.innerHTML='<div style="padding:20px;text-align:center;background:#f9f9f9"><a href="'+v.ttUrl+'" target="_blank" rel="noopener" class="c-btn" style="display:inline-block;background:#000;color:#fff;text-decoration:none;padding:12px 24px;border-radius:9px;font-size:14px">&#x25FC; Open on TikTok to Watch</a><p style="font-size:12px;color:#6b7280;margin-top:8px">TikTok videos open in a new tab. Come back and click Claim when done.</p></div>';
-        } else if(src.indexOf('ex')===0){
-          var ei2=parseInt(src.replace('ex',''));
-          var eu=(v.extraUrls||[])[ei2];
-          if(eu&&eu.url){
-            frameDiv.innerHTML='<div style="padding:20px;text-align:center;background:#f9fafb"><a href="'+eu.url+'" target="_blank" rel="noopener" class="c-btn" style="display:inline-block;background:#374151;color:#fff;text-decoration:none;padding:12px 24px;border-radius:9px;font-size:14px">&#x1F517; Open '+(eu.label||'Link')+' to Watch</a><p style="font-size:12px;color:#6b7280;margin-top:8px">Opens in a new tab. Come back and click Claim when done.</p></div>';
-          }
-        }
-      });
-    });
   }
+}
+
+var _videoTimerIntervals={};
+function startVideoTimer(vid, url){
+  window.open(url,'_blank','noopener,noreferrer');
+  var visitDiv=el('vvisit_'+vid);
+  var countdownDiv=el('vcountdown_'+vid);
+  if(visitDiv) visitDiv.style.display='none';
+  if(countdownDiv) countdownDiv.style.display='block';
+  var secsEl=el('vsecs_'+vid);
+  var progEl=el('vprog_'+vid);
+  var secs=25;
+  if(_videoTimerIntervals[vid]) clearInterval(_videoTimerIntervals[vid]);
+  _videoTimerIntervals[vid]=setInterval(function(){
+    secs--;
+    if(secsEl) secsEl.textContent=secs;
+    if(progEl) progEl.style.width=((25-secs)/25*100)+'%';
+    if(secs<=0){
+      clearInterval(_videoTimerIntervals[vid]);
+      delete _videoTimerIntervals[vid];
+      claimVideoEarnAuto(vid);
+    }
+  },1000);
+}
+
+function claimVideoEarnAuto(vid){
+  var countdownDiv=el('vcountdown_'+vid);
+  var successDiv=el('vsuccess_'+vid);
+  if(countdownDiv) countdownDiv.style.display='none';
+  if(successDiv) successDiv.style.display='block';
+  var videos=getVideos();
+  var v=videos.find(function(x){return x.id===vid;});
+  var earn=v?v.earn:1.00;
+  var members=getMembers();
+  var idx=members.findIndex(function(m){return m.id===currentUser.id;});
+  if(idx>=0){
+    members[idx].balance=(members[idx].balance||0)+earn;
+    members[idx].monthEarned=(members[idx].monthEarned||0)+earn;
+    var cv=members[idx].completedVideos||[];
+    if(!cv.includes(vid)){cv.push(vid);members[idx].completedVideos=cv;}
+    saveMembers(members);
+    currentUser=members[idx];
+  }
+  setText('dmBal','GHS '+(currentUser.balance||0).toFixed(2));
+  setText('dmMonth','GHS '+(currentUser.monthEarned||0).toFixed(2));
+  checkDailyStreakBonus(currentUser);
+  setTimeout(function(){
+    renderVideoList(currentUser);
+  },2500);
 }
 
 function claimVideoEarn(vid){
@@ -5891,20 +5919,11 @@ function startAdView(adId, adTitle, adUrl, adImg){
 
   setText('adViewerTitle','&#x1F4E2; '+adTitle);
 
-  // Build ad content — link opens in new tab, but viewer stays here
-  var content=el('adViewerContent');
-  if(content){
-    var html='<a href="'+adUrl+'" target="_blank" rel="noopener" style="display:block;text-decoration:none">';
-    if(adImg) html+='<img src="'+adImg+'" alt="'+adTitle+'" style="width:100%;max-height:260px;object-fit:cover;display:block" onerror="this.style.display=\'none\'">';
-    html+='<div style="padding:12px 16px;background:var(--warm-gray);display:flex;align-items:center;justify-content:space-between;gap:8px">';
-    html+='<span style="font-size:13px;font-weight:600;color:var(--text)">'+adTitle+'</span>';
-    html+='<span style="font-size:12px;color:var(--green);font-weight:600">&#x1F517; Visit Site</span>';
-    html+='</div></a>';
-    content.innerHTML=html;
-  }
-
-  // Reset countdown UI
+  // Reset countdown UI — hidden until user clicks the link
   updateAdTimer(AD_VIEW_SECS);
+  var countdownWrap=el('adCountdownWrap');
+  if(countdownWrap) countdownWrap.style.display='none';
+
   var claimBtn=el('adClaimBtn');
   if(claimBtn){
     claimBtn.disabled=true;
@@ -5912,6 +5931,48 @@ function startAdView(adId, adTitle, adUrl, adImg){
     claimBtn.style.cursor='not-allowed';
     claimBtn.textContent='Wait '+AD_VIEW_SECS+'s to Claim GHS '+AD_EARN.toFixed(2);
     claimBtn.onclick=null;
+  }
+
+  // Build ad content — image preview + big "Visit Site" button
+  var content=el('adViewerContent');
+  if(content){
+    var html='';
+    if(adImg) html+='<img src="'+adImg+'" alt="'+adTitle+'" style="width:100%;max-height:220px;object-fit:cover;display:block;border-radius:10px 10px 0 0" onerror="this.style.display=\'none\'">';
+    html+='<div style="padding:14px 16px;background:var(--warm-gray);border-radius:'+(adImg?'0 0 10px 10px':'10px')+';text-align:center">';
+    html+='<div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:12px">'+adTitle+'</div>';
+    html+='<button id="adVisitBtn" style="background:var(--green);color:#fff;border:none;border-radius:9px;padding:12px 28px;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font-body);width:100%;max-width:280px;transition:opacity .2s">&#x1F517; Click to Visit Advertiser Site</button>';
+    html+='<div style="font-size:11.5px;color:#9ca3af;margin-top:8px">Clicking will open the site and start your 25-second timer</div>';
+    html+='</div>';
+    content.innerHTML=html;
+
+    // Wire the visit button — opens URL + starts countdown
+    var visitBtn=el('adVisitBtn');
+    if(visitBtn){
+      visitBtn.addEventListener('click',function(){
+        // Open advertiser URL in new tab
+        window.open(adUrl,'_blank','noopener,noreferrer');
+        // Disable visit button so they can't open multiple tabs
+        visitBtn.disabled=true;
+        visitBtn.style.opacity='0.5';
+        visitBtn.textContent='&#x23F3; Timer running — please stay for 25s';
+        // Show countdown
+        if(countdownWrap) countdownWrap.style.display='block';
+        countdownWrap.scrollIntoView({behavior:'smooth',block:'nearest'});
+        // Start timer — auto-claim when done
+        adSecsLeft=AD_VIEW_SECS;
+        updateAdTimer(adSecsLeft);
+        activeAdTimer=setInterval(function(){
+          adSecsLeft--;
+          updateAdTimer(adSecsLeft);
+          if(adSecsLeft<=0){
+            clearInterval(activeAdTimer);
+            activeAdTimer=null;
+            // Auto-claim the reward
+            claimAdEarnAuto(adId, adTitle);
+          }
+        },1000);
+      });
+    }
   }
 
   // Wire close button
@@ -5922,26 +5983,36 @@ function startAdView(adId, adTitle, adUrl, adImg){
       activeAdTimer=null; activeAdId=null;
       if(viewerWrap) viewerWrap.style.display='none';
       if(memberAdsList) memberAdsList.style.display='block';
+      if(countdownWrap) countdownWrap.style.display='none';
     };
   }
+}
 
-  // Start countdown
-  activeAdTimer=setInterval(function(){
-    adSecsLeft--;
-    updateAdTimer(adSecsLeft);
-    if(adSecsLeft<=0){
-      clearInterval(activeAdTimer);
-      activeAdTimer=null;
-      // Enable claim button
-      if(claimBtn){
-        claimBtn.disabled=false;
-        claimBtn.style.background='var(--green)';
-        claimBtn.style.cursor='pointer';
-        claimBtn.textContent='\u2705 Claim GHS '+AD_EARN.toFixed(2)+' — Ad Viewed!';
-        claimBtn.onclick=function(){claimAdEarn(adId);};
-      }
-    }
-  },1000);
+function claimAdEarnAuto(adId, adTitle){
+  // Auto-claim reward and return user to the ads list
+  claimAdEarn(adId);
+  // Show brief success overlay then return to ads list
+  var viewerWrap=el('adViewerWrap');
+  var memberAdsList=el('memberAdsList');
+  var countdownWrap=el('adCountdownWrap');
+  var content=el('adViewerContent');
+  if(content){
+    content.innerHTML='<div style="text-align:center;padding:28px 16px">'
+      +'<div style="font-size:48px;margin-bottom:10px">&#x1F389;</div>'
+      +'<div style="font-size:17px;font-weight:700;color:var(--green);margin-bottom:6px">Ad Viewed — Reward Earned!</div>'
+      +'<div style="font-size:13px;color:#6b7280;margin-bottom:18px">GHS '+AD_EARN.toFixed(2)+' has been added to your balance.<br>Returning to ads list…</div>'
+      +'<div style="width:40px;height:4px;background:var(--green);border-radius:2px;margin:0 auto;animation:adReturnBar 2s linear forwards"></div>'
+      +'</div>';
+  }
+  if(countdownWrap) countdownWrap.style.display='none';
+  // Return to ads list after 2.5 seconds
+  setTimeout(function(){
+    activeAdId=null;
+    if(viewerWrap) viewerWrap.style.display='none';
+    if(memberAdsList) memberAdsList.style.display='block';
+    // Re-render ads list to reflect claimed state
+    if(currentUser && typeof renderMemberAdsTab==='function') renderMemberAdsTab(currentUser);
+  }, 2500);
 }
 
 function updateAdTimer(secs){
@@ -6904,41 +6975,45 @@ var _pageOpenTime=null;
 var _pageTimerInterval=null;
 
 function openPageLink(pageId, url){
+  if(!currentUser||isAdminUser()) return;
   window.open(url,'_blank','noopener,noreferrer');
-  // Record when link was opened
   openedPageLinks[pageId]=true;
   verifiedPageLinks[pageId]=false;
-  _pendingPageReturn=pageId;
-  _pageOpenTime=Date.now();
-
-  // Clear any existing timer
   if(_pageTimerInterval) clearInterval(_pageTimerInterval);
 
-  // Silently track 10 seconds — no countdown shown to member
+  // Find earn amount for display
+  var pages=getPages();
+  var page=pages.find(function(p){return p.id===pageId;});
+  var earn=page?page.earn:1.00;
+
+  // Show countdown UI inside the actions area
+  var actionsEl=el('pactions_'+pageId);
+  if(actionsEl){
+    actionsEl.innerHTML=
+      '<div style="text-align:right">'+
+      '<div style="font-size:12px;font-weight:600;color:#92400e;margin-bottom:4px">&#x23F1; Timer running — stay for 25 seconds</div>'+
+      '<div id="ptimerSecs_'+pageId+'" style="font-size:36px;font-weight:800;color:var(--gold-dark);line-height:1.1">25</div>'+
+      '<div style="background:#fde68a;border-radius:99px;height:7px;margin:8px 0 4px;overflow:hidden;width:130px;margin-left:auto">'+
+      '<div id="ptimerProg_'+pageId+'" style="height:100%;background:var(--gold-dark);width:0;transition:width 1s linear"></div>'+
+      '</div>'+
+      '<div style="font-size:11px;color:#92400e">GHS '+earn.toFixed(2)+' will be auto-claimed when done</div>'+
+      '</div>';
+  }
+
+  var secs=25;
   _pageTimerInterval=setInterval(function(){
-    var elapsed=Math.floor((Date.now()-_pageOpenTime)/1000);
-    if(elapsed>=10){
+    secs--;
+    var secsEl=el('ptimerSecs_'+pageId);
+    var progEl=el('ptimerProg_'+pageId);
+    if(secsEl) secsEl.textContent=secs;
+    if(progEl) progEl.style.width=((25-secs)/25*100)+'%';
+    if(secs<=0){
       clearInterval(_pageTimerInterval);
       _pageTimerInterval=null;
       verifiedPageLinks[pageId]=true;
-      if(currentUser&&!isAdminUser()) renderMemberPages(currentUser);
+      claimPageReward(pageId);
     }
   },1000);
-
-  // Listen for user returning to tab
-  function onReturn(){
-    if(document.visibilityState==='visible'&&_pendingPageReturn===pageId){
-      _pendingPageReturn=null;
-      document.removeEventListener('visibilitychange',onReturn);
-      var elapsed=Math.floor((Date.now()-_pageOpenTime)/1000);
-      if(elapsed>=10){
-        verifiedPageLinks[pageId]=true;
-        if(_pageTimerInterval){clearInterval(_pageTimerInterval);_pageTimerInterval=null;}
-      }
-      if(currentUser&&!isAdminUser()) renderMemberPages(currentUser);
-    }
-  }
-  document.addEventListener('visibilitychange',onReturn);
 }
 
 function renderMemberPages(member){
@@ -6970,31 +7045,19 @@ function renderMemberPages(member){
     html+='</div>';
     html+='<div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">';
     html+='<span style="font-size:18px;font-weight:700;color:var(--green)">GHS '+p.earn.toFixed(2)+'</span>';
+    html+='<div id="pactions_'+p.id+'" style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">';
     if(done){
-      html+='<span style="background:#d1fae5;color:var(--green);font-size:12px;font-weight:700;padding:5px 14px;border-radius:9px">&#x2714; Followed</span>';
-    } else if(!opened){
-      // Not yet opened
-      html+='<button class="c-btn" data-openpage="'+p.id+'" data-pageurl="'+p.url.replace(/"/g,'&quot;')+'" style="background:'+color+';color:#fff;white-space:nowrap">&#x1F517; Follow / Join</button>';
-      html+='<button disabled class="c-btn" style="background:#e5e7eb;color:#9ca3af;cursor:not-allowed;opacity:0.6;white-space:nowrap">&#x1F512; Claim GHS '+p.earn.toFixed(2)+'</button>';
-      html+='<div style="font-size:11px;color:#9ca3af;text-align:right">Click Follow/Join first, then stay for 10s</div>';
-    } else if(opened && !verified){
-      // Opened but timer not done yet
-      html+='<button class="c-btn" data-openpage="'+p.id+'" data-pageurl="'+p.url.replace(/"/g,'&quot;')+'" style="background:'+color+';color:#fff;white-space:nowrap;opacity:0.85">&#x1F517; Opened</button>';
-      html+='<button disabled class="c-btn" style="background:#e5e7eb;color:#9ca3af;cursor:not-allowed;opacity:0.6;white-space:nowrap">&#x23F3; Claim GHS '+p.earn.toFixed(2)+'</button>';
-
+      html+='<span style="background:#d1fae5;color:var(--green);font-size:12px;font-weight:700;padding:5px 14px;border-radius:9px">&#x2714; Followed &amp; Earned</span>';
     } else {
-      // Verified — claim unlocked
-      html+='<button class="c-btn" data-openpage="'+p.id+'" data-pageurl="'+p.url.replace(/"/g,'&quot;')+'" style="background:'+color+';color:#fff;white-space:nowrap;opacity:0.75">&#x2713; Ready to claim</button>';
-      html+='<button class="c-btn" data-claimpage="'+p.id+'" style="background:var(--green);color:#fff;white-space:nowrap;font-weight:700">&#x2705; Claim GHS '+p.earn.toFixed(2)+'</button>';
+      html+='<button class="c-btn" data-openpage="'+p.id+'" data-pageurl="'+p.url.replace(/"/g,'&quot;')+'" style="background:'+color+';color:#fff;white-space:nowrap">&#x1F517; Follow / Join</button>';
+      html+='<div style="font-size:11px;color:#9ca3af;text-align:right">Click to open — 25-second timer starts, then reward is auto-claimed</div>';
     }
+    html+='</div>';
     html+='</div></div></div>';
   });
   el2.innerHTML=html;
   el2.querySelectorAll('[data-openpage]').forEach(function(b){
     b.addEventListener('click',function(){openPageLink(b.dataset.openpage, b.dataset.pageurl);});
-  });
-  el2.querySelectorAll('[data-claimpage]').forEach(function(b){
-    b.addEventListener('click',function(){claimPageReward(b.dataset.claimpage);});
   });
 }
 
