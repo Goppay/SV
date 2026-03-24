@@ -1877,22 +1877,18 @@ function syncMembersFromBackend(callback){
       remote.forEach(function(rm){
         if(!rm||!rm.id||!rm.phone) return;
         if(idMap[rm.id]===undefined){
-          // Brand new member from another device — add full record
+          // Brand new member — add full record
           idMap[rm.id]=local.length;
           local.push(rm);
           changed=true;
         } else {
-          // Existing member — update status/balance/tier/notifications if they changed
+          // Member exists — replace entirely with remote version
+          // (remote is the single source of truth written by syncMemberToBackend / status updates)
           var li=idMap[rm.id];
-          var lm=local[li];
-          var needsUpdate=false;
-          // Only overwrite fields that admin controls (status, balance, tier, notifications)
-          // Never overwrite member's own fields (surveys done, polls, videos etc.)
-          if(rm.status&&rm.status!==lm.status){lm.status=rm.status;needsUpdate=true;}
-          if(typeof rm.balance==='number'&&rm.balance!==lm.balance){lm.balance=rm.balance;needsUpdate=true;}
-          if(rm.tier&&rm.tier!==lm.tier){lm.tier=rm.tier;needsUpdate=true;}
-          if(rm.suspendReason&&rm.suspendReason!==lm.suspendReason){lm.suspendReason=rm.suspendReason;needsUpdate=true;}
-          if(needsUpdate){local[li]=lm;changed=true;}
+          if(JSON.stringify(local[li])!==JSON.stringify(rm)){
+            local[li]=rm;
+            changed=true;
+          }
         }
       });
       if(changed) saveMembers(local);
@@ -2055,7 +2051,10 @@ function appendFbLog(line){
 
 // ── FULL FIREBASE SYNC FOR ALL DATA STORES ──────────
 // Generic helper: push any array/value to a Firebase path
+var _fbSyncing=false; // true while a pull is in progress — blocks auto-pushes
+
 function fbPush(path, data){
+  if(_fbSyncing) return; // don't push while we're pulling — avoids overwriting Firebase
   try{
     fetch(FB_URL+'/'+path+'.json',{
       method:'PUT',
@@ -2077,16 +2076,37 @@ function fbPull(path, localGet, localSave, mergeById, callback){
       else if(typeof data==='object') remote=Object.values(data).filter(Boolean);
       else { if(callback)callback(); return; }
       if(!remote.length){if(callback)callback();return;}
+
       if(mergeById){
+        // TRUE merge: add records missing locally, AND update changed fields
         var local=localGet();
         var idMap={};
-        local.forEach(function(x){if(x&&x.id)idMap[x.id]=true;});
-        var added=false;
-        remote.forEach(function(r){if(r&&r.id&&!idMap[r.id]){local.push(r);added=true;}});
-        if(added) localSave(local);
+        local.forEach(function(x,i){if(x&&x.id) idMap[x.id]=i;});
+        var changed=false;
+        remote.forEach(function(r){
+          if(!r||!r.id) return;
+          if(idMap[r.id]===undefined){
+            // New record not in local — add it
+            idMap[r.id]=local.length;
+            local.push(r);
+            changed=true;
+          } else {
+            // Exists locally — overwrite with remote (remote is always authoritative)
+            var li=idMap[r.id];
+            if(JSON.stringify(local[li])!==JSON.stringify(r)){
+              local[li]=r;
+              changed=true;
+            }
+          }
+        });
+        if(changed) localSave(local);
       } else {
-        // Replace local with remote (for content like surveys/polls/videos/ads/pages)
-        localSave(remote);
+        // Content stores (surveys/polls/videos/ads): remote is always authoritative
+        // Only replace if remote is actually different from local
+        var localData=localGet();
+        if(JSON.stringify(localData)!==JSON.stringify(remote)){
+          localSave(remote);
+        }
       }
       if(callback) callback();
     }).catch(function(){if(callback)callback();});
@@ -2145,8 +2165,14 @@ function syncScheduleFromFirebase(cb){
 
 // Pull ALL admin data from Firebase in parallel — called on admin dashboard open
 function syncAllAdminDataFromFirebase(callback){
+  _fbSyncing=true; // block auto-pushes while pulling
   var pending=13;
-  function done(){ if(--pending<=0 && callback) callback(); }
+  function done(){
+    if(--pending<=0){
+      _fbSyncing=false; // re-enable pushes
+      if(callback) callback();
+    }
+  }
   syncMembersFromBackend(done);
   syncVisitsFromBackend(done);     // visits included here so members+visits arrive together
   syncWithdrawalsFromFirebase(done);
@@ -2162,9 +2188,10 @@ function syncAllAdminDataFromFirebase(callback){
   syncScheduleFromFirebase(done);
 }
 
-// Push ALL admin data to Firebase — called on admin dashboard open (uploads local state)
+// Push ALL local content data to Firebase (used by Upload button for initial seed)
+// Note: members are pushed individually via syncMemberToBackend on register/login
 function pushAllAdminDataToFirebase(){
-  syncMembersFromBackend(function(){}); // members pulled not pushed (push happens on register)
+  // Push all local content — only if _fbSyncing is false
   syncWithdrawalsToFirebase();
   syncSurveysToFirebase();
   syncPollsToFirebase();
@@ -2214,19 +2241,14 @@ function syncPagesFromFirebase(callback){
   }catch(e){if(callback) callback();}
 }
 
-// Sync member status/balance updates back to Firebase after admin actions
+// Sync full member record to Firebase after admin actions (PUT = full record, not partial)
 function syncMemberStatusToBackend(member){
   try{
     var key=member.id.replace(/[^a-zA-Z0-9_-]/g,'_');
     fetch(FB_URL+'/members/'+key+'.json',{
-      method:'PATCH',
+      method:'PUT',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        status:member.status,
-        balance:member.balance,
-        tier:member.tier,
-        notifications:member.notifications
-      })
+      body:JSON.stringify(member)
     }).catch(function(){});
   }catch(e){}
 }
@@ -2260,7 +2282,7 @@ function saveWithdrawals(w){sv('gop_withdrawals',w);}
 function getAnn(){return ld('gop_ann','');}
 function saveAnn(a){sv('gop_ann',a);}
 function getAds(){return ld('gop_ads',[]);}
-function saveAds(a){sv('gop_ads',a); if(typeof syncAdsToFirebase==='function') syncAdsToFirebase();}
+function saveAds(a){sv('gop_ads',a); syncAdsToFirebase();}
 function getSurveys(){
   var stored=ld('gop_surveys',null);
   var defaults=defaultSurveys();
@@ -2277,11 +2299,11 @@ function getSurveys(){
   if(changed) sv('gop_surveys',stored);
   return stored;
 }
-function saveSurveys(s){sv('gop_surveys',s); if(typeof syncSurveysToFirebase==='function') syncSurveysToFirebase();}
+function saveSurveys(s){sv('gop_surveys',s); syncSurveysToFirebase();}
 function getPolls(){return ld('gop_polls',defaultPolls());}
-function savePolls(p){sv('gop_polls',p); if(typeof syncPollsToFirebase==='function') syncPollsToFirebase();}
+function savePolls(p){sv('gop_polls',p); syncPollsToFirebase();}
 function getVideos(){return ld('gop_videos',defaultVideos());}
-function saveVideos(v){sv('gop_videos',v); if(typeof syncVideosToFirebase==='function') syncVideosToFirebase();}
+function saveVideos(v){sv('gop_videos',v); syncVideosToFirebase();}
 
 // ── DEFAULT CONTENT ───────────────────────────────────
 function defaultSurveys(){
@@ -4195,9 +4217,6 @@ function openAdminDashboard(){
     }
   });
 
-  // Push current pages to Firebase whenever admin opens dashboard (keeps pages in sync)
-  syncPagesToFirebase();
-
   // Show dashboard immediately from local data, then re-render after backend sync
   function renderAll(){
     refreshAdminMetrics();
@@ -4226,19 +4245,9 @@ function openAdminDashboard(){
     // Step 3: Re-render with merged Firebase data
     renderAll();
     if(st) st.textContent='Synced '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
-    // Step 4: AFTER pulling, push local-only content (pages, surveys, ads etc.)
-    // so other devices can get it. Members are NOT pushed here — they push themselves on login.
-    syncWithdrawalsToFirebase();
-    syncSurveysToFirebase();
-    syncPollsToFirebase();
-    syncVideosToFirebase();
-    syncAdsToFirebase();
-    syncAnnToFirebase();
-    syncSubAdminsToFirebase();
-    syncUpgradesToFirebase();
-    syncIssuesToFirebase();
-    syncScheduleToFirebase();
-    syncPagesToFirebase();
+    // Pull complete — Firebase data is now in localStorage, re-render done.
+    // No push-back here: Firebase is always authoritative after a pull.
+    // Local changes push automatically when admin makes edits (add/remove/update).
   });
 
   // Auto-refresh ALL data every 30 seconds while admin is on dashboard
@@ -4963,13 +4972,13 @@ function renderAdminSurveys(){
       var s=getSurveys();
       if(s[b.dataset.stoggle].type==='gh-affairs'){adminAlert('Ghana Affairs Survey cannot be deactivated.');return;}
       s[b.dataset.stoggle].active=!s[b.dataset.stoggle].active;
-      saveSurveys(s);renderAdminSurveys();
+      saveSurveys(s); syncSurveysToFirebase();renderAdminSurveys();
     });
   });
   // Remove
   listEl.querySelectorAll('[data-sremove]').forEach(function(b){
     b.addEventListener('click',function(){
-      if(confirm('Remove this survey?')){var s=getSurveys();s.splice(b.dataset.sremove,1);saveSurveys(s);renderAdminSurveys();}
+      if(confirm('Remove this survey?')){var s=getSurveys();s.splice(b.dataset.sremove,1);saveSurveys(s); syncSurveysToFirebase();renderAdminSurveys();}
     });
   });
   // Save all fields (title, desc, qs count, time, earn)
@@ -4992,7 +5001,7 @@ function renderAdminSurveys(){
         if(qsInp&&parseInt(qsInp.value)>0) s[idx].questions=parseInt(qsInp.value);
         if(timeInp&&parseInt(timeInp.value)>0) s[idx].timeMin=parseInt(timeInp.value);
       }
-      saveSurveys(s);renderAdminSurveys();
+      saveSurveys(s); syncSurveysToFirebase();renderAdminSurveys();
       adminAlert('Survey updated successfully.');
     });
   });
@@ -5014,7 +5023,7 @@ function renderAdminSurveys(){
       });
       s[idx].customQuestions=updatedQs;
       s[idx].questions=updatedQs.length;
-      saveSurveys(s);
+      saveSurveys(s); syncSurveysToFirebase();
       if(isGH2) ghQs=updatedQs;
       renderAdminSurveys();
       adminAlert('Questions saved! '+(isGH2?'Ghana Affairs':'Survey')+' updated with '+updatedQs.length+' questions.');
@@ -5032,7 +5041,7 @@ function renderAdminSurveys(){
       var qsCopy=baseQs.map(function(q){return {q:q.q,opts:q.opts.slice(),ans:q.ans};});
       qsCopy[qi].ans=oi;
       s[idx].customQuestions=qsCopy;
-      saveSurveys(s);
+      saveSurveys(s); syncSurveysToFirebase();
       if(isGH2) ghQs=qsCopy;
       renderAdminSurveys();
       adminAlert('Correct answer set for question '+(qi+1)+'.');
@@ -5049,7 +5058,7 @@ function renderAdminSurveys(){
       var qsCopy=baseQs.map(function(q){return {q:q.q,opts:q.opts.slice(),ans:q.ans};});
       qsCopy[qi].opts.push('New Option');
       s[idx].customQuestions=qsCopy;
-      saveSurveys(s);
+      saveSurveys(s); syncSurveysToFirebase();
       if(isGH2) ghQs=qsCopy;
       renderAdminSurveys();
     });
@@ -5068,7 +5077,7 @@ function renderAdminSurveys(){
       qsCopy[qi].opts.splice(oi,1);
       if(qsCopy[qi].ans>=qsCopy[qi].opts.length) qsCopy[qi].ans=0;
       s[idx].customQuestions=qsCopy;
-      saveSurveys(s);
+      saveSurveys(s); syncSurveysToFirebase();
       if(isGH2) ghQs=qsCopy;
       renderAdminSurveys();
     });
@@ -5083,7 +5092,7 @@ function renderAdminSurveys(){
       qsCopy.push({q:'New question '+(qsCopy.length+1)+'?',opts:['Option A','Option B','Option C'],ans:0});
       s[idx].customQuestions=qsCopy;
       s[idx].questions=qsCopy.length;
-      saveSurveys(s);
+      saveSurveys(s); syncSurveysToFirebase();
       renderAdminSurveys();
     });
   });
@@ -5099,7 +5108,7 @@ function renderAdminSurveys(){
       qsCopy.splice(qi,1);
       s[idx].customQuestions=qsCopy;
       s[idx].questions=qsCopy.length;
-      saveSurveys(s);
+      saveSurveys(s); syncSurveysToFirebase();
       renderAdminSurveys();
     });
   });
@@ -5150,13 +5159,13 @@ function renderAdminPolls(){
   // Toggle active
   listEl.querySelectorAll('[data-ptoggle]').forEach(function(b){
     b.addEventListener('click',function(){
-      var p=getPolls(); p[b.dataset.ptoggle].active=!p[b.dataset.ptoggle].active; savePolls(p); renderAdminPolls();
+      var p=getPolls(); p[b.dataset.ptoggle].active=!p[b.dataset.ptoggle].active; savePolls(p); syncPollsToFirebase(); renderAdminPolls();
     });
   });
   // Remove poll
   listEl.querySelectorAll('[data-premove]').forEach(function(b){
     b.addEventListener('click',function(){
-      if(confirm('Remove this poll?')){var p=getPolls();p.splice(b.dataset.premove,1);savePolls(p);renderAdminPolls();}
+      if(confirm('Remove this poll?')){var p=getPolls();p.splice(b.dataset.premove,1);savePolls(p); syncPollsToFirebase();renderAdminPolls();}
     });
   });
   // Delete an option
@@ -5167,7 +5176,7 @@ function renderAdminPolls(){
       var p=getPolls();
       if(p[idx].options.length<=2){adminAlert('A poll must have at least 2 options.');return;}
       p[idx].options.splice(oi,1);
-      savePolls(p); renderAdminPolls();
+      savePolls(p); syncPollsToFirebase(); renderAdminPolls();
     });
   });
   // Add an option
@@ -5176,7 +5185,7 @@ function renderAdminPolls(){
       var idx=parseInt(b.dataset.paddopt);
       var p=getPolls();
       p[idx].options.push('New Option');
-      savePolls(p); renderAdminPolls();
+      savePolls(p); syncPollsToFirebase(); renderAdminPolls();
     });
   });
   // Save all (question title + options + earn)
@@ -5200,7 +5209,7 @@ function renderAdminPolls(){
       var newEarn=earnInp?parseFloat(earnInp.value):p[idx].earn;
       if(!newEarn||newEarn<0.10){adminAlert('Earn amount must be at least GHS 0.10.');return;}
       p[idx].earn=newEarn;
-      savePolls(p); renderAdminPolls();
+      savePolls(p); syncPollsToFirebase(); renderAdminPolls();
       adminAlert('Poll updated successfully.');
     });
   });
@@ -5277,8 +5286,8 @@ function renderAdminVideos(){
     html+='</div>';
   });
   setHTML('adminVideoList', html);
-  el('adminVideoList').querySelectorAll('[data-vtoggle]').forEach(function(b){b.addEventListener('click',function(){var v=getVideos();v[b.dataset.vtoggle].active=!v[b.dataset.vtoggle].active;saveVideos(v);renderAdminVideos();});});
-  el('adminVideoList').querySelectorAll('[data-vremove]').forEach(function(b){b.addEventListener('click',function(){if(confirm('Remove this video?')){var v=getVideos();v.splice(b.dataset.vremove,1);saveVideos(v);renderAdminVideos();}});});
+  el('adminVideoList').querySelectorAll('[data-vtoggle]').forEach(function(b){b.addEventListener('click',function(){var v=getVideos();v[b.dataset.vtoggle].active=!v[b.dataset.vtoggle].active;saveVideos(v); syncVideosToFirebase();renderAdminVideos();});});
+  el('adminVideoList').querySelectorAll('[data-vremove]').forEach(function(b){b.addEventListener('click',function(){if(confirm('Remove this video?')){var v=getVideos();v.splice(b.dataset.vremove,1);saveVideos(v); syncVideosToFirebase();renderAdminVideos();}});});
   el('adminVideoList').querySelectorAll('[data-vsavetitle]').forEach(function(b){
     b.addEventListener('click',function(){
       var idx=parseInt(b.dataset.vsavetitle);
@@ -5290,7 +5299,7 @@ function renderAdminVideos(){
       var v=getVideos();
       v[idx].title=newTitle;
       if(newBrand) v[idx].brand=newBrand;
-      saveVideos(v);
+      saveVideos(v); syncVideosToFirebase();
       renderAdminVideos();
       adminAlert('Video title updated.');
     });
@@ -5302,7 +5311,7 @@ function renderAdminVideos(){
       var v=getVideos();
       v[idx].extraUrls=v[idx].extraUrls||[];
       v[idx].extraUrls.push({label:'',url:''});
-      saveVideos(v); renderAdminVideos();
+      saveVideos(v); syncVideosToFirebase(); renderAdminVideos();
     });
   });
   // Save an extra URL entry
@@ -5317,7 +5326,7 @@ function renderAdminVideos(){
       var v=getVideos();
       v[idx].extraUrls=v[idx].extraUrls||[];
       v[idx].extraUrls[ei]={label:labelInp?labelInp.value.trim():'',url:url};
-      saveVideos(v); renderAdminVideos();
+      saveVideos(v); syncVideosToFirebase(); renderAdminVideos();
       adminAlert(url?'Extra link saved!':'Extra link cleared.');
     });
   });
@@ -5328,7 +5337,7 @@ function renderAdminVideos(){
       var ei=parseInt(b.dataset.vei);
       var v=getVideos();
       if(v[idx].extraUrls) v[idx].extraUrls.splice(ei,1);
-      saveVideos(v); renderAdminVideos();
+      saveVideos(v); syncVideosToFirebase(); renderAdminVideos();
     });
   });
   el('adminVideoList').querySelectorAll('[data-vsaveurl]').forEach(function(b){
@@ -5338,7 +5347,7 @@ function renderAdminVideos(){
       if(!inp) return;
       var url=inp.value.trim();
       if(url&&!url.startsWith('http')){alert('Please enter a valid URL starting with https://');return;}
-      var v=getVideos();v[idx].videoUrl=url;saveVideos(v);renderAdminVideos();
+      var v=getVideos();v[idx].videoUrl=url;saveVideos(v); syncVideosToFirebase();renderAdminVideos();
       adminAlert(url?'Video URL saved! Members can now watch this video.':'Video URL cleared.');
     });
   });
@@ -5349,7 +5358,7 @@ function renderAdminVideos(){
       if(!inp) return;
       var newEarn=parseFloat(inp.value);
       if(!newEarn||newEarn<0.10){adminAlert('Please enter a valid earn amount (min GHS 0.10).');return;}
-      var v=getVideos(); v[idx].earn=newEarn; saveVideos(v); renderAdminVideos();
+      var v=getVideos(); v[idx].earn=newEarn; saveVideos(v); syncVideosToFirebase(); renderAdminVideos();
       adminAlert('Video price updated to GHS '+newEarn.toFixed(2)+'.');
     });
   });
@@ -5360,7 +5369,7 @@ function renderAdminVideos(){
       if(!inp) return;
       var url=inp.value.trim();
       if(url&&!url.startsWith('http')){adminAlert('Please enter a valid Facebook URL starting with https://');return;}
-      var v=getVideos(); v[idx].fbUrl=url; saveVideos(v); renderAdminVideos();
+      var v=getVideos(); v[idx].fbUrl=url; saveVideos(v); syncVideosToFirebase(); renderAdminVideos();
       adminAlert(url?'Facebook URL saved!':'Facebook URL cleared.');
     });
   });
@@ -5371,7 +5380,7 @@ function renderAdminVideos(){
       if(!inp) return;
       var url=inp.value.trim();
       if(url&&!url.startsWith('http')){adminAlert('Please enter a valid TikTok URL starting with https://');return;}
-      var v=getVideos(); v[idx].ttUrl=url; saveVideos(v); renderAdminVideos();
+      var v=getVideos(); v[idx].ttUrl=url; saveVideos(v); syncVideosToFirebase(); renderAdminVideos();
       adminAlert(url?'TikTok URL saved!':'TikTok URL cleared.');
     });
   });
@@ -5428,13 +5437,13 @@ function saveNewContent(){
     var desc=(val('acDesc')||'').trim();
     var surveys=getSurveys();
     surveys.push({id:'S'+Date.now(),title:title,desc:desc||title,questions:qs,timeMin:time,earn:earn,type:'standard',active:true});
-    saveSurveys(surveys); renderAdminSurveys();
+    saveSurveys(surveys); syncSurveysToFirebase(); renderAdminSurveys();
   } else if(type==='poll'){
     var opts=((val('acOptions')||'')).split(',').map(function(o){return o.trim();}).filter(function(o){return o;});
     if(opts.length<2){alert('Please enter at least 2 options separated by commas.'); return;}
     var polls=getPolls();
     polls.push({id:'P'+Date.now(),title:title,options:opts,earn:earn,active:true});
-    savePolls(polls); renderAdminPolls();
+    savePolls(polls); syncPollsToFirebase(); renderAdminPolls();
   } else if(type==='video'){
     var brand=(val('acBrand')||'').trim();
     var dur=parseInt(val('acDur'))||30;
@@ -5443,7 +5452,7 @@ function saveNewContent(){
     var fbUrl2=(val('acFbUrl')||'').trim();
     var ttUrl2=(val('acTtUrl')||'').trim();
     videos.push({id:'V'+Date.now(),title:title,brand:brand||title,durSec:dur,earn:earn,active:true,videoUrl:videoUrl,fbUrl:fbUrl2,ttUrl:ttUrl2});
-    saveVideos(videos); renderAdminVideos();
+    saveVideos(videos); syncVideosToFirebase(); renderAdminVideos();
   }
   closeAddContentModal();
 }
@@ -5487,7 +5496,7 @@ function addAd(){
     clicks:0,
     created:today()
   });
-  saveAds(ads);
+  saveAds(ads); syncAdsToFirebase();
   setVal('adTitle',''); setVal('adUrl',''); setVal('adImgUrl','');
   setVal('adStart',''); setVal('adEnd',''); setVal('adNotes','');
   el('adPreviewWrap').style.display='none';
@@ -5529,12 +5538,12 @@ function renderAdminAds(){
   el2.querySelectorAll('[data-adtoggle]').forEach(function(b){
     b.addEventListener('click',function(){
       var ads=getAds(); var idx=parseInt(b.dataset.adtoggle);
-      ads[idx].active=!ads[idx].active; saveAds(ads); renderAdminAds();
+      ads[idx].active=!ads[idx].active; saveAds(ads); syncAdsToFirebase(); renderAdminAds();
     });
   });
   el2.querySelectorAll('[data-adremove]').forEach(function(b){
     b.addEventListener('click',function(){
-      var ads=getAds(); ads.splice(parseInt(b.dataset.adremove),1); saveAds(ads); renderAdminAds();
+      var ads=getAds(); ads.splice(parseInt(b.dataset.adremove),1); saveAds(ads); syncAdsToFirebase(); renderAdminAds();
       adminAlert('Ad removed.');
     });
   });
@@ -5814,7 +5823,7 @@ function claimAdEarn(adId){
   // Track ad click in ads storage
   var ads=getAds();
   var ai=ads.findIndex(function(a){return a.id===adId;});
-  if(ai>=0){ads[ai].clicks=(ads[ai].clicks||0)+1; saveAds(ads);}
+  if(ai>=0){ads[ai].clicks=(ads[ai].clicks||0)+1; saveAds(ads); syncAdsToFirebase();}
 
   saveMembers(members);
   currentUser=members[idx];
