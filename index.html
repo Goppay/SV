@@ -1700,13 +1700,12 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
           <span id="fbUploadBadge" style="font-size:12px;font-weight:400;color:#9ca3af;margin-left:8px"></span>
         </div>
         <p style="font-size:13px;color:#6b7280;margin-bottom:14px;line-height:1.7">
-          Members who registered <strong>before</strong> the Firebase sync was added only exist in the local browser that was used to admin them. Click the button below to upload <strong>every member currently in this browser's localStorage</strong> to Firebase so all devices can see them.
-          <br><br>
-          <strong style="color:var(--green)">Run this once on the device that has the most member records (usually your main admin device).</strong> After that, new members sync automatically.
+          Use <strong>Upload</strong> to push everything from this browser to Firebase — members, surveys, polls, videos, ads, pages, withdrawals, issues, announcements, and schedule settings. <strong>Run this once from your main admin device</strong> to seed Firebase with all existing data.
+          <br>Use <strong>Pull</strong> to pull everything from Firebase into this browser — useful when logging in on a new device for the first time.
         </p>
         <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-          <button class="add-btn" id="bulkUploadBtn" style="background:var(--green)">&#x2601; Upload All Local Members to Firebase</button>
-          <button class="abtn" id="bulkPullBtn">&#x25BC; Pull All Members FROM Firebase</button>
+          <button class="add-btn" id="bulkUploadBtn" style="background:var(--green)">&#x2601; Upload All Local Data to Firebase</button>
+          <button class="abtn" id="bulkPullBtn">&#x25BC; Pull All Data FROM Firebase</button>
         </div>
         <div id="fbUploadLog" style="margin-top:12px;font-size:12.5px;color:#374151;line-height:1.8;background:#f9fafb;border-radius:8px;padding:10px 14px;display:none"></div>
       </div>
@@ -1851,24 +1850,34 @@ function syncVisitsFromBackend(callback){
 // ── BULK FIREBASE SYNC (recover pre-sync members) ────
 function bulkUploadToFirebase(){
   var members = getMembers();
-  if(!members.length){
-    showFbLog('No members in local storage to upload.', false);
-    return;
-  }
   var btn = el('bulkUploadBtn');
   if(btn){ btn.disabled=true; btn.textContent='Uploading...'; }
-  showFbLog('Starting upload of '+members.length+' member(s) to Firebase...', false);
+  showFbLog('Uploading all data to Firebase...', false);
 
-  var done=0, failed=0;
-  var total=members.length;
+  // Step 1: Push all content/config data instantly (non-member stores)
+  appendFbLog('  Pushing surveys, polls, videos, ads, pages, schedule...');
+  syncSurveysToFirebase(); syncPollsToFirebase(); syncVideosToFirebase();
+  syncAdsToFirebase(); syncAnnToFirebase(); syncSubAdminsToFirebase();
+  syncUpgradesToFirebase(); syncIssuesToFirebase(); syncScheduleToFirebase();
+  syncPagesToFirebase(); syncWithdrawalsToFirebase();
+  appendFbLog('  ✅ Content & config data pushed.');
+
+  // Step 2: Upload members one-by-one with progress log
+  if(!members.length){
+    showFbLog('All data uploaded. No members to upload.', true);
+    if(btn){ btn.disabled=false; btn.textContent='☁ Upload All Local Data to Firebase'; }
+    el('fbUploadBadge').textContent='Done: '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    return;
+  }
+  appendFbLog('  Uploading '+members.length+' member(s)...');
+  var done=0, failed=0, total=members.length;
 
   function uploadNext(i){
     if(i>=total){
-      var msg='Upload complete. '+done+' uploaded, '+failed+' failed.';
-      showFbLog(msg, done>0);
-      if(btn){ btn.disabled=false; btn.textContent='☁ Upload All Local Members to Firebase'; }
-      el('fbUploadBadge').textContent='Last run: '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
-      // Re-render tables with any newly merged data
+      var msg='Upload complete! '+done+' member(s) uploaded, '+failed+' failed.';
+      showFbLog(msg, done>0||failed===0);
+      if(btn){ btn.disabled=false; btn.textContent='☁ Upload All Local Data to Firebase'; }
+      el('fbUploadBadge').textContent='Done: '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
       renderMembersTable(); renderPaymentsTable(); refreshAdminMetrics();
       return;
     }
@@ -1881,11 +1890,11 @@ function bulkUploadToFirebase(){
       body:JSON.stringify(m)
     }).then(function(r){
       if(r.ok) done++; else failed++;
-      appendFbLog((r.ok?'  ✅':'  ❌')+' '+(m.firstName||'?')+' '+( m.lastName||'')+' ('+( m.phone||'?')+')');
+      appendFbLog((r.ok?'  ✅':'  ❌')+' '+(m.firstName||'?')+' '+(m.lastName||'')+' ('+( m.phone||'?')+')');
       uploadNext(i+1);
     }).catch(function(){
       failed++;
-      appendFbLog('  ❌ '+( m.firstName||'?')+' '+(m.lastName||'')+' — network error');
+      appendFbLog('  ❌ '+(m.firstName||'?')+' '+(m.lastName||'')+' — network error');
       uploadNext(i+1);
     });
   }
@@ -1895,13 +1904,19 @@ function bulkUploadToFirebase(){
 function bulkPullFromFirebase(){
   var btn=el('bulkPullBtn');
   if(btn){ btn.disabled=true; btn.textContent='Pulling...'; }
-  showFbLog('Pulling all members from Firebase...', false);
-  syncMembersFromBackend(function(){
-    var members=getMembers();
-    showFbLog('Done. '+members.length+' total member(s) now in local storage.', true);
-    if(btn){ btn.disabled=false; btn.textContent='▼ Pull All Members FROM Firebase'; }
-    el('fbUploadBadge').textContent='Pulled: '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
-    renderMembersTable(); renderPaymentsTable(); refreshAdminMetrics();
+  showFbLog('Pulling all data from Firebase...', false);
+  syncAllAdminDataFromFirebase(function(){
+    syncVisitsFromBackend(function(){
+      var members=getMembers();
+      showFbLog('Done. '+members.length+' member(s) + all content synced from Firebase.', true);
+      if(btn){ btn.disabled=false; btn.textContent='▼ Pull All Data FROM Firebase'; }
+      el('fbUploadBadge').textContent='Pulled: '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+      refreshAdminMetrics();
+      renderMembersTable(); renderPaymentsTable(); renderWithdrawalsTable();
+      renderAdminContent(); renderAdminIssues(); renderAdminUpgradeRequests();
+      renderAdminUpgradesFull(); renderSubAdminList(); renderAdminPages();
+      renderAdminAds(); renderScheduleTab();
+    });
   });
 }
 
@@ -1917,6 +1932,130 @@ function appendFbLog(line){
   if(!log) return;
   log.innerHTML+=('<br>'+line);
   log.scrollTop=log.scrollHeight;
+}
+
+// ── FULL FIREBASE SYNC FOR ALL DATA STORES ──────────
+// Generic helper: push any array/value to a Firebase path
+function fbPush(path, data){
+  try{
+    fetch(FB_URL+'/'+path+'.json',{
+      method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(data)
+    }).catch(function(){});
+  }catch(e){}
+}
+
+// Generic helper: pull from Firebase, merge with local, save, callback
+function fbPull(path, localGet, localSave, mergeById, callback){
+  try{
+    fetch(FB_URL+'/'+path+'.json')
+    .then(function(r){return r.ok?r.json():null;})
+    .then(function(data){
+      if(data===null||data===undefined){if(callback)callback();return;}
+      var remote;
+      if(Array.isArray(data)) remote=data.filter(Boolean);
+      else if(typeof data==='object') remote=Object.values(data).filter(Boolean);
+      else { if(callback)callback(); return; }
+      if(!remote.length){if(callback)callback();return;}
+      if(mergeById){
+        var local=localGet();
+        var idMap={};
+        local.forEach(function(x){if(x&&x.id)idMap[x.id]=true;});
+        var added=false;
+        remote.forEach(function(r){if(r&&r.id&&!idMap[r.id]){local.push(r);added=true;}});
+        if(added) localSave(local);
+      } else {
+        // Replace local with remote (for content like surveys/polls/videos/ads/pages)
+        localSave(remote);
+      }
+      if(callback) callback();
+    }).catch(function(){if(callback)callback();});
+  }catch(e){if(callback)callback();}
+}
+
+// ── Specific sync wrappers ────────────────────────────
+
+function syncWithdrawalsToFirebase(){ fbPush('withdrawals', getWithdrawals()); }
+function syncWithdrawalsFromFirebase(cb){ fbPull('withdrawals', getWithdrawals, saveWithdrawals, true, cb); }
+
+function syncSurveysToFirebase(){ fbPush('surveys', getSurveys()); }
+function syncSurveysFromFirebase(cb){ fbPull('surveys', getSurveys, saveSurveys, false, cb); }
+
+function syncPollsToFirebase(){ fbPush('polls', getPolls()); }
+function syncPollsFromFirebase(cb){ fbPull('polls', getPolls, savePolls, false, cb); }
+
+function syncVideosToFirebase(){ fbPush('videos', getVideos()); }
+function syncVideosFromFirebase(cb){ fbPull('videos', getVideos, saveVideos, false, cb); }
+
+function syncAdsToFirebase(){ fbPush('ads', getAds()); }
+function syncAdsFromFirebase(cb){ fbPull('ads', getAds, saveAds, false, cb); }
+
+function syncAnnToFirebase(){ fbPush('ann', getAnn()); }
+function syncAnnFromFirebase(cb){
+  try{
+    fetch(FB_URL+'/ann.json')
+    .then(function(r){return r.ok?r.json():null;})
+    .then(function(data){
+      if(data!==null&&data!==undefined&&typeof data==='string') saveAnn(data);
+      if(cb) cb();
+    }).catch(function(){if(cb)cb();});
+  }catch(e){if(cb)cb();}
+}
+
+function syncSubAdminsToFirebase(){ fbPush('subadmins', getSubAdmins()); }
+function syncSubAdminsFromFirebase(cb){ fbPull('subadmins', getSubAdmins, saveSubAdmins, true, cb); }
+
+function syncUpgradesToFirebase(){ fbPush('upgrades', getUpgradeReqs()); }
+function syncUpgradesFromFirebase(cb){ fbPull('upgrades', getUpgradeReqs, saveUpgradeReqs, true, cb); }
+
+function syncIssuesToFirebase(){ fbPush('issues', getIssues()); }
+function syncIssuesFromFirebase(cb){ fbPull('issues', getIssues, saveIssues, true, cb); }
+
+function syncScheduleToFirebase(){ fbPush('schedule', getSchedule()); }
+function syncScheduleFromFirebase(cb){
+  try{
+    fetch(FB_URL+'/schedule.json')
+    .then(function(r){return r.ok?r.json():null;})
+    .then(function(data){
+      if(data&&typeof data==='object'){ saveSchedule(data); }
+      if(cb) cb();
+    }).catch(function(){if(cb)cb();});
+  }catch(e){if(cb)cb();}
+}
+
+// Pull ALL admin data from Firebase in parallel — called on admin dashboard open
+function syncAllAdminDataFromFirebase(callback){
+  var pending=12;
+  function done(){ if(--pending<=0 && callback) callback(); }
+  syncMembersFromBackend(done);
+  syncWithdrawalsFromFirebase(done);
+  syncSurveysFromFirebase(done);
+  syncPollsFromFirebase(done);
+  syncVideosFromFirebase(done);
+  syncAdsFromFirebase(done);
+  syncAnnFromFirebase(done);
+  syncSubAdminsFromFirebase(done);
+  syncPagesFromFirebase(done);
+  syncUpgradesFromFirebase(done);
+  syncIssuesFromFirebase(done);
+  syncScheduleFromFirebase(done);
+}
+
+// Push ALL admin data to Firebase — called on admin dashboard open (uploads local state)
+function pushAllAdminDataToFirebase(){
+  syncMembersFromBackend(function(){}); // members pulled not pushed (push happens on register)
+  syncWithdrawalsToFirebase();
+  syncSurveysToFirebase();
+  syncPollsToFirebase();
+  syncVideosToFirebase();
+  syncAdsToFirebase();
+  syncAnnToFirebase();
+  syncSubAdminsToFirebase();
+  syncUpgradesToFirebase();
+  syncIssuesToFirebase();
+  syncScheduleToFirebase();
+  syncPagesToFirebase();
 }
 
 // ── PAGES FIREBASE SYNC ──────────────────────────────
@@ -2001,7 +2140,7 @@ function saveWithdrawals(w){sv('gop_withdrawals',w);}
 function getAnn(){return ld('gop_ann','');}
 function saveAnn(a){sv('gop_ann',a);}
 function getAds(){return ld('gop_ads',[]);}
-function saveAds(a){sv('gop_ads',a);}
+function saveAds(a){sv('gop_ads',a); if(typeof syncAdsToFirebase==='function') syncAdsToFirebase();}
 function getSurveys(){
   var stored=ld('gop_surveys',null);
   var defaults=defaultSurveys();
@@ -2018,11 +2157,11 @@ function getSurveys(){
   if(changed) sv('gop_surveys',stored);
   return stored;
 }
-function saveSurveys(s){sv('gop_surveys',s);}
+function saveSurveys(s){sv('gop_surveys',s); if(typeof syncSurveysToFirebase==='function') syncSurveysToFirebase();}
 function getPolls(){return ld('gop_polls',defaultPolls());}
-function savePolls(p){sv('gop_polls',p);}
+function savePolls(p){sv('gop_polls',p); if(typeof syncPollsToFirebase==='function') syncPollsToFirebase();}
 function getVideos(){return ld('gop_videos',defaultVideos());}
-function saveVideos(v){sv('gop_videos',v);}
+function saveVideos(v){sv('gop_videos',v); if(typeof syncVideosToFirebase==='function') syncVideosToFirebase();}
 
 // ── DEFAULT CONTENT ───────────────────────────────────
 function defaultSurveys(){
@@ -2479,12 +2618,12 @@ document.addEventListener('DOMContentLoaded', function(){
   // Firebase bulk sync buttons (admin settings tab)
   var bub=el('bulkUploadBtn');
   if(bub) bub.addEventListener('click', function(){
-    if(!confirm('This will upload ALL '+getMembers().length+' members from this browser to Firebase. Continue?')) return;
+    if(!confirm('This will upload ALL local data ('+getMembers().length+' members + surveys, polls, videos, ads, pages, withdrawals, issues, etc.) to Firebase. Continue?')) return;
     bulkUploadToFirebase();
   });
   var bpb=el('bulkPullBtn');
   if(bpb) bpb.addEventListener('click', function(){
-    if(!confirm('This will pull all members from Firebase and merge them into this browser. Continue?')) return;
+    if(!confirm('This will pull ALL data from Firebase (members, surveys, polls, videos, ads, pages, withdrawals, issues, etc.) into this browser. Continue?')) return;
     bulkPullFromFirebase();
   });
 
@@ -2504,12 +2643,14 @@ document.addEventListener('DOMContentLoaded', function(){
     if(!isAdminUser()) return;
     var st=el('adminSyncStatus');
     if(st) st.textContent='Syncing...';
-    syncMembersFromBackend(function(){
+    syncAllAdminDataFromFirebase(function(){
       syncVisitsFromBackend(function(){
         refreshAdminMetrics();
-        renderPaymentsTable();
-        renderMembersTable();
-        renderVisitsTab();
+        renderPaymentsTable(); renderMembersTable(); renderWithdrawalsTable();
+        renderAdminContent(); renderAdminIssues(); renderAdminUpgradeRequests();
+        renderAdminUpgradesFull(); renderSubAdminList(); renderProfilesTab();
+        renderAdminPages(); renderAdminAds(); renderVisitsTab(); renderScheduleTab();
+        renderDuplicatesTable();
         if(st) st.textContent='Updated '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
       });
     });
@@ -2843,32 +2984,56 @@ function openMemberDashboard(member){
       currentUser=member;
     }
   }
-  renderDashAds(member);
-  // Pull latest pages from Firebase then render the pages nudge and tab
+  // Render immediately from local data, then silently re-render after Firebase pull
+  function renderMemberContent(m){
+    // Load any admin-customised Ghana Affairs questions into session ghQs
+    var ghSurvey=getSurveys().find(function(s){return s.type==='gh-affairs';});
+    if(ghSurvey&&ghSurvey.customQuestions&&ghSurvey.customQuestions.length) ghQs=ghSurvey.customQuestions;
+    renderNotifications(m);
+    renderSurveyList(m);
+    renderPollList(m);
+    renderVideoList(m);
+    renderDashAds(m);
+    renderMemberAdsTab(m);
+    renderDashPages(m);
+    renderMemberPages(m);
+    renderWithdrawalHistory(m);
+    updateWithdrawHistoryDisplay(m);
+    renderMyIssues(m);
+    renderReferralTab(m);
+    renderUpgradeTab(m);
+    populateWithdrawCard(m);
+    checkWithdrawalDay();
+    checkDailyStreakBonus(m);
+  }
+
+  // First pass — render from localStorage immediately (fast, no flicker)
+  renderMemberContent(member);
+
+  // Second pass — pull latest content from Firebase then re-render (gets admin updates)
+  var pending=4;
+  function contentDone(){
+    if(--pending<=0){
+      var fresh=getMembers().find(function(x){return x.id===member.id;})||member;
+      currentUser=fresh;
+      renderMemberContent(fresh);
+    }
+  }
+  syncSurveysFromFirebase(contentDone);
+  syncPollsFromFirebase(contentDone);
+  syncVideosFromFirebase(contentDone);
+  syncAdsFromFirebase(contentDone);
+  // Also pull ann separately (doesn't affect pending counter)
+  syncAnnFromFirebase(function(){
+    renderNotifications(currentUser||member);
+  });
+  // Pull pages
   syncPagesFromFirebase(function(){
     renderDashPages(currentUser||member);
     renderMemberPages(currentUser||member);
   });
-  // Check if today is a withdrawal day
-  checkWithdrawalDay();
-  // Load any admin-customised Ghana Affairs questions into session ghQs
-  var ghSurvey=getSurveys().find(function(s){return s.type==='gh-affairs';});
-  if(ghSurvey&&ghSurvey.customQuestions&&ghSurvey.customQuestions.length) ghQs=ghSurvey.customQuestions;
-  renderNotifications(member);
-  renderSurveyList(member);
-  renderPollList(member);
-  renderVideoList(member);
-  renderWithdrawalHistory(member);
-  renderMyIssues(member);
-  renderReferralTab(member);
-  renderUpgradeTab(member);
-  renderMemberPages(member);
-  populateWithdrawCard(member);
-  updateWithdrawHistoryDisplay(member);
-  renderMemberAdsTab(member);
-  checkDailyStreakBonus(member);
+
   // Silently push this member's latest record to Firebase so admin sees them
-  // regardless of which device they originally registered on
   syncMemberToBackend(member);
 }
 
@@ -3744,7 +3909,7 @@ function reverseWithdrawal(wId){
   // Mark withdrawal as Reversed
   ws[wIdx].phase='Reversed';
   ws[wIdx].reversedAt=new Date().toISOString();
-  saveWithdrawals(ws);
+  saveWithdrawals(ws); syncWithdrawalsToFirebase();
 
   // Update UI
   setText('dmBal','GHS '+(currentUser.balance||0).toFixed(2));
@@ -3902,26 +4067,26 @@ function openAdminDashboard(){
   // Render immediately from local storage
   renderAll();
 
-  // Pull fresh data from backend and re-render
+  // Push local data to Firebase (so this device's data goes up)
+  pushAllAdminDataToFirebase();
+
+  // Pull ALL data from Firebase and re-render (so this device gets everything)
   var st=el('adminSyncStatus');
   if(st) st.textContent='Syncing...';
-  syncMembersFromBackend(function(){
+  syncAllAdminDataFromFirebase(function(){
     syncVisitsFromBackend(function(){
       renderAll();
       if(st) st.textContent='Synced '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
     });
   });
 
-  // Auto-refresh from backend every 30 seconds while admin is on dashboard
+  // Auto-refresh ALL data every 30 seconds while admin is on dashboard
   if(window._adminSyncInterval) clearInterval(window._adminSyncInterval);
   window._adminSyncInterval=setInterval(function(){
     if(!isAdminUser()||el('adminDashboard').style.display==='none') return;
-    syncMembersFromBackend(function(){
+    syncAllAdminDataFromFirebase(function(){
       syncVisitsFromBackend(function(){
-        refreshAdminMetrics();
-        renderPaymentsTable();
-        renderMembersTable();
-        renderVisitsTab();
+        renderAll();
       });
     });
   },30000);
@@ -3931,7 +4096,7 @@ function refreshAdminMetrics(){
   var members=getMembers(), ws=getWithdrawals();
   setText('aTotalM', members.length);
   setText('aPendP', members.filter(function(m){return m.status==='awaiting_verification';}).length);
-  setText('aPendW', ws.filter(function(w){return w.phase!=='Complete';}).length);
+  setText('aPendW', ws.filter(function(w){return w.phase!=='Complete'&&w.phase!=='Reversed';}).length);
   var paid=ws.filter(function(w){return w.phase==='Complete';}).reduce(function(s,w){return s+parseFloat(w.amount);},0);
   setText('aTotalPaid','GHS '+paid.toFixed(2));
   // count duplicates — use same scoring as renderDuplicatesTable (score>=2)
@@ -4354,7 +4519,7 @@ function renderWithdrawalsTable(){
   if(!ws.length){setHTML('aWithdrawalsBody','<tr><td colspan="10" class="empty-row">No withdrawal requests yet.</td></tr>');return;}
   var html='';
   ws.slice().reverse().forEach(function(w,i){
-    var bc=w.phase==='Complete'?'ph-complete':w.phase==='Processing'?'ph-processing':'ph-pending';
+    var bc=w.phase==='Complete'?'ph-complete':w.phase==='Processing'?'ph-processing':w.phase==='Reversed'?'ph-failed':'ph-pending';
     var fee=w.fee||0;
     var netPaid=w.amountAfterFee!=null?w.amountAfterFee:parseFloat(w.amount);
     var feeCell=w.isFree
@@ -4386,7 +4551,7 @@ function renderWithdrawalsTable(){
 function updateWithdrawalPhase(wid, newPhase){
   var ws=getWithdrawals(), idx=ws.findIndex(function(w){return w.id===wid;});
   if(idx<0) return;
-  ws[idx].phase=newPhase; saveWithdrawals(ws);
+  ws[idx].phase=newPhase; saveWithdrawals(ws); syncWithdrawalsToFirebase();
   var w=ws[idx];
   var members=getMembers(), mIdx=members.findIndex(function(m){return m.id===w.memberId;});
   if(mIdx>=0){
@@ -5539,13 +5704,13 @@ function renderSubAdminList(){
   el2.querySelectorAll('[data-satoggle]').forEach(function(b){
     b.addEventListener('click',function(){
       var subs2=getSubAdmins(); subs2[parseInt(b.dataset.satoggle)].active=!subs2[parseInt(b.dataset.satoggle)].active;
-      saveSubAdmins(subs2); renderSubAdminList();
+      saveSubAdmins(subs2); syncSubAdminsToFirebase(); renderSubAdminList();
     });
   });
   el2.querySelectorAll('[data-saremove]').forEach(function(b){
     b.addEventListener('click',function(){
       var subs2=getSubAdmins(); subs2.splice(parseInt(b.dataset.saremove),1);
-      saveSubAdmins(subs2); renderSubAdminList();
+      saveSubAdmins(subs2); syncSubAdminsToFirebase(); renderSubAdminList();
       adminAlert('Sub-admin removed.');
     });
   });
@@ -5563,7 +5728,7 @@ function addSubAdmin(){
   var subs=getSubAdmins();
   if(subs.find(function(s){return s.phone===phone;})){adminAlert('A sub-admin with this number already exists.');return;}
   subs.push({id:'SA'+Date.now(),name:name,phone:phone,password:pass,active:true,created:today()});
-  saveSubAdmins(subs);
+  saveSubAdmins(subs); syncSubAdminsToFirebase();
   setVal('saName',''); setVal('saPhone',''); setVal('saPass','');
   renderSubAdminList();
   adminAlert('Sub-admin "'+name+'" added. They can log in with '+phone+' and their password.');
@@ -5712,7 +5877,7 @@ function submitUpgradeRequest(){
     paystackRef:'',
     date:today()
   };
-  reqs.push(req); saveUpgradeReqs(reqs);
+  reqs.push(req); saveUpgradeReqs(reqs); syncUpgradesToFirebase();
 
   // Save to localStorage for recovery after Paystack redirect
   try{localStorage.setItem('gop_pending_upgrade',JSON.stringify({reqId:req.id,ref:upgradeRef}));}catch(e){}
@@ -5828,7 +5993,7 @@ function processUpgrade(reqId, action, denyReason){
   if(idx<0) return;
   reqs[idx].status=action;
   if(denyReason) reqs[idx].denyReason=denyReason;
-  saveUpgradeReqs(reqs);
+  saveUpgradeReqs(reqs); syncUpgradesToFirebase();
   var req=reqs[idx];
   if(action==='approved'){
     var members=getMembers();
@@ -6939,14 +7104,14 @@ function saveScheduleSettings(){
       poll:pollYes?pollYes.value==='yes':true
     };
   });
-  saveSchedule(schedule);
+  saveSchedule(schedule); syncScheduleToFirebase();
   adminAlert('Schedule saved for '+tier+' tier!');
 }
 
 function broadcastAnn(){
   var text=(val('annText')||'').trim();
   if(!text){alert('Please enter an announcement.'); return;}
-  saveAnn(text);
+  saveAnn(text); syncAnnToFirebase();
   setText('annStatus','\u2705 Announcement saved! All members will see it on their dashboard.');
   setTimeout(function(){setText('annStatus','');},3500);
 }
@@ -7010,7 +7175,7 @@ function submitIssue(){
     repliedDate:''
   };
   issues.push(issue);
-  saveIssues(issues);
+  saveIssues(issues); syncIssuesToFirebase();
   setVal('issueCategory',''); setVal('issueSubject',''); setVal('issueBody','');
   showIssueMsg('success','&#x2705; Issue submitted! Our support team will respond within 24 hours. Check "My Support History" below.');
   // Also notify member
@@ -7099,7 +7264,7 @@ function renderAdminIssues(){
   el2.querySelectorAll('[data-issue-status]').forEach(function(sel){
     sel.addEventListener('change',function(){
       var issues2=getIssues(); var idx=issues2.findIndex(function(x){return x.id===sel.dataset.issueStatus;});
-      if(idx>=0){issues2[idx].status=sel.value;saveIssues(issues2);renderAdminIssues();}
+      if(idx>=0){issues2[idx].status=sel.value;saveIssues(issues2);syncIssuesToFirebase();renderAdminIssues();}
     });
   });
   // Bind reply buttons
@@ -7115,7 +7280,7 @@ function renderAdminIssues(){
       issues2[idx].adminReply=reply;
       issues2[idx].repliedDate=today();
       issues2[idx].status='answered';
-      saveIssues(issues2);
+      saveIssues(issues2); syncIssuesToFirebase();
       // Notify member
       var members=getMembers(); var mi=members.findIndex(function(m){return m.id===issues2[idx].memberId;});
       if(mi>=0){
