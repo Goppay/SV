@@ -1694,6 +1694,22 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
         <button class="add-btn" id="addSubAdminBtn">&#x2795; Add Sub-Admin</button>
         <div id="subAdminList" style="margin-top:14px"></div>
       </div>
+      <div class="a-card" id="firebaseSyncCard">
+        <div class="a-card-title">
+          <span>&#x2601;&#xFE0F; Firebase — Recover Pre-Sync Members</span>
+          <span id="fbUploadBadge" style="font-size:12px;font-weight:400;color:#9ca3af;margin-left:8px"></span>
+        </div>
+        <p style="font-size:13px;color:#6b7280;margin-bottom:14px;line-height:1.7">
+          Members who registered <strong>before</strong> the Firebase sync was added only exist in the local browser that was used to admin them. Click the button below to upload <strong>every member currently in this browser's localStorage</strong> to Firebase so all devices can see them.
+          <br><br>
+          <strong style="color:var(--green)">Run this once on the device that has the most member records (usually your main admin device).</strong> After that, new members sync automatically.
+        </p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+          <button class="add-btn" id="bulkUploadBtn" style="background:var(--green)">&#x2601; Upload All Local Members to Firebase</button>
+          <button class="abtn" id="bulkPullBtn">&#x25BC; Pull All Members FROM Firebase</button>
+        </div>
+        <div id="fbUploadLog" style="margin-top:12px;font-size:12.5px;color:#374151;line-height:1.8;background:#f9fafb;border-radius:8px;padding:10px 14px;display:none"></div>
+      </div>
       <div class="a-card">
         <div class="a-card-title">&#x1F527; Site Controls</div>
         <div style="display:flex;flex-wrap:wrap;gap:10px">
@@ -1830,6 +1846,77 @@ function syncVisitsFromBackend(callback){
       if(callback) callback();
     }).catch(function(){if(callback)callback();});
   }catch(e){if(callback)callback();}
+}
+
+// ── BULK FIREBASE SYNC (recover pre-sync members) ────
+function bulkUploadToFirebase(){
+  var members = getMembers();
+  if(!members.length){
+    showFbLog('No members in local storage to upload.', false);
+    return;
+  }
+  var btn = el('bulkUploadBtn');
+  if(btn){ btn.disabled=true; btn.textContent='Uploading...'; }
+  showFbLog('Starting upload of '+members.length+' member(s) to Firebase...', false);
+
+  var done=0, failed=0;
+  var total=members.length;
+
+  function uploadNext(i){
+    if(i>=total){
+      var msg='Upload complete. '+done+' uploaded, '+failed+' failed.';
+      showFbLog(msg, done>0);
+      if(btn){ btn.disabled=false; btn.textContent='☁ Upload All Local Members to Firebase'; }
+      el('fbUploadBadge').textContent='Last run: '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+      // Re-render tables with any newly merged data
+      renderMembersTable(); renderPaymentsTable(); refreshAdminMetrics();
+      return;
+    }
+    var m=members[i];
+    var key=(m.id||'').replace(/[^a-zA-Z0-9_-]/g,'_');
+    if(!key){ failed++; uploadNext(i+1); return; }
+    fetch(FB_URL+'/members/'+key+'.json',{
+      method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(m)
+    }).then(function(r){
+      if(r.ok) done++; else failed++;
+      appendFbLog((r.ok?'  ✅':'  ❌')+' '+(m.firstName||'?')+' '+( m.lastName||'')+' ('+( m.phone||'?')+')');
+      uploadNext(i+1);
+    }).catch(function(){
+      failed++;
+      appendFbLog('  ❌ '+( m.firstName||'?')+' '+(m.lastName||'')+' — network error');
+      uploadNext(i+1);
+    });
+  }
+  uploadNext(0);
+}
+
+function bulkPullFromFirebase(){
+  var btn=el('bulkPullBtn');
+  if(btn){ btn.disabled=true; btn.textContent='Pulling...'; }
+  showFbLog('Pulling all members from Firebase...', false);
+  syncMembersFromBackend(function(){
+    var members=getMembers();
+    showFbLog('Done. '+members.length+' total member(s) now in local storage.', true);
+    if(btn){ btn.disabled=false; btn.textContent='▼ Pull All Members FROM Firebase'; }
+    el('fbUploadBadge').textContent='Pulled: '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    renderMembersTable(); renderPaymentsTable(); refreshAdminMetrics();
+  });
+}
+
+function showFbLog(msg, success){
+  var log=el('fbUploadLog');
+  if(!log) return;
+  log.style.display='block';
+  log.style.borderLeft='3px solid '+(success?'var(--green)':'#e5e7eb');
+  log.innerHTML='<strong>'+(success?'✅ ':'')+''+msg+'</strong>';
+}
+function appendFbLog(line){
+  var log=el('fbUploadLog');
+  if(!log) return;
+  log.innerHTML+=('<br>'+line);
+  log.scrollTop=log.scrollHeight;
 }
 
 // Sync member status/balance updates back to Firebase after admin actions
@@ -2353,6 +2440,18 @@ document.addEventListener('DOMContentLoaded', function(){
   checkScheduledDeletions();
   // Track this page visit
   trackVisit();
+  // Firebase bulk sync buttons (admin settings tab)
+  var bub=el('bulkUploadBtn');
+  if(bub) bub.addEventListener('click', function(){
+    if(!confirm('This will upload ALL '+getMembers().length+' members from this browser to Firebase. Continue?')) return;
+    bulkUploadToFirebase();
+  });
+  var bpb=el('bulkPullBtn');
+  if(bpb) bpb.addEventListener('click', function(){
+    if(!confirm('This will pull all members from Firebase and merge them into this browser. Continue?')) return;
+    bulkPullFromFirebase();
+  });
+
   // Suspend modal buttons
   var csb=el('closeSuspendBtn');
   if(csb) csb.addEventListener('click', closeSuspendModal);
@@ -2729,6 +2828,9 @@ function openMemberDashboard(member){
   updateWithdrawHistoryDisplay(member);
   renderMemberAdsTab(member);
   checkDailyStreakBonus(member);
+  // Silently push this member's latest record to Firebase so admin sees them
+  // regardless of which device they originally registered on
+  syncMemberToBackend(member);
 }
 
 function renderNotifications(member){
