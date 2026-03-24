@@ -1366,9 +1366,9 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
     <div class="a-title">Admin Control Panel</div>
     <div class="a-sub">Full platform oversight — payments, members, content, and site control.</div>
     <div class="a-metrics" style="grid-template-columns:repeat(5,1fr);row-gap:10px;grid-auto-rows:auto">
-      <div class="am"><div class="am-label">Unique Sessions</div><div class="am-val" id="aTotalVisits" style="color:var(--green)">0</div><div class="am-sub">All-time visits</div></div>
-      <div class="am"><div class="am-label">Today's Sessions</div><div class="am-val" id="aTodayVisits" style="color:var(--blue)">0</div><div class="am-sub">Visits today</div></div>
-      <div class="am"><div class="am-label">Page Loads</div><div class="am-val" id="aSiteVisits" style="color:#7c3aed">0</div><div class="am-sub">Today: <span id="aSiteVisitsToday">0</span></div></div>
+      <div class="am"><div class="am-label">Total Visits</div><div class="am-val" id="aTotalVisits" style="color:var(--green)">0</div><div class="am-sub">All-time (all devices)</div></div>
+      <div class="am"><div class="am-label">Today's Visits</div><div class="am-val" id="aTodayVisits" style="color:var(--blue)">0</div><div class="am-sub">Visits today (all devices)</div></div>
+      <div class="am"><div class="am-label">This Week</div><div class="am-val" id="aSiteVisits" style="color:#7c3aed">0</div><div class="am-sub">Today: <span id="aSiteVisitsToday">0</span></div></div>
       <div class="am"><div class="am-label">Total Members</div><div class="am-val" id="aTotalM">0</div><div class="am-sub">Registered</div></div>
       <div class="am"><div class="am-label">Pending Payments</div><div class="am-val" id="aPendP" style="color:var(--orange)">0</div><div class="am-sub">Awaiting verification</div></div>
       <div class="am"><div class="am-label">Open Withdrawals</div><div class="am-val" id="aPendW" style="color:var(--blue)">0</div><div class="am-sub">Need processing</div></div>
@@ -1802,17 +1802,28 @@ function syncMembersFromBackend(callback){
       var remote=Object.values(data).filter(Boolean);
       if(!remote.length){if(callback)callback();return;}
       var local=getMembers();
-      var idMap={},phoneMap={};
-      local.forEach(function(m){idMap[m.id]=true;phoneMap[m.phone]=true;});
+      var idMap={};
+      local.forEach(function(m,i){idMap[m.id]=i;});
       var changed=false;
       remote.forEach(function(rm){
         if(!rm||!rm.id||!rm.phone) return;
-        if(!idMap[rm.id]&&!phoneMap[rm.phone]){
-          // Brand new member from a different device — store full record
+        if(idMap[rm.id]===undefined){
+          // Brand new member from another device — add full record
+          idMap[rm.id]=local.length;
           local.push(rm);
-          idMap[rm.id]=true;
-          phoneMap[rm.phone]=true;
           changed=true;
+        } else {
+          // Existing member — update status/balance/tier/notifications if they changed
+          var li=idMap[rm.id];
+          var lm=local[li];
+          var needsUpdate=false;
+          // Only overwrite fields that admin controls (status, balance, tier, notifications)
+          // Never overwrite member's own fields (surveys done, polls, videos etc.)
+          if(rm.status&&rm.status!==lm.status){lm.status=rm.status;needsUpdate=true;}
+          if(typeof rm.balance==='number'&&rm.balance!==lm.balance){lm.balance=rm.balance;needsUpdate=true;}
+          if(rm.tier&&rm.tier!==lm.tier){lm.tier=rm.tier;needsUpdate=true;}
+          if(rm.suspendReason&&rm.suspendReason!==lm.suspendReason){lm.suspendReason=rm.suspendReason;needsUpdate=true;}
+          if(needsUpdate){local[li]=lm;changed=true;}
         }
       });
       if(changed) saveMembers(local);
@@ -1906,9 +1917,8 @@ function bulkPullFromFirebase(){
   if(btn){ btn.disabled=true; btn.textContent='Pulling...'; }
   showFbLog('Pulling all data from Firebase...', false);
   syncAllAdminDataFromFirebase(function(){
-    syncVisitsFromBackend(function(){
-      var members=getMembers();
-      showFbLog('Done. '+members.length+' member(s) + all content synced from Firebase.', true);
+    var members=getMembers();
+    showFbLog('Done. '+members.length+' member(s) + all content synced from Firebase.', true);
       if(btn){ btn.disabled=false; btn.textContent='▼ Pull All Data FROM Firebase'; }
       el('fbUploadBadge').textContent='Pulled: '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
       refreshAdminMetrics();
@@ -2026,9 +2036,10 @@ function syncScheduleFromFirebase(cb){
 
 // Pull ALL admin data from Firebase in parallel — called on admin dashboard open
 function syncAllAdminDataFromFirebase(callback){
-  var pending=12;
+  var pending=13;
   function done(){ if(--pending<=0 && callback) callback(); }
   syncMembersFromBackend(done);
+  syncVisitsFromBackend(done);     // visits included here so members+visits arrive together
   syncWithdrawalsFromFirebase(done);
   syncSurveysFromFirebase(done);
   syncPollsFromFirebase(done);
@@ -2644,15 +2655,13 @@ document.addEventListener('DOMContentLoaded', function(){
     var st=el('adminSyncStatus');
     if(st) st.textContent='Syncing...';
     syncAllAdminDataFromFirebase(function(){
-      syncVisitsFromBackend(function(){
-        refreshAdminMetrics();
-        renderPaymentsTable(); renderMembersTable(); renderWithdrawalsTable();
-        renderAdminContent(); renderAdminIssues(); renderAdminUpgradeRequests();
-        renderAdminUpgradesFull(); renderSubAdminList(); renderProfilesTab();
-        renderAdminPages(); renderAdminAds(); renderVisitsTab(); renderScheduleTab();
-        renderDuplicatesTable();
-        if(st) st.textContent='Updated '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
-      });
+      refreshAdminMetrics();
+      renderPaymentsTable(); renderMembersTable(); renderWithdrawalsTable();
+      renderAdminContent(); renderAdminIssues(); renderAdminUpgradeRequests();
+      renderAdminUpgradesFull(); renderSubAdminList(); renderProfilesTab();
+      renderAdminPages(); renderAdminAds(); renderVisitsTab(); renderScheduleTab();
+      renderDuplicatesTable();
+      if(st) st.textContent='Updated '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
     });
   });
   // Restore session after refresh — must be last so all DOM elements are ready
@@ -4064,20 +4073,29 @@ function openAdminDashboard(){
     renderScheduleTab();
   }
 
-  // Render immediately from local storage
+  // Step 1: Render immediately from local storage (instant, no wait)
   renderAll();
 
-  // Push local data to Firebase (so this device's data goes up)
-  pushAllAdminDataToFirebase();
-
-  // Pull ALL data from Firebase and re-render (so this device gets everything)
+  // Step 2: Pull ALL data from Firebase first (so we get the fullest dataset)
   var st=el('adminSyncStatus');
   if(st) st.textContent='Syncing...';
   syncAllAdminDataFromFirebase(function(){
-    syncVisitsFromBackend(function(){
-      renderAll();
-      if(st) st.textContent='Synced '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
-    });
+    // Step 3: Re-render with merged Firebase data
+    renderAll();
+    if(st) st.textContent='Synced '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    // Step 4: AFTER pulling, push local-only content (pages, surveys, ads etc.)
+    // so other devices can get it. Members are NOT pushed here — they push themselves on login.
+    syncWithdrawalsToFirebase();
+    syncSurveysToFirebase();
+    syncPollsToFirebase();
+    syncVideosToFirebase();
+    syncAdsToFirebase();
+    syncAnnToFirebase();
+    syncSubAdminsToFirebase();
+    syncUpgradesToFirebase();
+    syncIssuesToFirebase();
+    syncScheduleToFirebase();
+    syncPagesToFirebase();
   });
 
   // Auto-refresh ALL data every 30 seconds while admin is on dashboard
@@ -4085,9 +4103,7 @@ function openAdminDashboard(){
   window._adminSyncInterval=setInterval(function(){
     if(!isAdminUser()||el('adminDashboard').style.display==='none') return;
     syncAllAdminDataFromFirebase(function(){
-      syncVisitsFromBackend(function(){
-        renderAll();
-      });
+      renderAll();
     });
   },30000);
 }
@@ -4124,15 +4140,19 @@ function refreshAdminMetrics(){
   var upEl=el('aPendingUpgrades'); if(upEl) upEl.textContent=pendingUpgrades;
   var badge=el('upgradeTabBadge');
   if(badge){badge.textContent=pendingUpgrades;badge.style.display=pendingUpgrades>0?'inline':'none';}
-  // Visit counts — use detailed gop_visits array as the single source of truth
+  // Visit counts — all derived from the Firebase-synced gop_visits array
+  // (same number shown on every admin device because Firebase is the single source)
   var allVisits=getVisits();
-  var todayStr=new Date().toLocaleDateString('en-GB');
+  var now=new Date();
+  var todayStr=now.toLocaleDateString('en-GB');
+  var weekAgo=new Date(now.getTime()-7*24*60*60*1000);
+  var todayVisits=allVisits.filter(function(v){return v.date===todayStr;});
+  var weekVisits=allVisits.filter(function(v){return v.ts&&new Date(v.ts)>=weekAgo;});
   var tvEl=el('aTotalVisits'); if(tvEl) tvEl.textContent=allVisits.length.toLocaleString();
-  var todayEl=el('aTodayVisits'); if(todayEl) todayEl.textContent=allVisits.filter(function(v){return v.date===todayStr;}).length;
-  // Also keep the simple counter card in sync (aSiteVisits) from localStorage for cross-session totals
-  var visitStats=getSiteVisitStats();
-  var vsEl=el('aSiteVisits'); if(vsEl) vsEl.textContent=visitStats.total.toLocaleString();
-  var vstEl=el('aSiteVisitsToday'); if(vstEl) vstEl.textContent=visitStats.today;
+  var todayEl=el('aTodayVisits'); if(todayEl) todayEl.textContent=todayVisits.length.toLocaleString();
+  // Third card: this week's visits + today's sub-label
+  var vsEl=el('aSiteVisits'); if(vsEl) vsEl.textContent=weekVisits.length.toLocaleString();
+  var vstEl=el('aSiteVisitsToday'); if(vstEl) vstEl.textContent=todayVisits.length;
   // Total ads viewed = sum of all members' dailyAdCount is per-day only,
   // so we use the ad clicks counter stored on each ad object
   var totalAds=getAds().reduce(function(s,ad){return s+(ad.clicks||0);},0);
@@ -6412,33 +6432,18 @@ function getRegDeviceInfo(){
 
 // ── SITE VISIT TRACKING ──────────────────────────────
 function trackSiteVisit(){
-  try{
-    // Only count once per browser session (not on every page refresh or admin reload)
-    if(sessionStorage.getItem('gop_svisit_counted')) return;
-    sessionStorage.setItem('gop_svisit_counted','1');
-    var todayKey='gop_visits_'+new Date().toISOString().slice(0,10);
-    // Total all-time visits
-    var total=parseInt(localStorage.getItem('gop_visits_total')||'0')+1;
-    localStorage.setItem('gop_visits_total',total);
-    // Today's visits
-    var todayCount=parseInt(localStorage.getItem(todayKey)||'0')+1;
-    localStorage.setItem(todayKey,todayCount);
-    // Clean up old daily keys (keep last 30 days)
-    var keys=[];
-    for(var i=0;i<localStorage.length;i++){
-      var k=localStorage.key(i);
-      if(k&&k.startsWith('gop_visits_2')) keys.push(k);
-    }
-    keys.sort();
-    if(keys.length>30) keys.slice(0,keys.length-30).forEach(function(k){localStorage.removeItem(k);});
-  }catch(e){}
+  // Simple local counter removed — all visit stats now come from the Firebase-synced
+  // gop_visits array (written by trackVisit). Nothing to do here anymore.
 }
 
 function getSiteVisitStats(){
-  var total=parseInt(localStorage.getItem('gop_visits_total')||'0');
-  var todayKey='gop_visits_'+new Date().toISOString().slice(0,10);
-  var todayCount=parseInt(localStorage.getItem(todayKey)||'0');
-  return {total:total, today:todayCount};
+  // Derive counts directly from the gop_visits array so they're always Firebase-accurate
+  var visits=getVisits();
+  var todayStr=new Date().toLocaleDateString('en-GB');
+  return {
+    total: visits.length,
+    today: visits.filter(function(v){return v.date===todayStr;}).length
+  };
 }
 
 // ── PAGES ─────────────────────────────────────────────
