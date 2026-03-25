@@ -1429,6 +1429,7 @@ iframe[src*="badge"]{
       <button class="a-tab" data-atab="pages">&#x1F4F1; Pages</button>
       <button class="a-tab" data-atab="ads">&#x1F4E2; Ads</button>
       <button class="a-tab" data-atab="visits">&#x1F4CA; Site Visits</button>
+      <button class="a-tab" data-atab="sms">&#x1F4F2; SMS</button>
       <button class="a-tab" data-atab="schedule">&#x1F4C5; Schedule</button>
       <button class="a-tab" data-atab="asettings">&#x2699; Settings</button>
     </div>
@@ -1472,8 +1473,8 @@ iframe[src*="badge"]{
         <!-- Search -->
         <div class="search-bar"><input type="text" placeholder="&#x1F50D; Search name or phone..." id="memberSearch"/></div>
         <div style="overflow-x:auto"><table class="atable">
-          <thead><tr><th>#</th><th>Name</th><th>Phone</th><th>Region</th><th>Tier</th><th>Status</th><th>Balance</th><th>Total Earned</th><th>Surveys</th><th>Videos</th><th>Daily Polls</th><th>Joined</th><th>Last Login</th><th>Actions</th></tr></thead>
-          <tbody id="aMembersBody"><tr><td colspan="14" class="empty-row">No members yet.</td></tr></tbody>
+          <thead><tr><th>#</th><th>Name</th><th>Phone</th><th>Ghana Card</th><th>Region</th><th>Tier</th><th>Status</th><th>Balance</th><th>Total Earned</th><th>Surveys</th><th>Videos</th><th>Daily Polls</th><th>Joined</th><th>Last Login</th><th>Actions</th></tr></thead>
+          <tbody id="aMembersBody"><tr><td colspan="15" class="empty-row">No members yet.</td></tr></tbody>
         </table></div>
       </div>
     </div>
@@ -1667,6 +1668,89 @@ iframe[src*="badge"]{
         </div>
       </div>
     </div>
+    <!-- SMS TAB -->
+    <div class="a-section" id="atab-sms">
+      <!-- API Settings -->
+      <div class="a-card">
+        <div class="a-card-title">
+          <span>&#x1F511; Arkesel SMS API Settings</span>
+          <button class="abtn" id="saveSmsApiBtn" style="background:var(--green);color:#fff;border-color:var(--green)">&#x1F4BE; Save Settings</button>
+        </div>
+        <p style="font-size:13px;color:#6b7280;margin-bottom:16px;line-height:1.6">
+          Connect your <strong>Arkesel</strong> account to send SMS to members. Get your API key at
+          <a href="https://arkesel.com" target="_blank" style="color:var(--blue)">arkesel.com</a>.
+          Messages are sent using Arkesel's SMS gateway, the leading SMS provider in Ghana.
+        </p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+          <div class="fg" style="margin:0">
+            <label>API Key</label>
+            <input type="text" id="smsApiKey" placeholder="Your Arkesel API key" autocomplete="off"/>
+          </div>
+          <div class="fg" style="margin:0">
+            <label>Sender ID <span style="font-size:11px;color:#9ca3af">(max 11 chars)</span></label>
+            <input type="text" id="smsSenderId" placeholder="e.g. GhanaOPay" maxlength="11"/>
+          </div>
+        </div>
+        <div id="smsApiStatus" style="font-size:13px;color:var(--green);margin-top:6px"></div>
+      </div>
+
+      <!-- Compose SMS -->
+      <div class="a-card">
+        <div class="a-card-title">&#x1F4DD; Compose &amp; Send SMS</div>
+
+        <!-- Recipient selector -->
+        <div class="fg">
+          <label>Send To</label>
+          <select id="smsRecipient" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:9px;font-size:13.5px;outline:none;background:#fff;color:var(--text)">
+            <option value="all">&#x1F465; All Members</option>
+            <option value="Bronze">&#x1F949; Bronze Members Only</option>
+            <option value="Silver">&#x1F948; Silver Members Only</option>
+            <option value="Gold">&#x1F947; Gold Members Only</option>
+            <option value="active">&#x2705; Active Members Only</option>
+            <option value="custom">&#x1F4F1; Custom Phone Number</option>
+          </select>
+        </div>
+        <div class="fg" id="smsCustomPhoneWrap" style="display:none">
+          <label>Phone Number <span style="font-size:11px;color:#9ca3af">(Ghanaian MoMo number e.g. 0241234567)</span></label>
+          <input type="tel" id="smsCustomPhone" placeholder="e.g. 0241234567" inputmode="numeric" maxlength="10"/>
+        </div>
+
+        <!-- Message -->
+        <div class="fg">
+          <label>Message <span id="smsCharCount" style="font-size:11px;color:#9ca3af;font-weight:400">0 / 160</span></label>
+          <textarea id="smsMessage" rows="4" maxlength="480" placeholder="Type your SMS message here... (160 characters = 1 SMS)" style="resize:vertical;line-height:1.6"></textarea>
+          <div id="smsMsgHint" style="font-size:11.5px;color:#9ca3af;margin-top:4px">1 SMS (160 chars). Longer messages use multiple SMS credits.</div>
+        </div>
+
+        <!-- Preview -->
+        <div id="smsPreviewBox" style="display:none;background:#f0fdf4;border:1.5px solid var(--green);border-radius:9px;padding:13px 16px;margin-bottom:14px;font-size:13px;color:var(--text)">
+          <div style="font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--green);margin-bottom:6px">Preview — sending to: <span id="smsPreviewTo"></span></div>
+          <div id="smsPreviewMsg" style="line-height:1.65;white-space:pre-wrap"></div>
+        </div>
+
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+          <button class="add-btn" id="smsSendBtn" style="background:var(--green)">&#x1F4F2; Send SMS</button>
+          <button class="abtn" id="smsPreviewBtn">&#x1F441; Preview</button>
+          <span id="smsSendStatus" style="font-size:13px;color:var(--green)"></span>
+        </div>
+        <div id="smsSendProgress" style="display:none;margin-top:12px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:10px 14px;font-size:12.5px;max-height:160px;overflow-y:auto;line-height:1.7" id="smsSendLog"></div>
+      </div>
+
+      <!-- SMS History -->
+      <div class="a-card">
+        <div class="a-card-title">
+          <span>&#x1F4DC; SMS History</span>
+          <button class="abtn" id="refreshSmsLogBtn">&#x21BB; Refresh</button>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="atable">
+            <thead><tr><th>#</th><th>Date &amp; Time</th><th>Sent To</th><th>Recipients</th><th>Message</th><th>Status</th></tr></thead>
+            <tbody id="smsHistoryBody"><tr><td colspan="6" class="empty-row">No SMS sent yet.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <!-- SCHEDULE TAB -->
     <div class="a-section" id="atab-schedule">
       <div class="a-card">
@@ -4709,6 +4793,7 @@ function switchAdminTab(name, btn){
   if(name==='visits'){
     syncVisitsFromBackend(function(){ refreshAdminMetrics(); renderVisitsTab(); });
   }
+  if(name==='sms') initSmsTab();
   if(name==='schedule') renderScheduleTab();
 }
 
@@ -4815,7 +4900,7 @@ function renderMembersTable(){
   }
 
   if(!filtered.length){
-    setHTML('aMembersBody','<tr><td colspan="14" class="empty-row">No members found for this filter.</td></tr>');
+    setHTML('aMembersBody','<tr><td colspan="15" class="empty-row">No members found for this filter.</td></tr>');
     return;
   }
 
@@ -4848,7 +4933,7 @@ function renderMembersTable(){
     var tierTextColor=tierName==='Bronze'?'#7a4515':tierName==='Silver'?'#495057':tierName==='Gold'?'#856e00':'#374151';
 
     html+='<tr style="background:'+tierColor+';border-top:2px solid '+tierBorder+';border-bottom:1px solid '+tierBorder+'">';
-    html+='<td colspan="14" style="padding:10px 14px">';
+    html+='<td colspan="15" style="padding:10px 14px">';
     html+='<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">';
     html+='<span style="font-size:14px;font-weight:700;color:'+tierTextColor+'">'+tierIcon+' '+tierName+' Tier &nbsp;&mdash;&nbsp; '+grp.length+' member'+(grp.length!==1?'s':'')+' &nbsp;|&nbsp; '+grpActive+' active</span>';
     html+='<span style="font-size:12px;color:#6b7280">Balance held: <strong style="color:#0d1117">GHS '+grpBal.toFixed(2)+'</strong> &nbsp;&middot;&nbsp; Month earned: <strong style="color:var(--green)">GHS '+grpEarned.toFixed(2)+'</strong></span>';
@@ -4872,6 +4957,7 @@ function renderMembersTable(){
       html+='<td>'+rowNum+'</td>';
       html+='<td><strong>'+m.firstName+' '+m.lastName+'</strong><br><span style="font-size:11px;color:#9ca3af">'+m.email+'</span></td>';
       html+='<td>'+m.phone+'</td>';
+      html+='<td style="font-family:monospace;font-size:11.5px;white-space:nowrap">'+(m.ghanaCard||'<span style="color:#9ca3af;font-size:11px">—</span>')+'</td>';
       html+='<td>'+m.region+'</td>';
       html+='<td><span style="font-size:11px;font-weight:700;padding:2px 7px;border-radius:8px;background:'+tierColor+';color:'+tierTextColor+'">'+m.tier+'</span></td>';
       var sbCell=sb;
@@ -6734,7 +6820,8 @@ function renderProfilesTab(){
     if(q && !(
       (m.firstName+' '+m.lastName).toLowerCase().includes(q)||
       (m.phone||'').includes(q)||
-      (m.email||'').toLowerCase().includes(q)
+      (m.email||'').toLowerCase().includes(q)||
+      (m.ghanaCard||'').toLowerCase().includes(q)
     )) return false;
     if(gf!=='all' && (m.gender||'N/A')!==gf) return false;
     if(tf!=='all' && m.tier!==tf) return false;
@@ -6803,6 +6890,9 @@ function renderProfilesTab(){
     var rows=[
       ['&#x1F4DE; Phone', m.phone],
       ['&#x1F4E7; Email', m.email||'—'],
+      ['&#x1F1EC;&#x1F1ED; Ghana Card', m.ghanaCard
+        ? '<span style="font-family:monospace;font-size:12.5px;font-weight:700;color:var(--blue);background:#e3f2fd;padding:2px 8px;border-radius:6px">'+m.ghanaCard+'</span>'
+        : '<span style="color:#9ca3af;font-size:12px">Not provided</span>'],
       ['&#x1F4CD; Region', m.region||'—'],
       ['&#x1F9D1; Gender', genderIcon(m.gender||'')+' '+(m.gender||'Not specified')],
       ['&#x1F382; Age', m.age||'—'],
@@ -8338,6 +8428,295 @@ function showManualActivation(ref){
   });
   obs.observe(document.body,{childList:true,subtree:true});
 })();
+
+// ── SMS MODULE ────────────────────────────────────────
+
+function getSmsSettings(){try{return JSON.parse(localStorage.getItem('gop_sms_settings')||'{}');}catch(e){return {};}}
+function saveSmsSettings(v){try{localStorage.setItem('gop_sms_settings',JSON.stringify(v));}catch(e){}}
+function getSmsLog(){try{return JSON.parse(localStorage.getItem('gop_sms_log')||'[]');}catch(e){return [];}}
+function saveSmsLog(v){try{localStorage.setItem('gop_sms_log',JSON.stringify(v));}catch(e){}}
+
+function initSmsTab(){
+  // Load saved API settings into form
+  var s=getSmsSettings();
+  var keyEl=el('smsApiKey'); if(keyEl&&s.apiKey) keyEl.value=s.apiKey;
+  var sidEl=el('smsSenderId'); if(sidEl&&s.senderId) sidEl.value=s.senderId;
+
+  // Save settings button
+  var saveBtn=el('saveSmsApiBtn');
+  if(saveBtn&&!saveBtn._smsBound){
+    saveBtn._smsBound=true;
+    saveBtn.addEventListener('click',function(){
+      var apiKey=(val('smsApiKey')||'').trim();
+      var senderId=(val('smsSenderId')||'').trim();
+      if(!apiKey){setText('smsApiStatus','Please enter your Arkesel API key.');el('smsApiStatus').style.color='var(--red)';return;}
+      if(!senderId){setText('smsApiStatus','Please enter a Sender ID.');el('smsApiStatus').style.color='var(--red)';return;}
+      saveSmsSettings({apiKey:apiKey,senderId:senderId});
+      el('smsApiStatus').style.color='var(--green)';
+      setText('smsApiStatus','Settings saved successfully.');
+      setTimeout(function(){setText('smsApiStatus','');},3000);
+    });
+  }
+
+  // Recipient selector — show/hide custom phone field
+  var recipSel=el('smsRecipient');
+  if(recipSel&&!recipSel._smsBound){
+    recipSel._smsBound=true;
+    recipSel.addEventListener('change',function(){
+      var wrap=el('smsCustomPhoneWrap');
+      if(wrap) wrap.style.display=this.value==='custom'?'block':'none';
+      el('smsPreviewBox').style.display='none';
+    });
+  }
+
+  // Character counter
+  var msgTA=el('smsMessage');
+  if(msgTA&&!msgTA._smsBound){
+    msgTA._smsBound=true;
+    msgTA.addEventListener('input',function(){
+      var len=this.value.length;
+      var smsCount=Math.max(1,Math.ceil(len/160));
+      var countEl=el('smsCharCount');
+      if(countEl) countEl.textContent=len+' / '+(smsCount*160);
+      var hintEl=el('smsMsgHint');
+      if(hintEl) hintEl.textContent=smsCount+' SMS credit'+(smsCount>1?'s':'')+' per recipient ('+len+' chars).';
+      el('smsPreviewBox').style.display='none';
+    });
+  }
+
+  // Preview button
+  var prevBtn=el('smsPreviewBtn');
+  if(prevBtn&&!prevBtn._smsBound){
+    prevBtn._smsBound=true;
+    prevBtn.addEventListener('click',function(){
+      var msg=(val('smsMessage')||'').trim();
+      if(!msg){setText('smsSendStatus','Please type a message first.');el('smsSendStatus').style.color='var(--red)';return;}
+      var recipVal=val('smsRecipient');
+      var phones=getSmsRecipients(recipVal);
+      var toLabel=getSmsRecipientLabel(recipVal,phones.length);
+      el('smsPreviewTo').textContent=toLabel;
+      el('smsPreviewMsg').textContent=msg;
+      el('smsPreviewBox').style.display='block';
+      setText('smsSendStatus','');
+    });
+  }
+
+  // Send button
+  var sendBtn=el('smsSendBtn');
+  if(sendBtn&&!sendBtn._smsBound){
+    sendBtn._smsBound=true;
+    sendBtn.addEventListener('click',doSendSms);
+  }
+
+  // Refresh history button
+  var refBtn=el('refreshSmsLogBtn');
+  if(refBtn&&!refBtn._smsBound){
+    refBtn._smsBound=true;
+    refBtn.addEventListener('click',function(){
+      syncSmsLogFromFirebase(renderSmsHistory);
+    });
+  }
+
+  renderSmsHistory();
+}
+
+function getSmsRecipients(recipVal){
+  var members=getMembers();
+  var phones=[];
+  if(recipVal==='all'){
+    phones=members.filter(function(m){return m.status==='active'||m.status==='awaiting_verification';}).map(function(m){return m.phone;});
+  } else if(recipVal==='active'){
+    phones=members.filter(function(m){return m.status==='active';}).map(function(m){return m.phone;});
+  } else if(recipVal==='Bronze'||recipVal==='Silver'||recipVal==='Gold'){
+    phones=members.filter(function(m){return m.tier===recipVal&&(m.status==='active'||m.status==='awaiting_verification');}).map(function(m){return m.phone;});
+  } else if(recipVal==='custom'){
+    var cp=(val('smsCustomPhone')||'').trim();
+    if(cp) phones=[cp];
+  }
+  return phones;
+}
+
+function getSmsRecipientLabel(recipVal, count){
+  if(recipVal==='all') return 'All Members ('+count+')';
+  if(recipVal==='active') return 'Active Members ('+count+')';
+  if(recipVal==='Bronze'||recipVal==='Silver'||recipVal==='Gold') return recipVal+' Tier ('+count+')';
+  if(recipVal==='custom') return 'Custom: '+(val('smsCustomPhone')||'');
+  return count+' recipient(s)';
+}
+
+function doSendSms(){
+  var s=getSmsSettings();
+  if(!s.apiKey||!s.senderId){
+    setText('smsSendStatus','Please save your Arkesel API key and Sender ID first.');
+    el('smsSendStatus').style.color='var(--red)';
+    return;
+  }
+  var msg=(val('smsMessage')||'').trim();
+  if(!msg){setText('smsSendStatus','Please type a message.');el('smsSendStatus').style.color='var(--red)';return;}
+
+  var recipVal=val('smsRecipient');
+  var phones=getSmsRecipients(recipVal);
+
+  if(recipVal==='custom'){
+    var cp=(val('smsCustomPhone')||'').trim();
+    if(!cp||!/^0[2345679]\d{8}$/.test(cp)){
+      setText('smsSendStatus','Please enter a valid Ghanaian phone number.');
+      el('smsSendStatus').style.color='var(--red)';
+      return;
+    }
+  }
+
+  if(!phones.length){
+    setText('smsSendStatus','No recipients found for the selected group.');
+    el('smsSendStatus').style.color='var(--orange)';
+    return;
+  }
+
+  // Confirm before mass send
+  if(phones.length>1){
+    if(!confirm('Send SMS to '+phones.length+' recipient(s)?\n\nMessage:\n'+msg+'\n\nThis will use '+phones.length+' SMS credit(s) from your Arkesel account.')){
+      return;
+    }
+  }
+
+  var sendBtn=el('smsSendBtn');
+  if(sendBtn){sendBtn.disabled=true;sendBtn.textContent='Sending...';}
+  setText('smsSendStatus','');
+
+  var progressEl=el('smsSendProgress');
+  if(progressEl){progressEl.style.display='block';progressEl.innerHTML='<strong>Sending SMS...</strong><br>';}
+
+  var sent=0,failed=0,total=phones.length;
+  var logEntries=[];
+
+  function sendNext(i){
+    if(i>=total){
+      // Done
+      if(sendBtn){sendBtn.disabled=false;sendBtn.innerHTML='&#x1F4F2; Send SMS';}
+      var statusMsg='Done! '+sent+' sent, '+failed+' failed.';
+      setText('smsSendStatus',statusMsg);
+      el('smsSendStatus').style.color=failed>0?'var(--orange)':'var(--green)';
+      if(progressEl) progressEl.innerHTML+='<br><strong>'+statusMsg+'</strong>';
+
+      // Save to log
+      var logEntry={
+        id:'SMS'+Date.now(),
+        ts:new Date().toISOString(),
+        date:new Date().toLocaleDateString('en-GB'),
+        time:new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}),
+        recipientGroup:getSmsRecipientLabel(recipVal,total),
+        recipientCount:total,
+        message:msg,
+        sent:sent,
+        failed:failed,
+        senderId:s.senderId
+      };
+      var log=getSmsLog();
+      log.unshift(logEntry);
+      if(log.length>200) log=log.slice(0,200);
+      saveSmsLog(log);
+      syncSmsLogToFirebase();
+      renderSmsHistory();
+
+      // Clear message field
+      var msgTA=el('smsMessage');
+      if(msgTA) msgTA.value='';
+      setText('smsCharCount','0 / 160');
+      el('smsPreviewBox').style.display='none';
+      return;
+    }
+
+    var phone=phones[i];
+    // Convert 0XX to 233XX for Arkesel international format
+    var intlPhone=phone.replace(/^0/,'233');
+
+    // Arkesel API V1
+    var url='https://sms.arkesel.com/sms/api?action=send-sms'
+      +'&api_key='+encodeURIComponent(s.apiKey)
+      +'&to='+encodeURIComponent(intlPhone)
+      +'&from='+encodeURIComponent(s.senderId)
+      +'&sms='+encodeURIComponent(msg);
+
+    fetch(url,{method:'GET'})
+    .then(function(r){return r.json();})
+    .then(function(data){
+      if(data&&(data.status==='ok'||data.code==='ok'||data.message==='Sent'||data['response-code']==='00'||String(data.status).toLowerCase()==='ok')){
+        sent++;
+        if(progressEl) progressEl.innerHTML+='&#x2705; '+phone+'<br>';
+      } else {
+        failed++;
+        if(progressEl) progressEl.innerHTML+='&#x274C; '+phone+' — '+(data.message||data.status||'Error')+'<br>';
+      }
+      if(progressEl) progressEl.scrollTop=progressEl.scrollHeight;
+      sendNext(i+1);
+    })
+    .catch(function(err){
+      failed++;
+      if(progressEl) progressEl.innerHTML+='&#x274C; '+phone+' — Network error<br>';
+      if(progressEl) progressEl.scrollTop=progressEl.scrollHeight;
+      sendNext(i+1);
+    });
+  }
+
+  sendNext(0);
+}
+
+function renderSmsHistory(){
+  var log=getSmsLog();
+  var tbody=el('smsHistoryBody');
+  if(!tbody) return;
+  if(!log.length){tbody.innerHTML='<tr><td colspan="6" class="empty-row">No SMS sent yet.</td></tr>';return;}
+  var rows='';
+  log.forEach(function(entry,i){
+    var statusHtml='<span style="font-size:12px;font-weight:600;color:var(--green)">'+entry.sent+' sent</span>'
+      +(entry.failed?' <span style="font-size:12px;color:var(--red)">'+entry.failed+' failed</span>':'');
+    var shortMsg=entry.message.length>60?entry.message.substring(0,60)+'…':entry.message;
+    rows+='<tr>'
+      +'<td style="font-size:12px;color:#9ca3af">'+(i+1)+'</td>'
+      +'<td style="font-size:12px"><strong>'+entry.date+'</strong><br><span style="color:#9ca3af">'+entry.time+'</span></td>'
+      +'<td style="font-size:12.5px;font-weight:600">'+entry.recipientGroup+'</td>'
+      +'<td style="text-align:center;font-size:13.5px;font-weight:700;color:var(--green)">'+entry.recipientCount+'</td>'
+      +'<td style="font-size:12px;color:#374151;max-width:220px;word-break:break-word">'+shortMsg+'</td>'
+      +'<td>'+statusHtml+'</td>'
+      +'</tr>';
+  });
+  tbody.innerHTML=rows;
+}
+
+// Sync SMS log to Firebase
+function syncSmsLogToFirebase(){
+  try{
+    var log=getSmsLog();
+    var obj={};
+    log.forEach(function(e){if(e&&e.id) obj[e.id.replace(/[^a-zA-Z0-9_-]/g,'_')]=e;});
+    fetch(FB_URL+'/sms_log.json',{
+      method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(obj)
+    }).catch(function(){});
+  }catch(e){}
+}
+
+// Pull SMS log from Firebase and merge into localStorage
+function syncSmsLogFromFirebase(callback){
+  try{
+    fetch(FB_URL+'/sms_log.json')
+    .then(function(r){return r.ok?r.json():null;})
+    .then(function(data){
+      if(!data||typeof data!=='object'){if(callback)callback();return;}
+      var remote=Object.values(data).filter(Boolean);
+      if(!remote.length){if(callback)callback();return;}
+      var local=getSmsLog();
+      var ids={};
+      local.forEach(function(e){if(e&&e.id) ids[e.id]=true;});
+      remote.forEach(function(e){if(e&&e.id&&!ids[e.id]){local.push(e);}});
+      local.sort(function(a,b){return (b.ts||'').localeCompare(a.ts||'');});
+      if(local.length>200) local=local.slice(0,200);
+      saveSmsLog(local);
+      if(callback) callback();
+    }).catch(function(){if(callback)callback();});
+  }catch(e){if(callback)callback();}
+}
 </script>
 <script src="https://replit-cdn.com/replit-pill/replit-pill.global.js" data-repl-id="f115ee18-b034-4c4c-b0c1-5be7feaca850"></script></body>
 </html>
