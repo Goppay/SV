@@ -1667,7 +1667,7 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
             <button class="abtn" id="refreshScheduleBtn">&#x21BB; Refresh</button>
           </div>
         </div>
-        <p style="font-size:13px;color:#6b7280;margin-bottom:16px;line-height:1.6">Set each day's survey and poll eligibility for the selected tier. <strong>Yes</strong> = members of that tier are eligible on that day. <strong>No</strong> = not eligible. Changes are saved per tier.</p>
+        <p style="font-size:13px;color:#6b7280;margin-bottom:16px;line-height:1.6">Set each day's content eligibility for the selected tier. <strong>Yes</strong> = members of that tier can access that content type on this day. <strong>No</strong> = not available. Changes are saved per tier and synced to all devices.</p>
 
         <!-- Schedule Grid -->
         <div style="overflow-x:auto">
@@ -1675,8 +1675,11 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
             <thead>
               <tr>
                 <th>Day</th>
-                <th colspan="2" style="text-align:center;background:#f0fdf4;color:var(--green)">Survey</th>
-                <th colspan="2" style="text-align:center;background:#eff6ff;color:#1d4ed8">Poll</th>
+                <th colspan="2" style="text-align:center;background:#f0fdf4;color:var(--green)">&#x1F4CB; Survey</th>
+                <th colspan="2" style="text-align:center;background:#eff6ff;color:#1d4ed8">&#x1F5F3; Poll</th>
+                <th colspan="2" style="text-align:center;background:#fffbeb;color:#b45309">&#x1F4E2; Ads</th>
+                <th colspan="2" style="text-align:center;background:#fdf4ff;color:#7c3aed">&#x1F4F1; Pages</th>
+                <th colspan="2" style="text-align:center;background:#fff1f2;color:#be123c">&#x1F3A5; Videos</th>
               </tr>
               <tr>
                 <th></th>
@@ -1684,6 +1687,12 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
                 <th style="background:#f0fdf4;color:var(--green);font-size:11px">No</th>
                 <th style="background:#eff6ff;color:#1d4ed8;font-size:11px">Yes</th>
                 <th style="background:#eff6ff;color:#1d4ed8;font-size:11px">No</th>
+                <th style="background:#fffbeb;color:#b45309;font-size:11px">Yes</th>
+                <th style="background:#fffbeb;color:#b45309;font-size:11px">No</th>
+                <th style="background:#fdf4ff;color:#7c3aed;font-size:11px">Yes</th>
+                <th style="background:#fdf4ff;color:#7c3aed;font-size:11px">No</th>
+                <th style="background:#fff1f2;color:#be123c;font-size:11px">Yes</th>
+                <th style="background:#fff1f2;color:#be123c;font-size:11px">No</th>
               </tr>
             </thead>
             <tbody id="scheduleTableBody"></tbody>
@@ -3644,6 +3653,16 @@ function answerPoll(pid, optIdx, btn){
 
 // ── VIDEOS ────────────────────────────────────────────
 function renderVideoList(member){
+  // Schedule gate — check if videos are enabled for this tier today
+  var todaySchedVid=getTodaySchedule(member.tier);
+  if(!todaySchedVid.video){
+    setHTML('videoListWrap','<div style="text-align:center;padding:28px 16px;background:#fff1f2;border:1px solid #fecdd3;border-radius:10px;margin-top:8px">'
+      +'<div style="font-size:28px;margin-bottom:8px">&#x1F3A5;</div>'
+      +'<div style="font-size:15px;font-weight:700;color:#9f1239;margin-bottom:4px">Videos not available today</div>'
+      +'<div style="font-size:13px;color:#be123c">Your tier\'s schedule doesn\'t include Videos today. Come back another day!</div>'
+      +'</div>');
+    return;
+  }
   var videos=getVideos().filter(function(v){return v.active;});
   var html='';
   if(!videos.length){html='<p style="color:var(--text-muted);font-size:13.5px;text-align:center;padding:18px">No videos available right now.</p>';setHTML('videoListWrap',html);return;}
@@ -5790,6 +5809,10 @@ function renderAdminAds(){
 // Show active ads as a small notification strip at top of dashboard (no earn — just awareness)
 function renderDashAds(member){
   // The earning version is in the Ads tab — this just shows a subtle strip if ads exist
+  // Hide strip entirely if ads are not scheduled for this tier today
+  var el3=el('dashAdsWrap');
+  if(!el3) return;
+  if(!getTodaySchedule(member.tier).ad){el3.innerHTML='';return;}
   var ads=getAds().filter(function(ad){
     if(!ad.active) return false;
     if(ad.tier!=='all' && ad.tier!==member.tier) return false;
@@ -5798,8 +5821,6 @@ function renderDashAds(member){
     if(ad.end && now>ad.end) return false;
     return true;
   });
-  var el3=el('dashAdsWrap');
-  if(!el3) return;
   if(!ads.length){el3.innerHTML='';return;}
   // Show a small badge nudging to the Ads tab
   el3.innerHTML='<div style="background:var(--gold-pale);border:1px solid var(--gold-dark);border-radius:9px;padding:8px 14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:13px;color:#6b5200">'
@@ -5817,6 +5838,8 @@ function switchDashTabById(name){
 function renderDashPages(member){
   var el3=el('dashPagesWrap');
   if(!el3) return;
+  // Hide strip entirely if pages are not scheduled for this tier today
+  if(!getTodaySchedule(member.tier).page){el3.innerHTML='';return;}
   var pages=getPages().filter(function(p){return p.active;});
   var completed=member.completedPages||[];
   var unclaimed=pages.filter(function(p){return completed.indexOf(p.id)<0;});
@@ -5872,6 +5895,24 @@ document.addEventListener('visibilitychange',function(){
 });
 
 function renderMemberAdsTab(member){
+  // Schedule gate — check if ads are enabled for this tier today
+  var todaySched=getTodaySchedule(member.tier);
+  if(!todaySched.ad){
+    var wrap0=el('memberAdsList');
+    if(wrap0) wrap0.innerHTML='<div style="text-align:center;padding:28px 16px;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;margin-top:8px">'
+      +'<div style="font-size:28px;margin-bottom:8px">&#x1F4E2;</div>'
+      +'<div style="font-size:15px;font-weight:700;color:#92400e;margin-bottom:4px">Ads not available today</div>'
+      +'<div style="font-size:13px;color:#b45309">Your tier\'s ad schedule does not include today. Check back on another day!</div>'
+      +'</div>';
+    // Still update quota display
+    var adDone0=member.dailyAdDate===today()?member.dailyAdCount||0:0;
+    var adLim0=TIER_ADS[member.tier]||5;
+    setText('adLimitBadge','Daily limit: '+adLim0+' ads ('+member.tier+' tier)');
+    setText('adQuotaText',adDone0+' / '+adLim0);
+    var fill0=el('adQuotaFill');
+    if(fill0) fill0.style.width=Math.min(100,Math.round(adDone0/adLim0*100))+'%';
+    return;
+  }
   var ads=getAds().filter(function(ad){
     if(!ad.active) return false;
     if(ad.tier!=='all' && ad.tier!==member.tier) return false;
@@ -7057,9 +7098,19 @@ function openPageLink(pageId, url){
 }
 
 function renderMemberPages(member){
-  var pages=getPages().filter(function(p){return p.active;});
   var el2=el('memberPagesList');
   if(!el2) return;
+  // Schedule gate — check if pages are enabled for this tier today
+  var todaySchedPg=getTodaySchedule(member.tier);
+  if(!todaySchedPg.page){
+    el2.innerHTML='<div style="text-align:center;padding:28px 16px;background:#fdf4ff;border:1px solid #e9d5ff;border-radius:10px;margin-top:8px">'
+      +'<div style="font-size:28px;margin-bottom:8px">&#x1F4F1;</div>'
+      +'<div style="font-size:15px;font-weight:700;color:#5b21b6;margin-bottom:4px">Pages not available today</div>'
+      +'<div style="font-size:13px;color:#7c3aed">Your tier\'s schedule doesn\'t include Pages today. Come back on another day!</div>'
+      +'</div>';
+    return;
+  }
+  var pages=getPages().filter(function(p){return p.active;});
   var completed=member.completedPages||[];
   var badge=el('pagesEarnBadge');
   if(badge) setText('pagesEarnBadge',completed.length+' followed &middot; '+pages.length+' available');
@@ -7553,6 +7604,22 @@ var DAYS=[
   {key:'Sun',label:'Sunday'}
 ];
 
+// Returns the schedule settings for the member's tier today.
+// Defaults to all enabled (true) so that if no schedule is saved yet nothing is blocked.
+function getTodaySchedule(tier){
+  var dayKeys=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  var todayKey=dayKeys[new Date().getDay()];
+  var schedule=getSchedule();
+  var daySched=(schedule[tier]||{})[todayKey]||{};
+  return {
+    survey : daySched.survey  !== undefined ? daySched.survey  : true,
+    poll   : daySched.poll    !== undefined ? daySched.poll    : true,
+    ad     : daySched.ad      !== undefined ? daySched.ad      : true,
+    page   : daySched.page    !== undefined ? daySched.page    : true,
+    video  : daySched.video   !== undefined ? daySched.video   : true
+  };
+}
+
 function renderScheduleTab(){
   var tierEl=el('scheduleTierFilter');
   var tier=tierEl?tierEl.value:'Bronze';
@@ -7564,26 +7631,29 @@ function renderScheduleTab(){
   if(!tbody) return;
   var html='';
   DAYS.forEach(function(d){
-    var surveyVal=tierSched[d.key]&&tierSched[d.key].survey!==undefined?tierSched[d.key].survey:true;
-    var pollVal=tierSched[d.key]&&tierSched[d.key].poll!==undefined?tierSched[d.key].poll:true;
+    var ds=tierSched[d.key]||{};
+    var surveyVal=ds.survey!==undefined?ds.survey:true;
+    var pollVal=ds.poll!==undefined?ds.poll:true;
+    var adVal=ds.ad!==undefined?ds.ad:true;
+    var pageVal=ds.page!==undefined?ds.page:true;
+    var videoVal=ds.video!==undefined?ds.video:true;
     html+='<tr>';
     html+='<td style="font-weight:700;min-width:90px">'+d.label+'</td>';
-    // Survey Yes
-    html+='<td style="text-align:center;background:#f8fffe">';
-    html+='<label style="cursor:pointer"><input type="radio" name="survey_'+d.key+'" value="yes"'+(surveyVal?' checked':'')+' style="cursor:pointer;width:16px;height:16px;accent-color:var(--green)"/></label>';
-    html+='</td>';
-    // Survey No
-    html+='<td style="text-align:center;background:#f8fffe">';
-    html+='<label style="cursor:pointer"><input type="radio" name="survey_'+d.key+'" value="no"'+(!surveyVal?' checked':'')+' style="cursor:pointer;width:16px;height:16px;accent-color:var(--red)"/></label>';
-    html+='</td>';
-    // Poll Yes
-    html+='<td style="text-align:center;background:#f0f7ff">';
-    html+='<label style="cursor:pointer"><input type="radio" name="poll_'+d.key+'" value="yes"'+(pollVal?' checked':'')+' style="cursor:pointer;width:16px;height:16px;accent-color:#1d4ed8"/></label>';
-    html+='</td>';
-    // Poll No
-    html+='<td style="text-align:center;background:#f0f7ff">';
-    html+='<label style="cursor:pointer"><input type="radio" name="poll_'+d.key+'" value="no"'+(!pollVal?' checked':'')+' style="cursor:pointer;width:16px;height:16px;accent-color:var(--red)"/></label>';
-    html+='</td>';
+    // Survey Yes/No
+    html+='<td style="text-align:center;background:#f8fffe"><label style="cursor:pointer"><input type="radio" name="survey_'+d.key+'" value="yes"'+(surveyVal?' checked':'')+' style="cursor:pointer;width:16px;height:16px;accent-color:var(--green)"/></label></td>';
+    html+='<td style="text-align:center;background:#f8fffe"><label style="cursor:pointer"><input type="radio" name="survey_'+d.key+'" value="no"'+(!surveyVal?' checked':'')+' style="cursor:pointer;width:16px;height:16px;accent-color:var(--red)"/></label></td>';
+    // Poll Yes/No
+    html+='<td style="text-align:center;background:#f0f7ff"><label style="cursor:pointer"><input type="radio" name="poll_'+d.key+'" value="yes"'+(pollVal?' checked':'')+' style="cursor:pointer;width:16px;height:16px;accent-color:#1d4ed8"/></label></td>';
+    html+='<td style="text-align:center;background:#f0f7ff"><label style="cursor:pointer"><input type="radio" name="poll_'+d.key+'" value="no"'+(!pollVal?' checked':'')+' style="cursor:pointer;width:16px;height:16px;accent-color:var(--red)"/></label></td>';
+    // Ads Yes/No
+    html+='<td style="text-align:center;background:#fffef5"><label style="cursor:pointer"><input type="radio" name="ad_'+d.key+'" value="yes"'+(adVal?' checked':'')+' style="cursor:pointer;width:16px;height:16px;accent-color:#b45309"/></label></td>';
+    html+='<td style="text-align:center;background:#fffef5"><label style="cursor:pointer"><input type="radio" name="ad_'+d.key+'" value="no"'+(!adVal?' checked':'')+' style="cursor:pointer;width:16px;height:16px;accent-color:var(--red)"/></label></td>';
+    // Pages Yes/No
+    html+='<td style="text-align:center;background:#fdf8ff"><label style="cursor:pointer"><input type="radio" name="page_'+d.key+'" value="yes"'+(pageVal?' checked':'')+' style="cursor:pointer;width:16px;height:16px;accent-color:#7c3aed"/></label></td>';
+    html+='<td style="text-align:center;background:#fdf8ff"><label style="cursor:pointer"><input type="radio" name="page_'+d.key+'" value="no"'+(!pageVal?' checked':'')+' style="cursor:pointer;width:16px;height:16px;accent-color:var(--red)"/></label></td>';
+    // Videos Yes/No
+    html+='<td style="text-align:center;background:#fff5f6"><label style="cursor:pointer"><input type="radio" name="video_'+d.key+'" value="yes"'+(videoVal?' checked':'')+' style="cursor:pointer;width:16px;height:16px;accent-color:#be123c"/></label></td>';
+    html+='<td style="text-align:center;background:#fff5f6"><label style="cursor:pointer"><input type="radio" name="video_'+d.key+'" value="no"'+(!videoVal?' checked':'')+' style="cursor:pointer;width:16px;height:16px;accent-color:var(--red)"/></label></td>';
     html+='</tr>';
   });
   tbody.innerHTML=html;
@@ -7623,9 +7693,15 @@ function saveScheduleSettings(){
   DAYS.forEach(function(d){
     var surveyYes=document.querySelector('input[name="survey_'+d.key+'"]:checked');
     var pollYes=document.querySelector('input[name="poll_'+d.key+'"]:checked');
+    var adYes=document.querySelector('input[name="ad_'+d.key+'"]:checked');
+    var pageYes=document.querySelector('input[name="page_'+d.key+'"]:checked');
+    var videoYes=document.querySelector('input[name="video_'+d.key+'"]:checked');
     schedule[tier][d.key]={
       survey:surveyYes?surveyYes.value==='yes':true,
-      poll:pollYes?pollYes.value==='yes':true
+      poll:pollYes?pollYes.value==='yes':true,
+      ad:adYes?adYes.value==='yes':true,
+      page:pageYes?pageYes.value==='yes':true,
+      video:videoYes?videoYes.value==='yes':true
     };
   });
   saveSchedule(schedule); syncScheduleToFirebase();
