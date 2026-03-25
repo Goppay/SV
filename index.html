@@ -2084,21 +2084,35 @@ function syncVisitsFromBackend(callback){
     fetch(FB_URL+'/visits.json')
     .then(function(r){return r.ok?r.json():null;})
     .then(function(data){
-      if(!data||typeof data!=='object'){if(callback)callback();return;}
-      var remote=Object.values(data).filter(Boolean);
-      if(!remote.length){if(callback)callback();return;}
       var local=getVisits();
-      var ids={};
-      local.forEach(function(v){ids[v.id]=true;});
-      var added=false;
-      remote.forEach(function(rv){
-        if(rv&&rv.id&&!ids[rv.id]){local.push(rv);added=true;}
-      });
-      if(added){
-        local.sort(function(a,b){return (a.ts||'').localeCompare(b.ts||'');});
-        if(local.length>2000) local=local.slice(-2000);
-        saveVisits(local);
+      var remoteIds={};
+      if(data&&typeof data==='object'){
+        var remote=Object.values(data).filter(Boolean);
+        remote.forEach(function(rv){if(rv&&rv.id) remoteIds[rv.id]=true;});
+        // Pull: add any remote visits not in local
+        var localIds={};
+        local.forEach(function(v){if(v&&v.id) localIds[v.id]=true;});
+        var changed=false;
+        remote.forEach(function(rv){
+          if(rv&&rv.id&&!localIds[rv.id]){local.push(rv);changed=true;}
+        });
+        if(changed){
+          local.sort(function(a,b){return (a.ts||'').localeCompare(b.ts||'');});
+          if(local.length>2000) local=local.slice(-2000);
+          saveVisits(local);
+        }
       }
+      // Push: upload any local visits that Firebase does not have yet
+      // (handles pagehide failures on mobile — makes sync bidirectional)
+      local.forEach(function(v){
+        if(!v||!v.id||remoteIds[v.id]) return;
+        var key=v.id.replace(/[^a-zA-Z0-9_-]/g,'_');
+        fetch(FB_URL+'/visits/'+key+'.json',{
+          method:'PUT',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify(v)
+        }).catch(function(){});
+      });
       if(callback) callback();
     }).catch(function(){if(callback)callback();});
   }catch(e){if(callback)callback();}
@@ -2347,7 +2361,7 @@ function syncScheduleFromFirebase(cb){
 // Pull ALL admin data from Firebase in parallel — called on admin dashboard open
 function syncAllAdminDataFromFirebase(callback){
   _fbSyncing=true; // block auto-pushes while pulling
-  var pending=15; // increased to include tombstones + deleted list
+  var pending=17; // includes SMS log + SMS settings
   function done(){
     if(--pending<=0){
       _fbSyncing=false; // re-enable pushes
@@ -2355,7 +2369,7 @@ function syncAllAdminDataFromFirebase(callback){
     }
   }
   syncMembersFromBackend(done);
-  syncVisitsFromBackend(done);     // visits included here so members+visits arrive together
+  syncVisitsFromBackend(done);       // visits included here so members+visits arrive together
   syncWithdrawalsFromFirebase(done);
   syncSurveysFromFirebase(done);
   syncPollsFromFirebase(done);
@@ -2369,6 +2383,8 @@ function syncAllAdminDataFromFirebase(callback){
   syncScheduleFromFirebase(done);
   syncTombstonesFromFirebase(done);  // ensure deleted-member block list syncs across devices
   syncDeletedFromFirebase(done);     // ensure deleted-ID blacklist syncs across devices
+  syncSmsLogFromFirebase(done);      // restore SMS history on any device/incognito
+  syncSmsSettingsFromFirebase(done); // restore API key + Sender ID on any device/incognito
 }
 
 // Push ALL local content data to Firebase (used by Upload button for initial seed)
@@ -8433,7 +8449,32 @@ function showManualActivation(ref){
 // ── SMS MODULE ────────────────────────────────────────
 
 function getSmsSettings(){try{return JSON.parse(localStorage.getItem('gop_sms_settings')||'{}');}catch(e){return {};}}
-function saveSmsSettings(v){try{localStorage.setItem('gop_sms_settings',JSON.stringify(v));}catch(e){}}
+function saveSmsSettings(v){
+  try{localStorage.setItem('gop_sms_settings',JSON.stringify(v));}catch(e){}
+  // Always push to Firebase so other admin devices/incognito get the settings
+  try{
+    fetch(FB_URL+'/sms_settings.json',{
+      method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(v)
+    }).catch(function(){});
+  }catch(e){}
+}
+function syncSmsSettingsFromFirebase(callback){
+  try{
+    fetch(FB_URL+'/sms_settings.json')
+    .then(function(r){return r.ok?r.json():null;})
+    .then(function(data){
+      if(data&&typeof data==='object'&&(data.apiKey||data.senderId)){
+        // Only overwrite local if remote has actual values
+        var local=getSmsSettings();
+        var merged={apiKey:data.apiKey||local.apiKey||'',senderId:data.senderId||local.senderId||''};
+        try{localStorage.setItem('gop_sms_settings',JSON.stringify(merged));}catch(e){}
+      }
+      if(callback) callback();
+    }).catch(function(){if(callback)callback();});
+  }catch(e){if(callback)callback();}
+}
 function getSmsLog(){try{return JSON.parse(localStorage.getItem('gop_sms_log')||'[]');}catch(e){return [];}}
 function saveSmsLog(v){try{localStorage.setItem('gop_sms_log',JSON.stringify(v));}catch(e){}}
 
