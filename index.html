@@ -3020,13 +3020,17 @@ function doLogin(){
   var pass  = val('loginPassword');
   hideErr('loginError');
   if(phone===ADMIN_PHONE && pass===ADMIN_PASS){
-    closeLoginModal(); currentUser={role:'superadmin',name:'Super Admin',phone:ADMIN_PHONE}; saveSession(); openAdminDashboard(); startIdleTracking(); return;
+    closeLoginModal(); currentUser={role:'superadmin',name:'Super Admin',phone:ADMIN_PHONE}; saveSession();
+    cancelSessionVisitIfAdmin(); // remove any visit recorded before we knew this was an admin
+    openAdminDashboard(); startIdleTracking(); return;
   }
   // Check sub-admins
   var subs=getSubAdmins();
   var sub=subs.find(function(s){return s.phone===phone && s.password===pass && s.active;});
   if(sub){
-    closeLoginModal(); currentUser={role:'subadmin',name:sub.name,phone:sub.phone,id:sub.id}; saveSession(); openAdminDashboard(); startIdleTracking(); return;
+    closeLoginModal(); currentUser={role:'subadmin',name:sub.name,phone:sub.phone,id:sub.id}; saveSession();
+    cancelSessionVisitIfAdmin(); // remove any visit recorded before we knew this was a sub-admin
+    openAdminDashboard(); startIdleTracking(); return;
   }
   var m = getMembers().find(function(x){return x.phone===phone && x.password===pass;});
   if(!m){
@@ -7418,8 +7422,29 @@ function trackVisit(){
   if(visits.length>=2000) visits=visits.slice(-1999);
   visits.push(visit);
   saveVisits(visits);
+  // Remember this visit's ID so we can retract it if the user turns out to be admin
+  try{sessionStorage.setItem('gop_visit_id', visit.id);}catch(e){}
   // Sync to backend so admin sees visits from all devices
   syncVisitToBackend(visit);
+}
+
+// Retroactively remove a visit recorded before we knew the user was an admin.
+// Called right after a successful admin / sub-admin login.
+function cancelSessionVisitIfAdmin(){
+  var vid;
+  try{ vid=sessionStorage.getItem('gop_visit_id'); }catch(e){}
+  if(!vid) return;
+  // Remove from localStorage
+  var remaining=getVisits().filter(function(v){return v.id!==vid;});
+  saveVisits(remaining);
+  // Delete the individual visit record from Firebase
+  try{
+    var key=vid.replace(/[^a-zA-Z0-9_-]/g,'_');
+    fetch(FB_URL+'/visits/'+key+'.json',{method:'DELETE'}).catch(function(){});
+  }catch(e){}
+  // Clear the flags so this session no longer counts
+  try{sessionStorage.removeItem('gop_visit_id');}catch(e){}
+  try{sessionStorage.removeItem('gop_visited');}catch(e){}
 }
 
 function renderVisitsTab(){
