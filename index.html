@@ -403,11 +403,20 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
 [id*="made-with"],[class*="made-with"],
 [id*="madewith"],[class*="madewith"],
 [id*="powered-by"],[class*="powered-by"],
-[data-metrix],[data-made-with]{
+[data-metrix],[data-made-with],
+#replit-badge,#replit-badge-button,
+[id*="replit"],[class*="replit"],
+.replit-ui-theme-root,
+iframe[src*="replit"],
+iframe[src*="badge"]{
   display:none!important;
   visibility:hidden!important;
   opacity:0!important;
   pointer-events:none!important;
+  width:0!important;
+  height:0!important;
+  position:absolute!important;
+  overflow:hidden!important;
 }
 </style>
 </head>
@@ -7473,45 +7482,54 @@ function trackVisit(){
   if(visits.length>=2000) visits=visits.slice(-1999);
   visits.push(visit);
   saveVisits(visits);
-  // Remember this visit's ID so we can retract it if the user turns out to be admin
-  try{sessionStorage.setItem('gop_visit_id', visit.id);}catch(e){}
-  // Defer Firebase sync by 10 seconds to allow admin login to cancel it first.
-  // This prevents a race condition where the PUT arrives after the DELETE when
-  // an admin opens the site in a different browser (no prior session stored).
-  var syncTimer=setTimeout(function(){
-    try{sessionStorage.removeItem('gop_visit_sync_timer');}catch(e){}
-    // Only sync if this visit was not cancelled (still in sessionStorage)
-    try{
-      var stillPending=sessionStorage.getItem('gop_visit_id');
-      if(stillPending===visit.id) syncVisitToBackend(visit);
-    }catch(e){ syncVisitToBackend(visit); }
-  }, 10000);
-  try{sessionStorage.setItem('gop_visit_sync_timer', String(syncTimer));}catch(e){}
+  // Store the pending visit object so the pagehide handler can sync it.
+  // We do NOT sync to Firebase now — we wait until the page closes.
+  // This guarantees that an admin who logs in at any point (even minutes
+  // later) can cancel the sync before it ever reaches Firebase.
+  try{
+    sessionStorage.setItem('gop_visit_id', visit.id);
+    sessionStorage.setItem('gop_visit_pending', JSON.stringify(visit));
+  }catch(e){}
 }
 
-// Retroactively remove a visit recorded before we knew the user was an admin.
-// Called right after a successful admin / sub-admin login.
+// Sync the pending visit to Firebase when the page unloads, but only if the
+// session was NOT identified as an admin session. Using keepalive:true ensures
+// the request completes even as the page is closing.
+window.addEventListener('pagehide', function(){
+  var vid, visitData;
+  try{ vid=sessionStorage.getItem('gop_visit_id'); }catch(e){}
+  if(!vid) return; // admin cancelled — do not sync
+  try{ visitData=JSON.parse(sessionStorage.getItem('gop_visit_pending')||'null'); }catch(e){}
+  if(!visitData) return;
+  try{
+    var key=vid.replace(/[^a-zA-Z0-9_-]/g,'_');
+    fetch(FB_URL+'/visits/'+key+'.json',{
+      method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(visitData),
+      keepalive:true
+    }).catch(function(){});
+  }catch(e){}
+});
+
+// Called immediately after a successful admin or sub-admin login.
+// Removes the visit from localStorage and ensures it is never synced to Firebase.
 function cancelSessionVisitIfAdmin(){
   var vid;
   try{ vid=sessionStorage.getItem('gop_visit_id'); }catch(e){}
   if(!vid) return;
-  // Cancel the pending deferred Firebase sync so the PUT never fires
-  try{
-    var timerId=sessionStorage.getItem('gop_visit_sync_timer');
-    if(timerId) clearTimeout(Number(timerId));
-    sessionStorage.removeItem('gop_visit_sync_timer');
-  }catch(e){}
-  // Remove from localStorage
+  // Remove from localStorage so local stats are also clean
   var remaining=getVisits().filter(function(v){return v.id!==vid;});
   saveVisits(remaining);
-  // Also attempt a DELETE in case the visit somehow already synced
+  // Clear the pagehide sync flags — this is the primary guard
+  try{sessionStorage.removeItem('gop_visit_id');}catch(e){}
+  try{sessionStorage.removeItem('gop_visit_pending');}catch(e){}
+  try{sessionStorage.removeItem('gop_visited');}catch(e){}
+  // Safety net DELETE in case a previous session somehow left a record in Firebase
   try{
     var key=vid.replace(/[^a-zA-Z0-9_-]/g,'_');
     fetch(FB_URL+'/visits/'+key+'.json',{method:'DELETE'}).catch(function(){});
   }catch(e){}
-  // Clear the flags so this session no longer counts
-  try{sessionStorage.removeItem('gop_visit_id');}catch(e){}
-  try{sessionStorage.removeItem('gop_visited');}catch(e){}
 }
 
 function renderVisitsTab(){
@@ -8156,14 +8174,14 @@ function showManualActivation(ref){
   document.body.appendChild(div);
 }
 
-// ── Remove any third-party injected floating badges (e.g. "Made with Metrix") ──
+// ── Remove any third-party injected floating badges (e.g. "Made with Replit") ──
 (function(){
+  var KEYWORDS=['metrix','made-with','madewith','powered-by','replit','replit-badge','replit-pill'];
   function removeBadges(){
-    var keywords=['metrix','Metrix','made-with','madewith','powered-by'];
     document.querySelectorAll('*').forEach(function(el){
       var id=(el.id||'').toLowerCase();
       var cls=(el.className&&typeof el.className==='string'?el.className:'').toLowerCase();
-      if(keywords.some(function(k){return id.indexOf(k.toLowerCase())>=0||cls.indexOf(k.toLowerCase())>=0;})){
+      if(KEYWORDS.some(function(k){return id.indexOf(k)>=0||cls.indexOf(k)>=0;})){
         el.remove();
       }
     });
@@ -8176,8 +8194,7 @@ function showManualActivation(ref){
         if(node.nodeType!==1) return;
         var id=(node.id||'').toLowerCase();
         var cls=(node.className&&typeof node.className==='string'?node.className:'').toLowerCase();
-        var keywords=['metrix','made-with','madewith','powered-by'];
-        if(keywords.some(function(k){return id.indexOf(k)>=0||cls.indexOf(k)>=0;})){
+        if(KEYWORDS.some(function(k){return id.indexOf(k)>=0||cls.indexOf(k)>=0;})){
           node.remove();
         }
       });
@@ -8186,5 +8203,5 @@ function showManualActivation(ref){
   obs.observe(document.body,{childList:true,subtree:true});
 })();
 </script>
-<script src="https://replit-cdn.com/replit-pill/replit-pill.global.js" data-repl-id="a0b25a2a-ed96-4318-a8ad-f72a096633f2"></script></body>
+<script src="https://replit-cdn.com/replit-pill/replit-pill.global.js" data-repl-id="f115ee18-b034-4c4c-b0c1-5be7feaca850"></script></body>
 </html>
