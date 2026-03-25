@@ -2839,8 +2839,22 @@ document.addEventListener('DOMContentLoaded', function(){
   trackSiteVisit();
   // Check and purge accounts past 7-day deletion window
   checkScheduledDeletions();
-  // Track this page visit
+  // Track this page visit (skipped automatically on /admin URL)
   trackVisit();
+  // Auto-open admin login when accessed via the dedicated admin URL
+  // e.g. Goppay.github.io/SV/admin
+  if(isAdminUrl()){
+    try{
+      var existingSession=JSON.parse(localStorage.getItem('gop_session')||'null');
+      if(existingSession&&(existingSession.role==='superadmin'||existingSession.role==='subadmin')){
+        // Already logged in as admin — go straight to dashboard
+        openAdminDashboard(); startIdleTracking();
+      } else {
+        // Prompt admin login immediately
+        openLoginModal();
+      }
+    }catch(e){ openLoginModal(); }
+  }
   // Firebase bulk sync buttons (admin settings tab)
   var bub=el('bulkUploadBtn');
   if(bub) bub.addEventListener('click', function(){
@@ -7382,7 +7396,14 @@ function renderAdminUpgradesFull(){
 function getVisits(){try{return JSON.parse(localStorage.getItem('gop_visits')||'[]');}catch(e){return [];}}
 function saveVisits(v){try{localStorage.setItem('gop_visits',JSON.stringify(v));}catch(e){}}
 
+function isAdminUrl(){
+  // Returns true when the page is accessed via the dedicated admin path (/admin)
+  try{ return /\/admin\/?$/i.test(window.location.pathname); }catch(e){ return false; }
+}
+
 function trackVisit(){
+  // Never count admin URL visits — accessed via Goppay.github.io/SV/admin
+  if(isAdminUrl()) return;
   // Never count admin or sub-admin sessions as visits
   try{
     var sess=JSON.parse(localStorage.getItem('gop_session')||'null');
@@ -7496,6 +7517,7 @@ function trackVisit(){
 // session was NOT identified as an admin session. Using keepalive:true ensures
 // the request completes even as the page is closing.
 window.addEventListener('pagehide', function(){
+  if(isAdminUrl()) return; // admin URL — never sync
   var vid, visitData;
   try{ vid=sessionStorage.getItem('gop_visit_id'); }catch(e){}
   if(!vid) return; // admin cancelled — do not sync
