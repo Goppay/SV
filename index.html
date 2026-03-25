@@ -1711,8 +1711,8 @@ iframe[src*="badge"]{
           </select>
         </div>
         <div class="fg" id="smsCustomPhoneWrap" style="display:none">
-          <label>Phone Number <span style="font-size:11px;color:#9ca3af">(Ghanaian MoMo number e.g. 0241234567)</span></label>
-          <input type="tel" id="smsCustomPhone" placeholder="e.g. 0241234567" inputmode="numeric" maxlength="10"/>
+          <label>Phone Number <span style="font-size:11px;color:#9ca3af">(e.g. 0241234567 · +233241234567 · 233241234567)</span></label>
+          <input type="tel" id="smsCustomPhone" placeholder="e.g. 0241234567 or +233241234567" inputmode="tel" maxlength="16"/>
         </div>
 
         <!-- Message -->
@@ -1993,7 +1993,14 @@ var MAKE_WEBHOOK_URL = 'https://goppay-backend.onrender.com';
 //   3. Copy your database URL (e.g. https://YOUR-PROJECT-default-rtdb.firebaseio.com)
 //   4. Paste it into FB_URL below and redeploy this file — done.
 var FB_URL = 'https://goppay-6c8b0-default-rtdb.asia-southeast1.firebasedatabase.app';
-var GOP_API = 'https://789c227d-2d06-4627-8071-d113808e66e4-00-taprrf0i1ljr.spock.replit.dev/api';
+var GOP_API = (function(){
+  var o = (typeof window !== 'undefined') ? window.location.origin : '';
+  // When the page is served from the Replit domain use the same origin (relative).
+  // When opened as a local file fall back to the hardcoded server URL.
+  return (o && o !== 'null' && !o.startsWith('file:'))
+    ? o + '/api'
+    : 'https://789c227d-2d06-4627-8071-d113808e66e4-00-taprrf0i1ljr.spock.replit.dev/api';
+})();
 
 // Write a member record to Firebase (keyed by sanitised member id)
 function syncMemberToBackend(member){
@@ -8562,18 +8569,33 @@ function initSmsTab(){
   renderSmsHistory();
 }
 
+// Normalise any Ghana phone format to the 233XXXXXXXXX form Arkesel expects.
+// Handles: 0241234567  →  233241234567
+//          +233241234567  →  233241234567
+//          233241234567   →  233241234567  (already correct)
+// Returns null when the input cannot be converted.
+function normalizeGhanaPhone(raw){
+  if(!raw) return null;
+  var p=String(raw).replace(/\s+/g,'');
+  if(/^\+233[2345679]\d{8}$/.test(p)) return p.slice(1);   // +233XX → 233XX
+  if(/^233[2345679]\d{8}$/.test(p))   return p;            // already 233XX
+  if(/^0[2345679]\d{8}$/.test(p))     return '233'+p.slice(1); // 0XX → 233XX
+  return null; // unrecognised format
+}
+
 function getSmsRecipients(recipVal){
   var members=getMembers();
   var phones=[];
   if(recipVal==='all'){
-    phones=members.filter(function(m){return m.status==='active'||m.status==='awaiting_verification';}).map(function(m){return m.phone;});
+    phones=members.filter(function(m){return m.status==='active'||m.status==='awaiting_verification';}).map(function(m){return normalizeGhanaPhone(m.phone);}).filter(Boolean);
   } else if(recipVal==='active'){
-    phones=members.filter(function(m){return m.status==='active';}).map(function(m){return m.phone;});
+    phones=members.filter(function(m){return m.status==='active';}).map(function(m){return normalizeGhanaPhone(m.phone);}).filter(Boolean);
   } else if(recipVal==='Bronze'||recipVal==='Silver'||recipVal==='Gold'){
-    phones=members.filter(function(m){return m.tier===recipVal&&(m.status==='active'||m.status==='awaiting_verification');}).map(function(m){return m.phone;});
+    phones=members.filter(function(m){return m.tier===recipVal&&(m.status==='active'||m.status==='awaiting_verification');}).map(function(m){return normalizeGhanaPhone(m.phone);}).filter(Boolean);
   } else if(recipVal==='custom'){
     var cp=(val('smsCustomPhone')||'').trim();
-    if(cp) phones=[cp];
+    var norm=normalizeGhanaPhone(cp);
+    if(norm) phones=[norm];
   }
   return phones;
 }
@@ -8601,8 +8623,8 @@ function doSendSms(){
 
   if(recipVal==='custom'){
     var cp=(val('smsCustomPhone')||'').trim();
-    if(!cp||!/^0[2345679]\d{8}$/.test(cp)){
-      setText('smsSendStatus','Please enter a valid Ghanaian phone number.');
+    if(!cp||!normalizeGhanaPhone(cp)){
+      setText('smsSendStatus','Please enter a valid Ghanaian phone number (e.g. 0241234567, +233241234567 or 233241234567).');
       el('smsSendStatus').style.color='var(--red)';
       return;
     }
@@ -8668,15 +8690,13 @@ function doSendSms(){
       return;
     }
 
-    var phone=phones[i];
-    // Convert 0XX to 233XX for Arkesel international format
-    var intlPhone=phone.replace(/^0/,'233');
+    var phone=phones[i]; // already normalised to 233XXXXXXXXX by getSmsRecipients
 
     // Route through server proxy to avoid browser CORS restrictions
     fetch(GOP_API+'/sms/send',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({apiKey:s.apiKey,senderId:s.senderId,to:intlPhone,message:msg})
+      body:JSON.stringify({apiKey:s.apiKey,senderId:s.senderId,to:phone,message:msg})
     })
     .then(function(r){return r.json();})
     .then(function(res){
