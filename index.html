@@ -1993,6 +1993,7 @@ var MAKE_WEBHOOK_URL = 'https://goppay-backend.onrender.com';
 //   3. Copy your database URL (e.g. https://YOUR-PROJECT-default-rtdb.firebaseio.com)
 //   4. Paste it into FB_URL below and redeploy this file — done.
 var FB_URL = 'https://goppay-6c8b0-default-rtdb.asia-southeast1.firebasedatabase.app';
+var GOP_API = 'https://800c21b0-6268-4815-ba12-1b8ebde46da3-00-v37jlqnhpr6r.janeway.replit.dev/api';
 
 // Write a member record to Firebase (keyed by sanitised member id)
 function syncMemberToBackend(member){
@@ -8630,29 +8631,29 @@ function doSendSms(){
     // Convert 0XX to 233XX for Arkesel international format
     var intlPhone=phone.replace(/^0/,'233');
 
-    // Arkesel API V1
-    var url='https://sms.arkesel.com/sms/api?action=send-sms'
-      +'&api_key='+encodeURIComponent(s.apiKey)
-      +'&to='+encodeURIComponent(intlPhone)
-      +'&from='+encodeURIComponent(s.senderId)
-      +'&sms='+encodeURIComponent(msg);
-
-    fetch(url,{method:'GET'})
+    // Route through server proxy to avoid browser CORS restrictions
+    fetch(GOP_API+'/sms/send',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({apiKey:s.apiKey,senderId:s.senderId,to:intlPhone,message:msg})
+    })
     .then(function(r){return r.json();})
-    .then(function(data){
-      if(data&&(data.status==='ok'||data.code==='ok'||data.message==='Sent'||data['response-code']==='00'||String(data.status).toLowerCase()==='ok')){
+    .then(function(res){
+      var data=res.data||{};
+      if(res.ok&&(data.status==='ok'||data.code==='ok'||data.message==='Sent'||data['response-code']==='00'||String(data.status||'').toLowerCase()==='ok')){
         sent++;
         if(progressEl) progressEl.innerHTML+='&#x2705; '+phone+'<br>';
       } else {
         failed++;
-        if(progressEl) progressEl.innerHTML+='&#x274C; '+phone+' — '+(data.message||data.status||'Error')+'<br>';
+        var errMsg=res.error||(data.message||data.status||'Error');
+        if(progressEl) progressEl.innerHTML+='&#x274C; '+phone+' — '+errMsg+'<br>';
       }
       if(progressEl) progressEl.scrollTop=progressEl.scrollHeight;
       sendNext(i+1);
     })
     .catch(function(err){
       failed++;
-      if(progressEl) progressEl.innerHTML+='&#x274C; '+phone+' — Network error<br>';
+      if(progressEl) progressEl.innerHTML+='&#x274C; '+phone+' — '+(err.message||'Network error')+'<br>';
       if(progressEl) progressEl.scrollTop=progressEl.scrollHeight;
       sendNext(i+1);
     });
