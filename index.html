@@ -1871,6 +1871,29 @@ function syncMemberToBackend(member){
   }catch(e){}
 }
 
+// Check if this member's record exists in Firebase.
+// If it is missing or incomplete, push the full record so the admin can see them.
+// Called on every login — covers members who registered before Firebase was integrated.
+function ensureMemberInFirebase(member){
+  try{
+    var key=member.id.replace(/[^a-zA-Z0-9_-]/g,'_');
+    fetch(FB_URL+'/members/'+key+'.json')
+    .then(function(r){return r.ok?r.json():null;})
+    .then(function(data){
+      // data is null or missing .id means the record is absent from Firebase
+      if(!data||typeof data!=='object'||!data.id){
+        syncMemberToBackend(member);
+      }
+    })
+    .catch(function(){
+      // On any network error, push anyway to be safe
+      syncMemberToBackend(member);
+    });
+  }catch(e){
+    syncMemberToBackend(member);
+  }
+}
+
 // Write a visit record to Firebase (keyed by visit id)
 function syncVisitToBackend(visit){
   try{
@@ -3051,7 +3074,7 @@ function doLoginWithMember(m, phone){
     closeLoginModal(); currentUser=m; saveSession(); showPendingDeletionPage(m); startIdleTracking(); return;
   }
   if(m.status!=='active'){showErr('loginError','Your account is not active. Contact support.'); return;}
-  // Record login details and sync to admin dashboard / Firebase
+  // Record login details (device, timestamp, count)
   try{
     var devInfo=getRegDeviceInfo();
     m.lastLoginAt=new Date().toISOString();
@@ -3065,9 +3088,12 @@ function doLoginWithMember(m, phone){
     var ms=getMembers();
     var idx=ms.findIndex(function(x){return x.id===m.id;});
     if(idx>=0){ms[idx]=m; saveMembers(ms);}
-    // Push updated record to Firebase so admin sees it immediately
-    syncMemberToBackend(m);
   }catch(e){}
+  // Always sync to Firebase on login — guaranteed outside try/catch so tracking
+  // errors cannot prevent it. This also auto-saves members who registered before
+  // Firebase was integrated and are missing from the admin members section.
+  syncMemberToBackend(m);
+  ensureMemberInFirebase(m);
   currentUser=m; saveSession(); closeLoginModal(); openMemberDashboard(m); startIdleTracking();
   try{sessionStorage.setItem('gop_session_active','1');}catch(e){}
 }
@@ -6709,15 +6735,18 @@ function reactivateFromDeletion(){
   members[idx].status='active';
   delete members[idx].deletionScheduledAt;
   delete members[idx].deletionDueAt;
-  // Remove tombstone so they can log in again
+  // Remove tombstone locally and sync removal to Firebase
   try{
     var tombs=getTombstones().filter(function(t){return t.id!==members[idx].id;});
     saveTombstones(tombs);
+    syncTombstonesToFirebase();
   }catch(e){}
   members[idx].notifications=members[idx].notifications||[];
   members[idx].notifications.push('&#x2705; Account deletion cancelled. Your account has been fully reactivated. Welcome back!');
   saveMembers(members);
   currentUser=members[idx];
+  // Sync reactivated status to Firebase so admin sees account is active again
+  syncMemberToBackend(currentUser);
   saveSession();
   hide('pendingDeletionPage');
   openMemberDashboard(currentUser);
