@@ -3052,6 +3052,11 @@ function doLogin(){
   var pass  = val('loginPassword');
   hideErr('loginError');
   if(phone===ADMIN_PHONE && pass===ADMIN_PASS){
+    // Block admin login from the public-facing URL
+    if(!isAdminUrl()){
+      showErr('loginError','Incorrect phone number or password.');
+      return;
+    }
     closeLoginModal(); currentUser={role:'superadmin',name:'Super Admin',phone:ADMIN_PHONE}; saveSession();
     cancelSessionVisitIfAdmin(); // remove any visit recorded before we knew this was an admin
     openAdminDashboard(); startIdleTracking(); return;
@@ -3060,6 +3065,11 @@ function doLogin(){
   var subs=getSubAdmins();
   var sub=subs.find(function(s){return s.phone===phone && s.password===pass && s.active;});
   if(sub){
+    // Block sub-admin login from the public-facing URL
+    if(!isAdminUrl()){
+      showErr('loginError','Incorrect phone number or password.');
+      return;
+    }
     closeLoginModal(); currentUser={role:'subadmin',name:sub.name,phone:sub.phone,id:sub.id}; saveSession();
     cancelSessionVisitIfAdmin(); // remove any visit recorded before we knew this was a sub-admin
     openAdminDashboard(); startIdleTracking(); return;
