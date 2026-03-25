@@ -1993,7 +1993,7 @@ var MAKE_WEBHOOK_URL = 'https://goppay-backend.onrender.com';
 //   3. Copy your database URL (e.g. https://YOUR-PROJECT-default-rtdb.firebaseio.com)
 //   4. Paste it into FB_URL below and redeploy this file — done.
 var FB_URL = 'https://goppay-6c8b0-default-rtdb.asia-southeast1.firebasedatabase.app';
-var GOP_API = 'https://800c21b0-6268-4815-ba12-1b8ebde46da3-00-v37jlqnhpr6r.janeway.replit.dev/api';
+var GOP_API = 'https://789c227d-2d06-4627-8071-d113808e66e4-00-taprrf0i1ljr.spock.replit.dev/api';
 
 // Write a member record to Firebase (keyed by sanitised member id)
 function syncMemberToBackend(member){
@@ -8681,6 +8681,36 @@ function doSendSms(){
     .then(function(r){return r.json();})
     .then(function(res){
       var data=res.data||{};
+      if(res.errorType==='insufficient_credit'){
+        // Stop sending immediately — out of SMS credits
+        if(sendBtn){sendBtn.disabled=false;sendBtn.innerHTML='&#x1F4F2; Send SMS';}
+        var creditMsg='⚠️ Insufficient Arkesel SMS credit. Sending stopped after '+sent+' sent. Please top up your Arkesel account and try again.';
+        setText('smsSendStatus',creditMsg);
+        el('smsSendStatus').style.color='var(--red)';
+        if(progressEl) progressEl.innerHTML+='<br><span style="color:var(--red);font-weight:600">&#x26A0; Stopped: Insufficient SMS credit. Top up your Arkesel account to continue.</span>';
+        // Show prominent alert banner
+        var alertId='smsCredAlert';
+        if(!el(alertId)){
+          var alertDiv=document.createElement('div');
+          alertDiv.id=alertId;
+          alertDiv.style.cssText='background:#fdeaec;border:1.5px solid var(--red);border-radius:10px;padding:14px 18px;margin:12px 0;display:flex;align-items:flex-start;gap:12px;font-size:13.5px;color:var(--red);line-height:1.6';
+          alertDiv.innerHTML='<span style="font-size:20px;flex-shrink:0">&#x26A0;</span><div><strong>Insufficient SMS Credit</strong><br>Your Arkesel account has run out of credit. Only <strong>'+sent+'</strong> of <strong>'+total+'</strong> messages were sent before sending stopped. Please top up your Arkesel balance at <a href="https://arkesel.com" target="_blank" style="color:var(--red);text-decoration:underline">arkesel.com</a> and retry.</div>';
+          var smsSection=el('atab-sms');
+          if(smsSection) smsSection.insertBefore(alertDiv,smsSection.firstChild);
+        }
+        // Log partial send
+        var logEntry={
+          id:'SMS'+Date.now(),ts:new Date().toISOString(),
+          date:new Date().toLocaleDateString('en-GB'),
+          time:new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}),
+          recipientGroup:getSmsRecipientLabel(recipVal,total),
+          recipientCount:total,message:msg,sent:sent,failed:failed+1,senderId:s.senderId
+        };
+        var log=getSmsLog(); log.unshift(logEntry);
+        if(log.length>200) log=log.slice(0,200);
+        saveSmsLog(log); syncSmsLogToFirebase(); renderSmsHistory();
+        return; // abort loop
+      }
       if(res.ok&&(data.status==='ok'||data.code==='ok'||data.message==='Sent'||data['response-code']==='00'||String(data.status||'').toLowerCase()==='ok')){
         sent++;
         if(progressEl) progressEl.innerHTML+='&#x2705; '+phone+'<br>';
