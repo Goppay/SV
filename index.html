@@ -2841,8 +2841,8 @@ document.addEventListener('DOMContentLoaded', function(){
   checkScheduledDeletions();
   // Track this page visit (skipped automatically on /admin URL)
   trackVisit();
-  // Auto-open admin login when accessed via the dedicated admin URL
-  // e.g. Goppay.github.io/SV/admin
+  // Auto-open admin login when accessed via admin URL, hash, or query param
+  // e.g. Goppay.github.io/SV/admin  OR  yoursite.com/index.html#admin  OR  yoursite.com/?admin=1
   if(isAdminUrl()){
     try{
       var existingSession=JSON.parse(localStorage.getItem('gop_session')||'null');
@@ -7407,8 +7407,13 @@ function getVisits(){try{return JSON.parse(localStorage.getItem('gop_visits')||'
 function saveVisits(v){try{localStorage.setItem('gop_visits',JSON.stringify(v));}catch(e){}}
 
 function isAdminUrl(){
-  // Returns true when the page is accessed via the dedicated admin path (/admin)
-  try{ return /\/admin\/?$/i.test(window.location.pathname); }catch(e){ return false; }
+  // Returns true when accessed via /admin path OR via #admin hash OR ?admin=1 query param
+  try{
+    if(/\/admin\/?$/i.test(window.location.pathname)) return true;
+    if(window.location.hash==='#admin') return true;
+    if(new URLSearchParams(window.location.search).get('admin')==='1') return true;
+    return false;
+  }catch(e){ return false; }
 }
 
 function trackVisit(){
