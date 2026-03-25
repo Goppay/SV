@@ -4736,7 +4736,7 @@ function refreshAdminMetrics(){
   setText('aTotalM', members.length);
   setText('aPendP', members.filter(function(m){return m.status==='awaiting_verification';}).length);
   setText('aPendW', ws.filter(function(w){return w.phase!=='Complete'&&w.phase!=='Reversed';}).length);
-  var paid=ws.filter(function(w){return w.phase==='Complete';}).reduce(function(s,w){return s+parseFloat(w.amount);},0);
+  var paid=ws.filter(function(w){return w.phase==='Complete';}).reduce(function(s,w){return s+parseFloat(w.amountAfterFee!=null?w.amountAfterFee:w.amount);},0);
   setText('aTotalPaid','GHS '+paid.toFixed(2));
   // count duplicates — use same scoring as renderDuplicatesTable (score>=2)
   var seen={}, cnt=0;
