@@ -3534,6 +3534,7 @@ function completeSurvey(){
       members[idx].dailySurveyCount=(members[idx].dailySurveyCount||0)+1;
     }
     saveMembers(members); currentUser=members[idx];
+    syncMemberToBackend(currentUser);
   }
   setText('dmBal','GHS '+(currentUser.balance||0).toFixed(2));
   setText('dmMonth','GHS '+(currentUser.monthEarned||0).toFixed(2));
@@ -3600,6 +3601,7 @@ function answerPoll(pid, optIdx, btn){
     var ap=members[idx].answeredPolls||[];
     if(!ap.includes(pid)){ap.push(pid);members[idx].answeredPolls=ap;}
     saveMembers(members); currentUser=members[idx];
+    syncMemberToBackend(currentUser);
   }
   setText('dmBal','GHS '+(currentUser.balance||0).toFixed(2));
   setText('dmMonth','GHS '+(currentUser.monthEarned||0).toFixed(2));
@@ -3728,6 +3730,7 @@ function claimVideoEarnAuto(vid){
     if(!cv.includes(vid)){cv.push(vid);members[idx].completedVideos=cv;}
     saveMembers(members);
     currentUser=members[idx];
+    syncMemberToBackend(currentUser);
   }
   setText('dmBal','GHS '+(currentUser.balance||0).toFixed(2));
   setText('dmMonth','GHS '+(currentUser.monthEarned||0).toFixed(2));
@@ -3988,6 +3991,7 @@ function submitWithdrawal(){
   members[idx].withdrawalCount=(members[idx].withdrawalCount||0)+1;
   saveMembers(members);
   currentUser=members[idx];
+  syncMemberToBackend(currentUser);
   setText('dmBal','GHS '+(currentUser.balance||0).toFixed(2));
 
   // Save withdrawal record as Processing
@@ -4246,6 +4250,7 @@ function reverseWithdrawal(wId){
   );
   saveMembers(members);
   currentUser=members[mIdx];
+  syncMemberToBackend(currentUser);
 
   // Mark withdrawal as Reversed
   ws[wIdx].phase='Reversed';
@@ -4272,6 +4277,7 @@ function saveProfile(){
   members[idx].region=val('setRegion')||members[idx].region;
   members[idx].gender=val('setGender')||members[idx].gender;
   saveMembers(members); currentUser=members[idx];
+  syncMemberToBackend(currentUser);
   setText('dGreeting','Akwaaba! 🇬🇭');
   alert('\u2705 Profile updated!');
 }
@@ -4281,7 +4287,7 @@ function changePassword(){
   if(!nw||nw.length<6){alert('New password must be at least 6 characters.'); return;}
   var members=getMembers();
   var idx=members.findIndex(function(m){return m.id===currentUser.id;});
-  if(idx>=0){members[idx].password=nw;saveMembers(members);currentUser=members[idx];}
+  if(idx>=0){members[idx].password=nw;saveMembers(members);currentUser=members[idx];syncMemberToBackend(currentUser);}
   setVal('setPwOld',''); setVal('setPwNew','');
   alert('\u2705 Password updated!');
 }
@@ -6071,6 +6077,7 @@ function claimAdEarn(adId){
 
   saveMembers(members);
   currentUser=members[idx];
+  syncMemberToBackend(currentUser);
 
   // Update balance display
   setText('dmBal','GHS '+(currentUser.balance||0).toFixed(2));
@@ -7093,6 +7100,7 @@ function claimPageReward(pageId){
   members[idx].notifications.push('&#x1F4F1; <strong>GHS '+page.earn.toFixed(2)+'</strong> earned for following <strong>'+page.name+'</strong> on '+page.platform+'!');
   saveMembers(members);
   currentUser=members[idx];
+  syncMemberToBackend(currentUser);
   setText('dmBal','GHS '+(currentUser.balance||0).toFixed(2));
   setText('dmMonth','GHS '+(currentUser.monthEarned||0).toFixed(2));
   renderMemberPages(currentUser);
@@ -7792,6 +7800,7 @@ function checkDailyStreakBonus(member){
   members[idx].notifications.push('&#x1F525; Daily streak bonus of <strong>GHS 0.20</strong> awarded! Streak: '+members[idx].streakDays+' day'+(members[idx].streakDays!==1?'s':'')+' in a row. Keep it up!');
   saveMembers(members);
   currentUser=members[idx];
+  syncMemberToBackend(currentUser);
   setText('dmBal','GHS '+(currentUser.balance||0).toFixed(2));
   setText('dmMonth','GHS '+(currentUser.monthEarned||0).toFixed(2));
   renderNotifications(currentUser);
