@@ -2849,8 +2849,11 @@ document.addEventListener('DOMContentLoaded', function(){
       if(existingSession&&(existingSession.role==='superadmin'||existingSession.role==='subadmin')){
         // Already logged in as admin — go straight to dashboard
         openAdminDashboard(); startIdleTracking();
+      } else if(existingSession&&existingSession.id){
+        // A regular registered member tried to access the admin URL — redirect them away
+        window.location.replace(window.location.pathname.replace(/\/admin\/?$/i,'')||'/');
       } else {
-        // Prompt admin login immediately
+        // No session — show admin login modal (only admins know the credentials)
         openLoginModal();
       }
     }catch(e){ openLoginModal(); }
