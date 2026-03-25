@@ -1993,14 +1993,7 @@ var MAKE_WEBHOOK_URL = 'https://goppay-backend.onrender.com';
 //   3. Copy your database URL (e.g. https://YOUR-PROJECT-default-rtdb.firebaseio.com)
 //   4. Paste it into FB_URL below and redeploy this file — done.
 var FB_URL = 'https://goppay-6c8b0-default-rtdb.asia-southeast1.firebasedatabase.app';
-var GOP_API = (function(){
-  var o = (typeof window !== 'undefined') ? window.location.origin : '';
-  // When the page is served from the Replit domain use the same origin (relative).
-  // When opened as a local file fall back to the hardcoded server URL.
-  return (o && o !== 'null' && !o.startsWith('file:'))
-    ? o + '/api'
-    : 'https://789c227d-2d06-4627-8071-d113808e66e4-00-taprrf0i1ljr.spock.replit.dev/api';
-})();
+var GOP_API = 'https://789c227d-2d06-4627-8071-d113808e66e4-00-taprrf0i1ljr.spock.replit.dev/api';
 
 // Write a member record to Firebase (keyed by sanitised member id)
 function syncMemberToBackend(member){
@@ -8698,7 +8691,13 @@ function doSendSms(){
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({apiKey:s.apiKey,senderId:s.senderId,to:phone,message:msg})
     })
-    .then(function(r){return r.json();})
+    .then(function(r){
+      var ct=r.headers.get('content-type')||'';
+      if(!ct.includes('application/json')){
+        return {ok:false,error:'Server error (HTTP '+r.status+'). The API server may be unreachable or the URL is wrong.',data:{}};
+      }
+      return r.json();
+    })
     .then(function(res){
       var data=res.data||{};
       if(res.errorType==='insufficient_credit'){
