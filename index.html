@@ -2963,6 +2963,11 @@ function closeLoginModal(){
   document.body.style.overflow='';
 }
 function openRegisterModal(){
+  // If someone tries to register from the admin URL, send them to the main site to register
+  if(isAdminUrl()){
+    window.location.replace(window.location.pathname.replace(/\/admin\/?$/i,'')||'/');
+    return;
+  }
   el('registerModal').classList.add('open');
   document.body.style.overflow='hidden';
   hideErr('regError');
