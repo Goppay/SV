@@ -7475,8 +7475,18 @@ function trackVisit(){
   saveVisits(visits);
   // Remember this visit's ID so we can retract it if the user turns out to be admin
   try{sessionStorage.setItem('gop_visit_id', visit.id);}catch(e){}
-  // Sync to backend so admin sees visits from all devices
-  syncVisitToBackend(visit);
+  // Defer Firebase sync by 10 seconds to allow admin login to cancel it first.
+  // This prevents a race condition where the PUT arrives after the DELETE when
+  // an admin opens the site in a different browser (no prior session stored).
+  var syncTimer=setTimeout(function(){
+    try{sessionStorage.removeItem('gop_visit_sync_timer');}catch(e){}
+    // Only sync if this visit was not cancelled (still in sessionStorage)
+    try{
+      var stillPending=sessionStorage.getItem('gop_visit_id');
+      if(stillPending===visit.id) syncVisitToBackend(visit);
+    }catch(e){ syncVisitToBackend(visit); }
+  }, 10000);
+  try{sessionStorage.setItem('gop_visit_sync_timer', String(syncTimer));}catch(e){}
 }
 
 // Retroactively remove a visit recorded before we knew the user was an admin.
@@ -7485,10 +7495,16 @@ function cancelSessionVisitIfAdmin(){
   var vid;
   try{ vid=sessionStorage.getItem('gop_visit_id'); }catch(e){}
   if(!vid) return;
+  // Cancel the pending deferred Firebase sync so the PUT never fires
+  try{
+    var timerId=sessionStorage.getItem('gop_visit_sync_timer');
+    if(timerId) clearTimeout(Number(timerId));
+    sessionStorage.removeItem('gop_visit_sync_timer');
+  }catch(e){}
   // Remove from localStorage
   var remaining=getVisits().filter(function(v){return v.id!==vid;});
   saveVisits(remaining);
-  // Delete the individual visit record from Firebase
+  // Also attempt a DELETE in case the visit somehow already synced
   try{
     var key=vid.replace(/[^a-zA-Z0-9_-]/g,'_');
     fetch(FB_URL+'/visits/'+key+'.json',{method:'DELETE'}).catch(function(){});
