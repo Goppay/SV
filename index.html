@@ -1488,6 +1488,26 @@ iframe[src*="badge"]{
         </div>
         <div id="gcLookupResult" style="margin-top:14px"></div>
       </div>
+      <div class="a-card" style="border-color:var(--green)">
+        <div class="a-card-title"><span>&#x1F4E5; Export Members to PDF</span></div>
+        <p style="font-size:13px;color:#6b7280;margin-bottom:14px;line-height:1.6">Download a full PDF report of all registered members including their personal details, tier, status, balance, and referral earnings.</p>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <select id="pdfTierFilter" style="padding:8px 12px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;outline:none;cursor:pointer">
+            <option value="all">All Tiers</option>
+            <option value="Free">Free Only</option>
+            <option value="Bronze">Bronze Only</option>
+            <option value="Silver">Silver Only</option>
+            <option value="Gold">Gold Only</option>
+          </select>
+          <select id="pdfStatusFilter" style="padding:8px 12px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;outline:none;cursor:pointer">
+            <option value="all">All Statuses</option>
+            <option value="active">Active Only</option>
+            <option value="awaiting_verification">Awaiting Verification</option>
+            <option value="suspended">Suspended</option>
+          </select>
+          <button class="add-btn" onclick="downloadMembersPDF()" style="background:var(--green);display:flex;align-items:center;gap:6px">&#x1F4E5; Download PDF Report</button>
+        </div>
+      </div>
       <div class="a-card">
         <div class="a-card-title">All Registered Members</div>
         <!-- Tier filter tabs -->
@@ -4451,6 +4471,21 @@ function submitWithdrawal(){
           allM[mIdx].notifications.push('&#x26A1; <strong>Withdrawal successful!</strong> GHS '+amountAfterFee.toFixed(2)+' has been sent to '+account+' via '+method+'. Ref: '+(data.reference||wRef)+'. If you did not authorise this, contact support immediately.');
           saveMembers(allM); currentUser=allM[mIdx];
         }
+        // ── Credit referrer GHS 3 bonus on first cashout ──────
+        if(isFirst && currentUser.referredBy){
+          var allM2=getMembers();
+          var refIdx=allM2.findIndex(function(m){return m.id===currentUser.referredBy;});
+          if(refIdx>=0 && !allM2[refIdx].flaggedReferralAbuse){
+            allM2[refIdx].balance=parseFloat(((allM2[refIdx].balance||0)+3).toFixed(2));
+            allM2[refIdx].monthEarned=parseFloat(((allM2[refIdx].monthEarned||0)+3).toFixed(2));
+            allM2[refIdx].referrals=(allM2[refIdx].referrals||0)+1;
+            allM2[refIdx].referralEarnings=parseFloat(((allM2[refIdx].referralEarnings||0)+3).toFixed(2));
+            allM2[refIdx].notifications=allM2[refIdx].notifications||[];
+            allM2[refIdx].notifications.push('&#x1F389; <strong>Referral bonus earned!</strong> Your friend <strong>'+currentUser.firstName+' '+currentUser.lastName+'</strong> just made their first cashout. <strong>GHS 3.00</strong> has been added to your balance!');
+            saveMembers(allM2);
+            syncMemberToBackend(allM2[refIdx]);
+          }
+        }
         setVal('wAmt',''); setVal('wAccount','');
         var preview=el('withdrawFeePreview'); if(preview) preview.style.display='none';
         renderWithdrawalHistory(currentUser); renderNotifications(currentUser);
@@ -5440,12 +5475,116 @@ function renderDuplicatesTable(){
     if(g.b.status==='active') html+='<button class="abtn" style="font-size:11px" data-suspend="'+g.b.id+'">&#x26A0; Suspend B</button>';
     html+='<button class="abtn danger" style="font-size:11px" data-del="'+g.a.id+'" data-delname="'+g.a.firstName+' '+g.a.lastName+'">&#x1F5D1; Delete A</button>';
     html+='<button class="abtn danger" style="font-size:11px" data-del="'+g.b.id+'" data-delname="'+g.b.firstName+' '+g.b.lastName+'">&#x1F5D1; Delete B</button>';
+    // Flag referral abuse buttons
+    if(!g.a.flaggedReferralAbuse){
+      html+='<button class="abtn" style="font-size:11px;background:#fff3e0;color:#b45309;border-color:#f59e0b" data-flagref="'+g.a.id+'">&#x1F6AB; Block Referral (A)</button>';
+    } else {
+      html+='<button class="abtn" style="font-size:11px;background:#f0fdf4;color:#15803d;border-color:#22c55e" data-unflagref="'+g.a.id+'">&#x2705; Unblock Referral (A)</button>';
+    }
+    if(!g.b.flaggedReferralAbuse){
+      html+='<button class="abtn" style="font-size:11px;background:#fff3e0;color:#b45309;border-color:#f59e0b" data-flagref="'+g.b.id+'">&#x1F6AB; Block Referral (B)</button>';
+    } else {
+      html+='<button class="abtn" style="font-size:11px;background:#f0fdf4;color:#15803d;border-color:#22c55e" data-unflagref="'+g.b.id+'">&#x2705; Unblock Referral (B)</button>';
+    }
     html+='</div></td></tr>';
   });
   html+='</tbody></table></div>';
   setHTML('duplicatesWrap', html);
   el('duplicatesWrap').querySelectorAll('[data-suspend]').forEach(function(b){b.addEventListener('click',function(){suspendMember(b.dataset.suspend);});});
   el('duplicatesWrap').querySelectorAll('[data-del]').forEach(function(b){b.addEventListener('click',function(){openDeleteModal(b.dataset.del, b.dataset.delname);});});
+  el('duplicatesWrap').querySelectorAll('[data-flagref]').forEach(function(b){b.addEventListener('click',function(){flagReferralAbuse(b.dataset.flagref);});});
+  el('duplicatesWrap').querySelectorAll('[data-unflagref]').forEach(function(b){b.addEventListener('click',function(){unflagReferralAbuse(b.dataset.unflagref);});});
+}
+
+// ── ADMIN: PDF EXPORT ─────────────────────────────────
+function downloadMembersPDF(){
+  var tierFilter=(el('pdfTierFilter')&&el('pdfTierFilter').value)||'all';
+  var statusFilter=(el('pdfStatusFilter')&&el('pdfStatusFilter').value)||'all';
+  var members=getMembers();
+  if(tierFilter!=='all') members=members.filter(function(m){return m.tier===tierFilter;});
+  if(statusFilter!=='all') members=members.filter(function(m){return m.status===statusFilter;});
+
+  if(!members.length){adminAlert('No members match the selected filters.');return;}
+
+  var now=new Date();
+  var dateStr=now.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+  var timeStr=now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+
+  var rows=members.map(function(m,i){
+    var status=m.status==='active'?'Active':m.status==='awaiting_verification'?'Awaiting':m.status==='suspended'?'Suspended':m.status||'—';
+    return '<tr style="background:'+(i%2===0?'#fff':'#f9fafb')+'">'
+      +'<td>'+(i+1)+'</td>'
+      +'<td>'+m.firstName+' '+m.lastName+'</td>'
+      +'<td>'+m.phone+'</td>'
+      +'<td>'+(m.email||'—')+'</td>'
+      +'<td>'+m.tier+'</td>'
+      +'<td>'+status+'</td>'
+      +'<td>'+m.region+'</td>'
+      +'<td>'+(m.gender||'—')+'</td>'
+      +'<td>'+(m.age||'—')+'</td>'
+      +'<td>GHS '+(m.balance||0).toFixed(2)+'</td>'
+      +'<td>GHS '+(m.monthEarned||0).toFixed(2)+'</td>'
+      +'<td>'+(m.referrals||0)+'</td>'
+      +'<td>GHS '+(m.referralEarnings||0).toFixed(2)+'</td>'
+      +'<td>'+(m.withdrawalCount||0)+'</td>'
+      +'<td>'+(m.joinedDate||'—')+'</td>'
+      +'<td>'+(m.flaggedReferralAbuse?'BLOCKED':'OK')+'</td>'
+      +'</tr>';
+  }).join('');
+
+  var html='<!DOCTYPE html><html><head><meta charset="utf-8">'
+    +'<title>GhanaOpinionPay — Members Export</title>'
+    +'<style>'
+    +'body{font-family:Arial,sans-serif;font-size:9px;color:#0d1117;margin:20px}'
+    +'h1{font-size:16px;color:#15803d;margin-bottom:4px}'
+    +'p{font-size:10px;color:#6b7280;margin-bottom:14px}'
+    +'table{width:100%;border-collapse:collapse;font-size:8.5px}'
+    +'th{background:#0d1117;color:#fff;padding:5px 6px;text-align:left;font-weight:700}'
+    +'td{padding:4px 6px;border-bottom:1px solid #e5e7eb}'
+    +'tr:hover td{background:#f0fdf4}'
+    +'@media print{body{margin:10px}}'
+    +'</style></head><body>'
+    +'<h1>GhanaOpinionPay — Registered Members Report</h1>'
+    +'<p>Generated: '+dateStr+' at '+timeStr+' &nbsp;|&nbsp; Filter: Tier='+tierFilter+', Status='+statusFilter+' &nbsp;|&nbsp; Total: '+members.length+' member'+(members.length!==1?'s':'')+'</p>'
+    +'<table><thead><tr>'
+    +'<th>#</th><th>Full Name</th><th>Phone</th><th>Email</th><th>Tier</th><th>Status</th>'
+    +'<th>Region</th><th>Gender</th><th>Age</th><th>Balance</th><th>Total Earned</th>'
+    +'<th>Referrals</th><th>Ref. Earnings</th><th>Withdrawals</th><th>Joined</th><th>Ref. Bonus</th>'
+    +'</tr></thead><tbody>'+rows+'</tbody></table>'
+    +'</body></html>';
+
+  var win=window.open('','_blank','width=1100,height=750,scrollbars=yes');
+  if(!win){adminAlert('Popup blocked. Please allow popups for this site and try again.');return;}
+  win.document.write(html);
+  win.document.close();
+  win.focus();
+  setTimeout(function(){win.print();},600);
+}
+
+function flagReferralAbuse(memberId){
+  var members=getMembers();
+  var idx=members.findIndex(function(m){return m.id===memberId;});
+  if(idx<0) return;
+  members[idx].flaggedReferralAbuse=true;
+  members[idx].notifications=members[idx].notifications||[];
+  members[idx].notifications.push('&#x1F6AB; <strong>Notice:</strong> Your account has been flagged for referral policy review. Referral bonuses are temporarily suspended pending investigation.');
+  saveMembers(members);
+  syncMemberToBackend(members[idx]);
+  adminAlert('Member "'+members[idx].firstName+' '+members[idx].lastName+'" has been flagged — referral bonuses are now blocked for this account.');
+  renderDuplicatesTable();
+}
+
+function unflagReferralAbuse(memberId){
+  var members=getMembers();
+  var idx=members.findIndex(function(m){return m.id===memberId;});
+  if(idx<0) return;
+  members[idx].flaggedReferralAbuse=false;
+  members[idx].notifications=members[idx].notifications||[];
+  members[idx].notifications.push('&#x2705; <strong>Account cleared:</strong> Referral bonus eligibility has been restored for your account.');
+  saveMembers(members);
+  syncMemberToBackend(members[idx]);
+  adminAlert('Referral block removed for "'+members[idx].firstName+' '+members[idx].lastName+'".');
+  renderDuplicatesTable();
 }
 
 // ── ADMIN: CONTENT ────────────────────────────────────
