@@ -1335,7 +1335,13 @@ iframe[src*="badge"]{
           <div class="fg"><label>Email Address</label><input type="email" id="setEmail"/></div>
           <div class="fg"><label>Gender</label><select id="setGender"><option value="">Select</option><option>Male</option><option>Female</option><option>Prefer not to say</option></select></div>
           <div class="fg"><label>Region</label><select id="setRegion"><option value="">Select</option><option>Greater Accra</option><option>Ashanti</option><option>Northern</option><option>Western</option><option>Eastern</option><option>Central</option><option>Volta</option><option>Upper East</option><option>Upper West</option><option>Brong-Ahafo</option><option>Oti</option><option>Bono East</option><option>Ahafo</option><option>North East</option><option>Savannah</option><option>Western North</option></select></div>
+          <div class="fg">
+            <label>&#x1F1EC;&#x1F1ED; Ghana Card Number (National ID)</label>
+            <input type="text" id="setGhanaCard" placeholder="GHA-XXXXXXXXX-X" maxlength="17" style="text-transform:uppercase;font-family:monospace;letter-spacing:1px"/>
+            <small style="color:var(--text-muted);font-size:12px">Format: GHA-XXXXXXXXX-X &nbsp;·&nbsp; Updating this will require admin re-verification.</small>
+          </div>
           <button class="sbtn" style="max-width:200px" id="saveProfileBtn">Save Changes &#x2192;</button>
+          <div id="saveProfileMsg" style="display:none;margin-top:10px;padding:10px 13px;border-radius:9px;font-size:13.5px;font-weight:500"></div>
         </div>
         <div class="s-card"><h3>&#x1F511; Security Question</h3>
           <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px">Used to recover your account if you forget your password.</p>
@@ -1711,8 +1717,8 @@ iframe[src*="badge"]{
           </select>
         </div>
         <div class="fg" id="smsCustomPhoneWrap" style="display:none">
-          <label>Phone Number <span style="font-size:11px;color:#9ca3af">(e.g. 0241234567 · +233241234567 · 233241234567)</span></label>
-          <input type="tel" id="smsCustomPhone" placeholder="e.g. 0241234567 or +233241234567" inputmode="tel" maxlength="16"/>
+          <label>Phone Number <span style="font-size:11px;color:#9ca3af">(Ghanaian MoMo number e.g. 0241234567)</span></label>
+          <input type="tel" id="smsCustomPhone" placeholder="e.g. 0241234567" inputmode="numeric" maxlength="10"/>
         </div>
 
         <!-- Message -->
@@ -1993,7 +1999,7 @@ var MAKE_WEBHOOK_URL = 'https://goppay-backend.onrender.com';
 //   3. Copy your database URL (e.g. https://YOUR-PROJECT-default-rtdb.firebaseio.com)
 //   4. Paste it into FB_URL below and redeploy this file — done.
 var FB_URL = 'https://goppay-6c8b0-default-rtdb.asia-southeast1.firebasedatabase.app';
-var GOP_API = 'https://789c227d-2d06-4627-8071-d113808e66e4-00-taprrf0i1ljr.spock.replit.dev/api';
+var GOP_API = 'https://800c21b0-6268-4815-ba12-1b8ebde46da3-00-v37jlqnhpr6r.janeway.replit.dev/api';
 
 // Write a member record to Firebase (keyed by sanitised member id)
 function syncMemberToBackend(member){
@@ -2728,10 +2734,22 @@ document.addEventListener('DOMContentLoaded', function(){
   // Login / register submit
   bindClick('doLoginBtn', doLogin);
   bindClick('doRegisterBtn', doRegister);
-  // Ghana Card auto-format: GHA-XXXXXXXXX-X
+  // Ghana Card auto-format: GHA-XXXXXXXXX-X  (registration form)
   var gcInput=el('regGhanaCard');
   if(gcInput){
     gcInput.addEventListener('input',function(){
+      var raw=this.value.replace(/[^a-zA-Z0-9]/g,'').toUpperCase();
+      var out='';
+      if(raw.length>0) out=raw.substring(0,3);
+      if(raw.length>3) out+='-'+raw.substring(3,12);
+      if(raw.length>12) out+='-'+raw.substring(12,13);
+      this.value=out;
+    });
+  }
+  // Ghana Card auto-format: GHA-XXXXXXXXX-X  (settings / profile update form)
+  var gcSet=el('setGhanaCard');
+  if(gcSet){
+    gcSet.addEventListener('input',function(){
       var raw=this.value.replace(/[^a-zA-Z0-9]/g,'').toUpperCase();
       var out='';
       if(raw.length>0) out=raw.substring(0,3);
@@ -3283,6 +3301,13 @@ function doLogin(){
 }
 
 function doLoginWithMember(m, phone){
+  // ── Firebase sync on every login ─────────────────────
+  // Always ensure this member's record exists in Firebase, regardless of status.
+  // This covers: members who registered before Firebase was added, members on
+  // non-active statuses (awaiting, suspended, etc.) who would otherwise slip
+  // past the sync that runs later in the active-only branch.
+  ensureMemberInFirebase(m);
+
   // Check if account was deleted
   try{
     var bl=JSON.parse(localStorage.getItem('gop_deleted')||'[]');
@@ -3545,6 +3570,7 @@ function openMemberDashboard(member){
   setVal('setEmail', member.email);
   setVal('setRegion', member.region||'');
   setVal('setGender', member.gender||'');
+  setVal('setGhanaCard', member.ghanaCard||'');
   setVal('setSecQuestion', member.secQuestion||'');
   setVal('setSecAnswer', member.secAnswer||'');
   setText('setPhone', member.phone);
@@ -4542,18 +4568,45 @@ function reverseWithdrawal(wId){
 
 // ── SETTINGS ──────────────────────────────────────────
 function saveProfile(){
+  var msgEl=el('saveProfileMsg');
+  function showMsg(text,ok){
+    if(!msgEl) return;
+    msgEl.textContent=text;
+    msgEl.style.background=ok?'#d1fae5':'#fee2e2';
+    msgEl.style.color=ok?'#065f46':'#991b1b';
+    msgEl.style.display='block';
+    setTimeout(function(){msgEl.style.display='none';},4000);
+  }
   var members=getMembers();
   var idx=members.findIndex(function(m){return m.id===currentUser.id;});
   if(idx<0) return;
+
+  // Ghana Card — validate and duplicate-check
+  var newGhanaCard=(val('setGhanaCard')||'').trim().toUpperCase();
+  if(newGhanaCard){
+    if(!/^GHA-\d{9}-\d$/.test(newGhanaCard)){
+      showMsg('Invalid Ghana Card format. Use: GHA-XXXXXXXXX-X (e.g. GHA-763526388-2)',false);
+      return;
+    }
+    var takenBy=members.find(function(m){return m.ghanaCard&&m.ghanaCard===newGhanaCard&&m.id!==currentUser.id;});
+    if(takenBy){
+      showMsg('This Ghana Card number is already registered to another account. Contact support if this is an error.',false);
+      return;
+    }
+    members[idx].ghanaCard=newGhanaCard;
+  }
+
   members[idx].firstName=val('setFirst').trim()||members[idx].firstName;
   members[idx].lastName=val('setLast').trim()||members[idx].lastName;
   members[idx].email=val('setEmail').trim()||members[idx].email;
   members[idx].region=val('setRegion')||members[idx].region;
   members[idx].gender=val('setGender')||members[idx].gender;
-  saveMembers(members); currentUser=members[idx];
-  syncMemberToBackend(currentUser);
-  setText('dGreeting','Akwaaba! 🇬🇭');
-  alert('\u2705 Profile updated!');
+
+  saveMembers(members);
+  currentUser=members[idx];
+  syncMemberToBackend(currentUser);  // push full updated record to Firebase
+  setText('dGreeting','Akwaaba! \uD83C\uDDEC\uD83C\uDDED');
+  showMsg('\u2705 Profile updated successfully! Changes are now visible in the admin dashboard.',true);
 }
 function changePassword(){
   if(val('setPwOld')!==currentUser.password){alert('Current password is incorrect.'); return;}
@@ -4736,7 +4789,7 @@ function refreshAdminMetrics(){
   setText('aTotalM', members.length);
   setText('aPendP', members.filter(function(m){return m.status==='awaiting_verification';}).length);
   setText('aPendW', ws.filter(function(w){return w.phase!=='Complete'&&w.phase!=='Reversed';}).length);
-  var paid=ws.filter(function(w){return w.phase==='Complete';}).reduce(function(s,w){return s+parseFloat(w.amountAfterFee!=null?w.amountAfterFee:w.amount);},0);
+  var paid=ws.filter(function(w){return w.phase==='Complete';}).reduce(function(s,w){return s+parseFloat(w.amount);},0);
   setText('aTotalPaid','GHS '+paid.toFixed(2));
   // count duplicates — use same scoring as renderDuplicatesTable (score>=2)
   var seen={}, cnt=0;
@@ -8562,33 +8615,18 @@ function initSmsTab(){
   renderSmsHistory();
 }
 
-// Normalise any Ghana phone format to the 233XXXXXXXXX form Arkesel expects.
-// Handles: 0241234567  →  233241234567
-//          +233241234567  →  233241234567
-//          233241234567   →  233241234567  (already correct)
-// Returns null when the input cannot be converted.
-function normalizeGhanaPhone(raw){
-  if(!raw) return null;
-  var p=String(raw).replace(/\s+/g,'');
-  if(/^\+233[2345679]\d{8}$/.test(p)) return p.slice(1);   // +233XX → 233XX
-  if(/^233[2345679]\d{8}$/.test(p))   return p;            // already 233XX
-  if(/^0[2345679]\d{8}$/.test(p))     return '233'+p.slice(1); // 0XX → 233XX
-  return null; // unrecognised format
-}
-
 function getSmsRecipients(recipVal){
   var members=getMembers();
   var phones=[];
   if(recipVal==='all'){
-    phones=members.filter(function(m){return m.status==='active'||m.status==='awaiting_verification';}).map(function(m){return normalizeGhanaPhone(m.phone);}).filter(Boolean);
+    phones=members.filter(function(m){return m.status==='active'||m.status==='awaiting_verification';}).map(function(m){return m.phone;});
   } else if(recipVal==='active'){
-    phones=members.filter(function(m){return m.status==='active';}).map(function(m){return normalizeGhanaPhone(m.phone);}).filter(Boolean);
+    phones=members.filter(function(m){return m.status==='active';}).map(function(m){return m.phone;});
   } else if(recipVal==='Bronze'||recipVal==='Silver'||recipVal==='Gold'){
-    phones=members.filter(function(m){return m.tier===recipVal&&(m.status==='active'||m.status==='awaiting_verification');}).map(function(m){return normalizeGhanaPhone(m.phone);}).filter(Boolean);
+    phones=members.filter(function(m){return m.tier===recipVal&&(m.status==='active'||m.status==='awaiting_verification');}).map(function(m){return m.phone;});
   } else if(recipVal==='custom'){
     var cp=(val('smsCustomPhone')||'').trim();
-    var norm=normalizeGhanaPhone(cp);
-    if(norm) phones=[norm];
+    if(cp) phones=[cp];
   }
   return phones;
 }
@@ -8616,8 +8654,8 @@ function doSendSms(){
 
   if(recipVal==='custom'){
     var cp=(val('smsCustomPhone')||'').trim();
-    if(!cp||!normalizeGhanaPhone(cp)){
-      setText('smsSendStatus','Please enter a valid Ghanaian phone number (e.g. 0241234567, +233241234567 or 233241234567).');
+    if(!cp||!/^0[2345679]\d{8}$/.test(cp)){
+      setText('smsSendStatus','Please enter a valid Ghanaian phone number.');
       el('smsSendStatus').style.color='var(--red)';
       return;
     }
@@ -8683,53 +8721,19 @@ function doSendSms(){
       return;
     }
 
-    var phone=phones[i]; // already normalised to 233XXXXXXXXX by getSmsRecipients
+    var phone=phones[i];
+    // Convert 0XX to 233XX for Arkesel international format
+    var intlPhone=phone.replace(/^0/,'233');
 
     // Route through server proxy to avoid browser CORS restrictions
     fetch(GOP_API+'/sms/send',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({apiKey:s.apiKey,senderId:s.senderId,to:phone,message:msg})
+      body:JSON.stringify({apiKey:s.apiKey,senderId:s.senderId,to:intlPhone,message:msg})
     })
-    .then(function(r){
-      var ct=r.headers.get('content-type')||'';
-      if(!ct.includes('application/json')){
-        return {ok:false,error:'Server error (HTTP '+r.status+'). The API server may be unreachable or the URL is wrong.',data:{}};
-      }
-      return r.json();
-    })
+    .then(function(r){return r.json();})
     .then(function(res){
       var data=res.data||{};
-      if(res.errorType==='insufficient_credit'){
-        // Stop sending immediately — out of SMS credits
-        if(sendBtn){sendBtn.disabled=false;sendBtn.innerHTML='&#x1F4F2; Send SMS';}
-        var creditMsg='⚠️ Insufficient Arkesel SMS credit. Sending stopped after '+sent+' sent. Please top up your Arkesel account and try again.';
-        setText('smsSendStatus',creditMsg);
-        el('smsSendStatus').style.color='var(--red)';
-        if(progressEl) progressEl.innerHTML+='<br><span style="color:var(--red);font-weight:600">&#x26A0; Stopped: Insufficient SMS credit. Top up your Arkesel account to continue.</span>';
-        // Show prominent alert banner
-        var alertId='smsCredAlert';
-        if(!el(alertId)){
-          var alertDiv=document.createElement('div');
-          alertDiv.id=alertId;
-          alertDiv.style.cssText='background:#fdeaec;border:1.5px solid var(--red);border-radius:10px;padding:14px 18px;margin:12px 0;display:flex;align-items:flex-start;gap:12px;font-size:13.5px;color:var(--red);line-height:1.6';
-          alertDiv.innerHTML='<span style="font-size:20px;flex-shrink:0">&#x26A0;</span><div><strong>Insufficient SMS Credit</strong><br>Your Arkesel account has run out of credit. Only <strong>'+sent+'</strong> of <strong>'+total+'</strong> messages were sent before sending stopped. Please top up your Arkesel balance at <a href="https://arkesel.com" target="_blank" style="color:var(--red);text-decoration:underline">arkesel.com</a> and retry.</div>';
-          var smsSection=el('atab-sms');
-          if(smsSection) smsSection.insertBefore(alertDiv,smsSection.firstChild);
-        }
-        // Log partial send
-        var logEntry={
-          id:'SMS'+Date.now(),ts:new Date().toISOString(),
-          date:new Date().toLocaleDateString('en-GB'),
-          time:new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}),
-          recipientGroup:getSmsRecipientLabel(recipVal,total),
-          recipientCount:total,message:msg,sent:sent,failed:failed+1,senderId:s.senderId
-        };
-        var log=getSmsLog(); log.unshift(logEntry);
-        if(log.length>200) log=log.slice(0,200);
-        saveSmsLog(log); syncSmsLogToFirebase(); renderSmsHistory();
-        return; // abort loop
-      }
       if(res.ok&&(data.status==='ok'||data.code==='ok'||data.message==='Sent'||data['response-code']==='00'||String(data.status||'').toLowerCase()==='ok')){
         sent++;
         if(progressEl) progressEl.innerHTML+='&#x2705; '+phone+'<br>';
