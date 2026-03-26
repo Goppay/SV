@@ -1736,12 +1736,13 @@ iframe[src*="badge"]{
             <option value="Silver">&#x1F948; Silver Members Only</option>
             <option value="Gold">&#x1F947; Gold Members Only</option>
             <option value="active">&#x2705; Active Members Only</option>
-            <option value="custom">&#x1F4F1; Custom Phone Number</option>
+            <option value="custom">&#x1F4F1; Custom Phone Numbers</option>
           </select>
         </div>
         <div class="fg" id="smsCustomPhoneWrap" style="display:none">
-          <label>Phone Number <span style="font-size:11px;color:#9ca3af">(e.g. 0241234567 · +233241234567 · 233241234567)</span></label>
-          <input type="tel" id="smsCustomPhone" placeholder="e.g. 0241234567 or +233241234567" inputmode="tel" maxlength="16"/>
+          <label>Phone Numbers <span style="font-size:11px;color:#9ca3af">— one per line or comma-separated (e.g. 0241234567, +233241234567)</span></label>
+          <textarea id="smsCustomPhone" rows="4" placeholder="0241234567&#10;0551234567&#10;+233201234567" style="resize:vertical;line-height:1.7;font-size:13.5px"></textarea>
+          <div id="smsCustomPhoneCount" style="font-size:11.5px;color:#9ca3af;margin-top:4px">Enter one or more Ghana phone numbers.</div>
         </div>
 
         <!-- Message -->
@@ -8610,6 +8611,29 @@ function initSmsTab(){
     });
   }
 
+  // Live counter for custom phone numbers textarea
+  var customPhoneTA=el('smsCustomPhone');
+  if(customPhoneTA&&!customPhoneTA._smsBound){
+    customPhoneTA._smsBound=true;
+    customPhoneTA.addEventListener('input',function(){
+      var raw=this.value;
+      var entries=raw.split(/[\n,]+/);
+      var valid=0,invalid=0;
+      for(var i=0;i<entries.length;i++){
+        var t=entries[i].trim();
+        if(!t) continue;
+        if(normalizeGhanaPhone(t)) valid++; else invalid++;
+      }
+      var hint=el('smsCustomPhoneCount');
+      if(!hint) return;
+      if(!raw.trim()){hint.textContent='Enter one or more Ghana phone numbers.';hint.style.color='#9ca3af';return;}
+      var msg=valid+' valid number'+(valid!==1?'s':'');
+      if(invalid>0) msg+=' · <span style="color:var(--red)">'+invalid+' invalid (will be skipped)</span>';
+      hint.innerHTML=msg;
+      hint.style.color=invalid>0?'#374151':'#059669';
+    });
+  }
+
   // Character counter
   var msgTA=el('smsMessage');
   if(msgTA&&!msgTA._smsBound){
@@ -8685,9 +8709,14 @@ function getSmsRecipients(recipVal){
   } else if(recipVal==='Bronze'||recipVal==='Silver'||recipVal==='Gold'){
     phones=members.filter(function(m){return m.tier===recipVal&&(m.status==='active'||m.status==='awaiting_verification');}).map(function(m){return normalizeGhanaPhone(m.phone);}).filter(Boolean);
   } else if(recipVal==='custom'){
-    var cp=(val('smsCustomPhone')||'').trim();
-    var norm=normalizeGhanaPhone(cp);
-    if(norm) phones=[norm];
+    var raw=(val('smsCustomPhone')||'');
+    var entries=raw.split(/[\n,]+/);
+    for(var ci=0;ci<entries.length;ci++){
+      var cp=entries[ci].trim();
+      if(!cp) continue;
+      var norm=normalizeGhanaPhone(cp);
+      if(norm&&phones.indexOf(norm)===-1) phones.push(norm);
+    }
   }
   return phones;
 }
@@ -8696,7 +8725,7 @@ function getSmsRecipientLabel(recipVal, count){
   if(recipVal==='all') return 'All Members ('+count+')';
   if(recipVal==='active') return 'Active Members ('+count+')';
   if(recipVal==='Bronze'||recipVal==='Silver'||recipVal==='Gold') return recipVal+' Tier ('+count+')';
-  if(recipVal==='custom') return 'Custom: '+(val('smsCustomPhone')||'');
+  if(recipVal==='custom') return 'Custom Numbers ('+count+')';
   return count+' recipient(s)';
 }
 
@@ -8714,9 +8743,8 @@ function doSendSms(){
   var phones=getSmsRecipients(recipVal);
 
   if(recipVal==='custom'){
-    var cp=(val('smsCustomPhone')||'').trim();
-    if(!cp||!normalizeGhanaPhone(cp)){
-      setText('smsSendStatus','Please enter a valid Ghanaian phone number (e.g. 0241234567, +233241234567 or 233241234567).');
+    if(!phones.length){
+      setText('smsSendStatus','Please enter at least one valid Ghana phone number (e.g. 0241234567, +233241234567).');
       el('smsSendStatus').style.color='var(--red)';
       return;
     }
