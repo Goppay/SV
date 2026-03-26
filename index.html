@@ -4471,17 +4471,18 @@ function submitWithdrawal(){
           allM[mIdx].notifications.push('&#x26A1; <strong>Withdrawal successful!</strong> GHS '+amountAfterFee.toFixed(2)+' has been sent to '+account+' via '+method+'. Ref: '+(data.reference||wRef)+'. If you did not authorise this, contact support immediately.');
           saveMembers(allM); currentUser=allM[mIdx];
         }
-        // ── Credit referrer GHS 3 bonus on first cashout ──────
+        // ── Credit referrer bonus on first cashout (GHS 1 for Free, GHS 3 for paid tiers) ──
         if(isFirst && currentUser.referredBy){
           var allM2=getMembers();
           var refIdx=allM2.findIndex(function(m){return m.id===currentUser.referredBy;});
           if(refIdx>=0 && !allM2[refIdx].flaggedReferralAbuse){
-            allM2[refIdx].balance=parseFloat(((allM2[refIdx].balance||0)+3).toFixed(2));
-            allM2[refIdx].monthEarned=parseFloat(((allM2[refIdx].monthEarned||0)+3).toFixed(2));
+            var refBonus=currentUser.tier==='Free'?1:3;
+            allM2[refIdx].balance=parseFloat(((allM2[refIdx].balance||0)+refBonus).toFixed(2));
+            allM2[refIdx].monthEarned=parseFloat(((allM2[refIdx].monthEarned||0)+refBonus).toFixed(2));
             allM2[refIdx].referrals=(allM2[refIdx].referrals||0)+1;
-            allM2[refIdx].referralEarnings=parseFloat(((allM2[refIdx].referralEarnings||0)+3).toFixed(2));
+            allM2[refIdx].referralEarnings=parseFloat(((allM2[refIdx].referralEarnings||0)+refBonus).toFixed(2));
             allM2[refIdx].notifications=allM2[refIdx].notifications||[];
-            allM2[refIdx].notifications.push('&#x1F389; <strong>Referral bonus earned!</strong> Your friend <strong>'+currentUser.firstName+' '+currentUser.lastName+'</strong> just made their first cashout. <strong>GHS 3.00</strong> has been added to your balance!');
+            allM2[refIdx].notifications.push('&#x1F389; <strong>Referral bonus earned!</strong> Your friend <strong>'+currentUser.firstName+' '+currentUser.lastName+'</strong> ('+currentUser.tier+' tier) just made their first cashout. <strong>GHS '+refBonus.toFixed(2)+'</strong> has been added to your balance!');
             saveMembers(allM2);
             syncMemberToBackend(allM2[refIdx]);
           }
@@ -5443,7 +5444,7 @@ function renderDuplicatesTable(){
   }
 
   var html='<p style="font-size:13px;color:#b45309;font-weight:600;margin-bottom:12px">&#x26A0; '+groups.length+' potential duplicate pair'+(groups.length>1?'s':'')+' detected — sorted by risk score.</p>';
-  html+='<div style="overflow-x:auto"><table class="atable"><thead><tr><th>#</th><th>Risk</th><th>Account A</th><th>Account B</th><th>Signals Detected</th><th>Actions</th></tr></thead><tbody>';
+  html+='<div style="overflow-x:auto"><table class="atable"><thead><tr><th>#</th><th>Risk</th><th>Account A</th><th>Account B</th><th>Referral Link</th><th>Signals Detected</th><th>Actions</th></tr></thead><tbody>';
 
   groups.forEach(function(g,i){
     var riskColor=g.score>=5?'var(--red)':g.score>=3?'var(--orange)':'#b45309';
@@ -5451,6 +5452,49 @@ function renderDuplicatesTable(){
     var riskBg=g.score>=5?'#fdeaec':g.score>=3?'#fff3e0':'#fef9c3';
     var stA=g.a.status==='active'?'<span class="s-active">Active</span>':g.a.status==='suspended'?'<span class="s-suspended">Suspended</span>':'<span class="s-pending">'+g.a.status+'</span>';
     var stB=g.b.status==='active'?'<span class="s-active">Active</span>':g.b.status==='suspended'?'<span class="s-suspended">Suspended</span>':'<span class="s-pending">'+g.b.status+'</span>';
+
+    // ── Referral relationship between the pair ──────────
+    var refBadgeA='', refBadgeB='', refCell='<span style="font-size:11.5px;color:#9ca3af">No direct referral link</span>';
+    if(g.a.referredBy===g.b.id){
+      // B referred A
+      refBadgeA='<br><span style="font-size:10.5px;font-weight:700;background:#fef3c7;color:#92400e;padding:2px 7px;border-radius:7px;display:inline-block;margin-top:3px">&#x1F517; Referred by B</span>';
+      refBadgeB='<br><span style="font-size:10.5px;font-weight:700;background:#dbeafe;color:#1d4ed8;padding:2px 7px;border-radius:7px;display:inline-block;margin-top:3px">&#x1F9F2; Referrer of A</span>';
+      refCell='<div style="font-size:11.5px;line-height:1.7">'
+        +'<span style="font-weight:700;color:#1d4ed8">&#x1F9F2; Referrer:</span> <strong>'+g.b.firstName+' '+g.b.lastName+'</strong> (Account B)<br>'
+        +'<span style="font-weight:700;color:#92400e">&#x1F517; Referred:</span> <strong>'+g.a.firstName+' '+g.a.lastName+'</strong> (Account A)<br>'
+        +'<span style="font-size:10.5px;color:#6b7280">B used their referral link to bring in A</span><br>'
+        +'<span style="font-size:10.5px;font-weight:700;color:#b45309">&#x26A0; Block referral bonus on B to prevent abuse</span>'
+        +'</div>';
+    } else if(g.b.referredBy===g.a.id){
+      // A referred B
+      refBadgeA='<br><span style="font-size:10.5px;font-weight:700;background:#dbeafe;color:#1d4ed8;padding:2px 7px;border-radius:7px;display:inline-block;margin-top:3px">&#x1F9F2; Referrer of B</span>';
+      refBadgeB='<br><span style="font-size:10.5px;font-weight:700;background:#fef3c7;color:#92400e;padding:2px 7px;border-radius:7px;display:inline-block;margin-top:3px">&#x1F517; Referred by A</span>';
+      refCell='<div style="font-size:11.5px;line-height:1.7">'
+        +'<span style="font-weight:700;color:#1d4ed8">&#x1F9F2; Referrer:</span> <strong>'+g.a.firstName+' '+g.a.lastName+'</strong> (Account A)<br>'
+        +'<span style="font-weight:700;color:#92400e">&#x1F517; Referred:</span> <strong>'+g.b.firstName+' '+g.b.lastName+'</strong> (Account B)<br>'
+        +'<span style="font-size:10.5px;color:#6b7280">A used their referral link to bring in B</span><br>'
+        +'<span style="font-size:10.5px;font-weight:700;color:#b45309">&#x26A0; Block referral bonus on A to prevent abuse</span>'
+        +'</div>';
+    } else if(g.a.referredBy&&g.b.referredBy&&g.a.referredBy===g.b.referredBy){
+      // Both referred by the same third account
+      var sharedReferrer=members.find(function(m){return m.id===g.a.referredBy;});
+      var refName=sharedReferrer?(sharedReferrer.firstName+' '+sharedReferrer.lastName+' ('+sharedReferrer.phone+')'):'Unknown (ID: '+g.a.referredBy+')';
+      refBadgeA='<br><span style="font-size:10.5px;font-weight:700;background:#fce7f3;color:#9d174d;padding:2px 7px;border-radius:7px;display:inline-block;margin-top:3px">&#x1F517; Both referred by same person</span>';
+      refBadgeB=refBadgeA;
+      refCell='<div style="font-size:11.5px;line-height:1.7">'
+        +'<span style="font-weight:700;color:#9d174d">&#x1F465; Same referrer for both:</span><br>'
+        +'<strong>'+refName+'</strong><br>'
+        +'<span style="font-size:10.5px;color:#6b7280">A &amp; B were both signed up using the same referral link</span><br>'
+        +'<span style="font-size:10.5px;font-weight:700;color:#b45309">&#x26A0; Block referral bonus on <strong>'+refName.split(' ')[0]+'</strong> to prevent abuse</span>'
+        +'</div>';
+    } else if(g.a.referredBy){
+      var refA=members.find(function(m){return m.id===g.a.referredBy;});
+      refBadgeA='<br><span style="font-size:10.5px;font-weight:700;background:#fef3c7;color:#92400e;padding:2px 7px;border-radius:7px;display:inline-block;margin-top:3px">&#x1F517; Referred by: '+(refA?refA.firstName+' '+refA.lastName:'ID '+g.a.referredBy)+'</span>';
+    } else if(g.b.referredBy){
+      var refB=members.find(function(m){return m.id===g.b.referredBy;});
+      refBadgeB='<br><span style="font-size:10.5px;font-weight:700;background:#fef3c7;color:#92400e;padding:2px 7px;border-radius:7px;display:inline-block;margin-top:3px">&#x1F517; Referred by: '+(refB?refB.firstName+' '+refB.lastName:'ID '+g.b.referredBy)+'</span>';
+    }
+
     html+='<tr>';
     html+='<td style="font-weight:700;color:#b45309">'+(i+1)+'</td>';
     html+='<td><span style="font-size:11px;font-weight:800;background:'+riskBg+';color:'+riskColor+';padding:3px 9px;border-radius:8px;display:inline-block">'+riskLabel+'<br><span style="font-size:10px;font-weight:600">Score: '+g.score+'</span></span></td>';
@@ -5458,12 +5502,13 @@ function renderDuplicatesTable(){
     html+='<span style="font-size:11px;color:#6b7280">'+g.a.phone+'</span><br>';
     html+='<span style="font-size:11px;color:#6b7280">'+g.a.region+' · '+(g.a.age||'?')+' · '+g.a.tier+'</span><br>';
     if(g.a.regDeviceModel&&g.a.regDeviceModel!=='—') html+='<span style="font-size:10.5px;color:#9ca3af">'+g.a.regDeviceModel+'</span><br>';
-    html+=stA+'</td>';
+    html+=stA+refBadgeA+'</td>';
     html+='<td><strong>'+g.b.firstName+' '+g.b.lastName+'</strong><br>';
     html+='<span style="font-size:11px;color:#6b7280">'+g.b.phone+'</span><br>';
     html+='<span style="font-size:11px;color:#6b7280">'+g.b.region+' · '+(g.b.age||'?')+' · '+g.b.tier+'</span><br>';
     if(g.b.regDeviceModel&&g.b.regDeviceModel!=='—') html+='<span style="font-size:10.5px;color:#9ca3af">'+g.b.regDeviceModel+'</span><br>';
-    html+=stB+'</td>';
+    html+=stB+refBadgeB+'</td>';
+    html+='<td style="min-width:180px">'+refCell+'</td>';
     html+='<td>'+g.reasons.map(function(r){
       var isHard=r.indexOf('Identical')>=0||r.indexOf('Same device model')>=0;
       var bg=isHard?'#fdeaec':'#fef3c7';
@@ -5553,12 +5598,18 @@ function downloadMembersPDF(){
     +'</tr></thead><tbody>'+rows+'</tbody></table>'
     +'</body></html>';
 
-  var win=window.open('','_blank','width=1100,height=750,scrollbars=yes');
-  if(!win){adminAlert('Popup blocked. Please allow popups for this site and try again.');return;}
-  win.document.write(html);
-  win.document.close();
-  win.focus();
-  setTimeout(function(){win.print();},600);
+  var now2=new Date();
+  var fileDate=now2.getFullYear()+'-'+String(now2.getMonth()+1).padStart(2,'0')+'-'+String(now2.getDate()).padStart(2,'0');
+  var fileName='GhanaOpinionPay_Members_'+fileDate+(tierFilter!=='all'?'_'+tierFilter:'')+(statusFilter!=='all'?'_'+statusFilter:'')+'.html';
+  var blob=new Blob([html],{type:'text/html;charset=utf-8'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  a.href=url;
+  a.download=fileName;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(function(){URL.revokeObjectURL(url);a.remove();},2000);
+  adminAlert('&#x2705; Download started: '+fileName);
 }
 
 function flagReferralAbuse(memberId){
