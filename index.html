@@ -771,6 +771,21 @@ iframe[src*="badge"]{
   </div>
 </div>
 
+<!-- GHANA CARD PROMPT MODAL — shown after login if ghanaCard is missing -->
+<div class="modal-overlay" id="ghanaCardModal">
+  <div class="modal modal-sm">
+    <h2>&#x1F4CB; Enter Your Ghana Card Number</h2>
+    <p style="font-size:13.5px;color:var(--text-muted);margin-bottom:18px;line-height:1.6">Your National ID (Ghana Card) has not been recorded yet. Please enter it to access your dashboard.</p>
+    <div class="fg">
+      <label>Ghana Card Number</label>
+      <input type="text" id="gcPromptInput" placeholder="e.g. GHA-763526388-2" maxlength="17" style="text-transform:uppercase;letter-spacing:.5px"/>
+      <small style="font-size:11.5px;color:var(--text-muted);margin-top:4px;display:block">&#x1F4CB; Format: GHA-XXXXXXXXX-X (as printed on your National ID card)</small>
+    </div>
+    <div class="err-box" id="gcPromptError"></div>
+    <button class="sbtn" id="gcPromptSubmitBtn">Continue to Dashboard &#x2192;</button>
+  </div>
+</div>
+
 <!-- LOGIN MODAL -->
 <div class="modal-overlay" id="loginModal">
   <div class="modal modal-sm">
@@ -1336,12 +1351,12 @@ iframe[src*="badge"]{
           <div class="fg"><label>Gender</label><select id="setGender"><option value="">Select</option><option>Male</option><option>Female</option><option>Prefer not to say</option></select></div>
           <div class="fg"><label>Region</label><select id="setRegion"><option value="">Select</option><option>Greater Accra</option><option>Ashanti</option><option>Northern</option><option>Western</option><option>Eastern</option><option>Central</option><option>Volta</option><option>Upper East</option><option>Upper West</option><option>Brong-Ahafo</option><option>Oti</option><option>Bono East</option><option>Ahafo</option><option>North East</option><option>Savannah</option><option>Western North</option></select></div>
           <div class="fg">
-            <label>&#x1F1EC;&#x1F1ED; Ghana Card Number (National ID)</label>
-            <input type="text" id="setGhanaCard" placeholder="GHA-XXXXXXXXX-X" maxlength="17" style="text-transform:uppercase;font-family:monospace;letter-spacing:1px"/>
-            <small style="color:var(--text-muted);font-size:12px">Format: GHA-XXXXXXXXX-X &nbsp;·&nbsp; Updating this will require admin re-verification.</small>
+            <label>&#x1F4CB; Ghana Card Number (National ID) <span style="font-size:11px;color:var(--text-muted);font-weight:400">— can be updated if incorrect</span></label>
+            <input type="text" id="setGhanaCard" placeholder="e.g. GHA-763526388-2" maxlength="17" style="text-transform:uppercase;letter-spacing:.5px"/>
+            <small style="font-size:11.5px;color:var(--text-muted);margin-top:4px;display:block">Format: GHA-XXXXXXXXX-X (as printed on your National ID card)</small>
+            <div class="err-box" id="setGhanaCardError" style="margin-top:6px"></div>
           </div>
           <button class="sbtn" style="max-width:200px" id="saveProfileBtn">Save Changes &#x2192;</button>
-          <div id="saveProfileMsg" style="display:none;margin-top:10px;padding:10px 13px;border-radius:9px;font-size:13.5px;font-weight:500"></div>
         </div>
         <div class="s-card"><h3>&#x1F511; Security Question</h3>
           <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px">Used to recover your account if you forget your password.</p>
@@ -1465,6 +1480,22 @@ iframe[src*="badge"]{
       </div>
     </div>
     <div class="a-section" id="atab-members">
+      <!-- Ghana Card Lookup -->
+      <div class="a-card">
+        <div class="a-card-title">
+          <span>&#x1F50D; Ghana Card Lookup</span>
+        </div>
+        <p style="font-size:13px;color:#6b7280;margin-bottom:14px;line-height:1.6">Enter any Ghana Card number to instantly retrieve the member's profile information.</p>
+        <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+          <div class="fg" style="margin:0;flex:1;min-width:200px">
+            <label>Ghana Card Number</label>
+            <input type="text" id="gcLookupInput" placeholder="e.g. GHA-763526388-2" maxlength="17" style="text-transform:uppercase;letter-spacing:.5px"/>
+          </div>
+          <button class="add-btn" id="gcLookupBtn" style="white-space:nowrap;height:42px">&#x1F50D; Look Up</button>
+        </div>
+        <div id="gcLookupResult" style="margin-top:16px"></div>
+      </div>
+
       <div class="a-card">
         <div class="a-card-title">All Registered Members</div>
         <!-- Tier filter tabs -->
@@ -1676,8 +1707,8 @@ iframe[src*="badge"]{
     </div>
     <!-- SMS TAB -->
     <div class="a-section" id="atab-sms">
-      <!-- API Settings -->
-      <div class="a-card">
+      <!-- API Settings — super-admin only -->
+      <div class="a-card" id="smsApiSettingsCard">
         <div class="a-card-title">
           <span>&#x1F511; Arkesel SMS API Settings</span>
           <button class="abtn" id="saveSmsApiBtn" style="background:var(--green);color:#fff;border-color:var(--green)">&#x1F4BE; Save Settings</button>
@@ -1717,8 +1748,8 @@ iframe[src*="badge"]{
           </select>
         </div>
         <div class="fg" id="smsCustomPhoneWrap" style="display:none">
-          <label>Phone Number <span style="font-size:11px;color:#9ca3af">(Ghanaian MoMo number e.g. 0241234567)</span></label>
-          <input type="tel" id="smsCustomPhone" placeholder="e.g. 0241234567" inputmode="numeric" maxlength="10"/>
+          <label>Phone Number <span style="font-size:11px;color:#9ca3af">(e.g. 0241234567 · +233241234567 · 233241234567)</span></label>
+          <input type="tel" id="smsCustomPhone" placeholder="e.g. 0241234567 or +233241234567" inputmode="tel" maxlength="16"/>
         </div>
 
         <!-- Message -->
@@ -2734,22 +2765,10 @@ document.addEventListener('DOMContentLoaded', function(){
   // Login / register submit
   bindClick('doLoginBtn', doLogin);
   bindClick('doRegisterBtn', doRegister);
-  // Ghana Card auto-format: GHA-XXXXXXXXX-X  (registration form)
+  // Ghana Card auto-format: GHA-XXXXXXXXX-X
   var gcInput=el('regGhanaCard');
   if(gcInput){
     gcInput.addEventListener('input',function(){
-      var raw=this.value.replace(/[^a-zA-Z0-9]/g,'').toUpperCase();
-      var out='';
-      if(raw.length>0) out=raw.substring(0,3);
-      if(raw.length>3) out+='-'+raw.substring(3,12);
-      if(raw.length>12) out+='-'+raw.substring(12,13);
-      this.value=out;
-    });
-  }
-  // Ghana Card auto-format: GHA-XXXXXXXXX-X  (settings / profile update form)
-  var gcSet=el('setGhanaCard');
-  if(gcSet){
-    gcSet.addEventListener('input',function(){
       var raw=this.value.replace(/[^a-zA-Z0-9]/g,'').toUpperCase();
       var out='';
       if(raw.length>0) out=raw.substring(0,3);
@@ -3017,6 +3036,24 @@ document.addEventListener('DOMContentLoaded', function(){
   // Member search
   var ms=el('memberSearch');
   if(ms) ms.addEventListener('input', renderMembersTable);
+
+  // Ghana Card Lookup — auto-format input
+  var gcLookupInp=el('gcLookupInput');
+  if(gcLookupInp&&!gcLookupInp._gcLBound){
+    gcLookupInp._gcLBound=true;
+    gcLookupInp.addEventListener('input',function(){
+      var raw=this.value.replace(/[^0-9A-Za-z]/g,'').toUpperCase();
+      if(raw.startsWith('GHA')) raw=raw.slice(3);
+      var out=raw.length<=9?'GHA-'+raw:'GHA-'+raw.slice(0,9)+'-'+raw.slice(9,10);
+      this.value=out;
+    });
+    gcLookupInp.addEventListener('keydown',function(e){if(e.key==='Enter')doGhanaCardLookup();});
+  }
+  var gcLookupBtn=el('gcLookupBtn');
+  if(gcLookupBtn&&!gcLookupBtn._gcLBound){
+    gcLookupBtn._gcLBound=true;
+    gcLookupBtn.addEventListener('click', doGhanaCardLookup);
+  }
 
   // Phone input: numbers only
   var phoneInputs=['loginPhone','regPhone'];
@@ -3301,13 +3338,6 @@ function doLogin(){
 }
 
 function doLoginWithMember(m, phone){
-  // ── Firebase sync on every login ─────────────────────
-  // Always ensure this member's record exists in Firebase, regardless of status.
-  // This covers: members who registered before Firebase was added, members on
-  // non-active statuses (awaiting, suspended, etc.) who would otherwise slip
-  // past the sync that runs later in the active-only branch.
-  ensureMemberInFirebase(m);
-
   // Check if account was deleted
   try{
     var bl=JSON.parse(localStorage.getItem('gop_deleted')||'[]');
@@ -3348,8 +3378,88 @@ function doLoginWithMember(m, phone){
   // Firebase was integrated and are missing from the admin members section.
   syncMemberToBackend(m);
   ensureMemberInFirebase(m);
-  currentUser=m; saveSession(); closeLoginModal(); openMemberDashboard(m); startIdleTracking();
+
+  // If Ghana Card is missing, prompt before opening dashboard
+  if(!m.ghanaCard||(m.ghanaCard+'').trim()===''){
+    currentUser=m; saveSession(); closeLoginModal();
+    showGhanaCardPrompt(m);
+    return;
+  }
+
+  finishMemberLogin(m);
+}
+
+// Called after login is fully confirmed (Ghana card already recorded)
+function finishMemberLogin(m){
+  currentUser=m; saveSession(); closeLoginModal();
+
+  // Immediately sync the pending page-load visit to Firebase now that we know
+  // this is a genuine member (not an admin). This fixes visits not updating.
+  try{
+    var pendingVisitStr=sessionStorage.getItem('gop_visit_pending');
+    var pendingVid=sessionStorage.getItem('gop_visit_id');
+    if(pendingVid&&pendingVisitStr){
+      var pendingVisitData=JSON.parse(pendingVisitStr);
+      var vKey=pendingVid.replace(/[^a-zA-Z0-9_-]/g,'_');
+      fetch(FB_URL+'/visits/'+vKey+'.json',{
+        method:'PUT',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(pendingVisitData)
+      }).catch(function(){});
+      // Clear flags so pagehide doesn't double-sync
+      sessionStorage.removeItem('gop_visit_pending');
+      sessionStorage.removeItem('gop_visit_id');
+    }
+  }catch(e){}
+
+  openMemberDashboard(m); startIdleTracking();
   try{sessionStorage.setItem('gop_session_active','1');}catch(e){}
+}
+
+// Show the Ghana card entry prompt after login
+function showGhanaCardPrompt(m){
+  var overlay=el('ghanaCardModal');
+  if(!overlay) return;
+  overlay.classList.add('open');
+  var inp=el('gcPromptInput');
+  if(inp){inp.value=''; inp.focus();}
+  hideErr('gcPromptError');
+
+  // Auto-format input as GHA-XXXXXXXXX-X
+  if(inp&&!inp._gcBound){
+    inp._gcBound=true;
+    inp.addEventListener('input',function(){
+      var raw=this.value.replace(/[^0-9A-Za-z]/g,'').toUpperCase();
+      var out='';
+      if(raw.startsWith('GHA')) raw=raw.slice(3);
+      if(raw.length<=9) out='GHA-'+raw;
+      else out='GHA-'+raw.slice(0,9)+'-'+raw.slice(9,10);
+      this.value=out;
+    });
+  }
+
+  var submitBtn=el('gcPromptSubmitBtn');
+  if(submitBtn&&!submitBtn._gcBound){
+    submitBtn._gcBound=true;
+    submitBtn.addEventListener('click',function(){
+      var cardNum=(val('gcPromptInput')||'').trim().toUpperCase();
+      if(!cardNum){showErr('gcPromptError','Please enter your Ghana Card number.'); return;}
+      if(!/^GHA-\d{9}-\d$/.test(cardNum)){showErr('gcPromptError','Invalid format. Please use: GHA-XXXXXXXXX-X'); return;}
+      // Check for duplicate Ghana Card
+      var allMembers=getMembers();
+      var dup=allMembers.find(function(x){return x.id!==m.id&&x.ghanaCard&&x.ghanaCard===cardNum;});
+      if(dup){showErr('gcPromptError','This Ghana Card is already registered to another account. Contact support if you believe this is an error.'); return;}
+      // Save Ghana Card
+      m.ghanaCard=cardNum;
+      var ms=getMembers();
+      var idx=ms.findIndex(function(x){return x.id===m.id;});
+      if(idx>=0){ms[idx]=m; saveMembers(ms);}
+      syncMemberToBackend(m);
+      // Close modal and proceed
+      overlay.classList.remove('open');
+      finishMemberLogin(m);
+    });
+  }
 }
 
 // ── REGISTER ──────────────────────────────────────────
@@ -3570,10 +3680,22 @@ function openMemberDashboard(member){
   setVal('setEmail', member.email);
   setVal('setRegion', member.region||'');
   setVal('setGender', member.gender||'');
-  setVal('setGhanaCard', member.ghanaCard||'');
   setVal('setSecQuestion', member.secQuestion||'');
   setVal('setSecAnswer', member.secAnswer||'');
+  setVal('setGhanaCard', member.ghanaCard||'');
   setText('setPhone', member.phone);
+  // Auto-format Ghana card input in settings
+  (function(){
+    var gcInp=el('setGhanaCard');
+    if(gcInp&&!gcInp._gcFmtBound){
+      gcInp._gcFmtBound=true;
+      gcInp.addEventListener('input',function(){
+        var raw=this.value.replace(/[^0-9A-Za-z]/g,'').toUpperCase();
+        if(raw.startsWith('GHA')) raw=raw.slice(3);
+        this.value=raw.length<=9?'GHA-'+raw:'GHA-'+raw.slice(0,9)+'-'+raw.slice(9,10);
+      });
+    }
+  })();
   setText('refLink','https://Goppay.github.io/SV/ref/'+member.id);
   // Reset daily ad viewed list if it's a new day
   if(member.dailyAdDate && member.dailyAdDate!==today()){
@@ -4568,29 +4690,23 @@ function reverseWithdrawal(wId){
 
 // ── SETTINGS ──────────────────────────────────────────
 function saveProfile(){
-  var msgEl=el('saveProfileMsg');
-  function showMsg(text,ok){
-    if(!msgEl) return;
-    msgEl.textContent=text;
-    msgEl.style.background=ok?'#d1fae5':'#fee2e2';
-    msgEl.style.color=ok?'#065f46':'#991b1b';
-    msgEl.style.display='block';
-    setTimeout(function(){msgEl.style.display='none';},4000);
-  }
   var members=getMembers();
   var idx=members.findIndex(function(m){return m.id===currentUser.id;});
   if(idx<0) return;
 
-  // Ghana Card — validate and duplicate-check
+  // Validate Ghana Card if provided
+  var gcErrEl=el('setGhanaCardError');
+  if(gcErrEl) gcErrEl.style.display='none';
   var newGhanaCard=(val('setGhanaCard')||'').trim().toUpperCase();
   if(newGhanaCard){
     if(!/^GHA-\d{9}-\d$/.test(newGhanaCard)){
-      showMsg('Invalid Ghana Card format. Use: GHA-XXXXXXXXX-X (e.g. GHA-763526388-2)',false);
+      if(gcErrEl){gcErrEl.textContent='Invalid format. Please use: GHA-XXXXXXXXX-X';gcErrEl.style.display='block';}
       return;
     }
-    var takenBy=members.find(function(m){return m.ghanaCard&&m.ghanaCard===newGhanaCard&&m.id!==currentUser.id;});
-    if(takenBy){
-      showMsg('This Ghana Card number is already registered to another account. Contact support if this is an error.',false);
+    // Check for duplicates (exclude self)
+    var dup=members.find(function(m){return m.id!==currentUser.id&&(m.ghanaCard||'').toUpperCase()===newGhanaCard;});
+    if(dup){
+      if(gcErrEl){gcErrEl.textContent='This Ghana Card is already registered to another account. Contact support if you believe this is an error.';gcErrEl.style.display='block';}
       return;
     }
     members[idx].ghanaCard=newGhanaCard;
@@ -4601,12 +4717,32 @@ function saveProfile(){
   members[idx].email=val('setEmail').trim()||members[idx].email;
   members[idx].region=val('setRegion')||members[idx].region;
   members[idx].gender=val('setGender')||members[idx].gender;
+  saveMembers(members); currentUser=members[idx]; saveSession();
 
-  saveMembers(members);
-  currentUser=members[idx];
-  syncMemberToBackend(currentUser);  // push full updated record to Firebase
+  // Push full updated member record to Firebase — this makes Ghana card
+  // (and all other changes) visible in the admin dashboard immediately
+  // when the admin next opens/refreshes the Members or Profiles tab.
+  var saveProfileStatusEl=el('saveProfileStatus');
+  if(saveProfileStatusEl){saveProfileStatusEl.textContent='Saving…';saveProfileStatusEl.style.color='var(--text-muted)';}
+  fetch(FB_URL+'/members/'+currentUser.id.replace(/[^a-zA-Z0-9_-]/g,'_')+'.json',{
+    method:'PUT',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(currentUser)
+  }).then(function(r){
+    if(r.ok){
+      if(saveProfileStatusEl){saveProfileStatusEl.textContent='\u2705 Saved & synced to admin dashboard';saveProfileStatusEl.style.color='var(--green)';}
+    } else {
+      if(saveProfileStatusEl){saveProfileStatusEl.textContent='\u26A0\uFE0F Saved locally — will sync when online';saveProfileStatusEl.style.color='var(--orange)';}
+    }
+    setTimeout(function(){if(saveProfileStatusEl) saveProfileStatusEl.textContent='';},4000);
+  }).catch(function(){
+    if(saveProfileStatusEl){saveProfileStatusEl.textContent='\u26A0\uFE0F Saved locally — will sync when online';saveProfileStatusEl.style.color='var(--orange)';}
+    setTimeout(function(){if(saveProfileStatusEl) saveProfileStatusEl.textContent='';},4000);
+  });
+
   setText('dGreeting','Akwaaba! \uD83C\uDDEC\uD83C\uDDED');
-  showMsg('\u2705 Profile updated successfully! Changes are now visible in the admin dashboard.',true);
+  // Refresh the Ghana card display in settings
+  setVal('setGhanaCard', currentUser.ghanaCard||'');
 }
 function changePassword(){
   if(val('setPwOld')!==currentUser.password){alert('Current password is incorrect.'); return;}
@@ -4789,7 +4925,7 @@ function refreshAdminMetrics(){
   setText('aTotalM', members.length);
   setText('aPendP', members.filter(function(m){return m.status==='awaiting_verification';}).length);
   setText('aPendW', ws.filter(function(w){return w.phase!=='Complete'&&w.phase!=='Reversed';}).length);
-  var paid=ws.filter(function(w){return w.phase==='Complete';}).reduce(function(s,w){return s+parseFloat(w.amount);},0);
+  var paid=ws.filter(function(w){return w.phase==='Complete';}).reduce(function(s,w){return s+parseFloat(w.amountAfterFee!=null?w.amountAfterFee:w.amount);},0);
   setText('aTotalPaid','GHS '+paid.toFixed(2));
   // count duplicates — use same scoring as renderDuplicatesTable (score>=2)
   var seen={}, cnt=0;
@@ -4837,6 +4973,25 @@ function refreshAdminMetrics(){
   setText('aTotalAds', totalAds||memberAdTotal);
 }
 
+// Tracks the periodic member-sync interval for the members/profiles tabs
+var _adminMemberSyncInterval = null;
+
+function _startAdminMemberAutoSync(){
+  _stopAdminMemberAutoSync();
+  _adminMemberSyncInterval = setInterval(function(){
+    if(!isAdminUser()) { _stopAdminMemberAutoSync(); return; }
+    syncMembersFromBackend(function(){
+      renderMembersTable();
+      renderProfilesTab();
+      refreshAdminMetrics();
+    });
+  }, 90000); // refresh every 90 seconds
+}
+
+function _stopAdminMemberAutoSync(){
+  if(_adminMemberSyncInterval){ clearInterval(_adminMemberSyncInterval); _adminMemberSyncInterval=null; }
+}
+
 function switchAdminTab(name, btn){
   var restricted=['content','ads','pages','asettings'];
   if(isSubAdmin() && restricted.indexOf(name)>=0){
@@ -4848,6 +5003,20 @@ function switchAdminTab(name, btn){
   var sec=el('atab-'+name);
   if(sec) sec.classList.add('active');
   if(btn) btn.classList.add('active');
+
+  // Auto-sync members from Firebase when switching to Members or Profiles tab
+  // so Ghana card updates and other member changes appear immediately
+  if(name==='members' || name==='profiles'){
+    syncMembersFromBackend(function(){
+      renderMembersTable();
+      renderProfilesTab();
+      refreshAdminMetrics();
+    });
+    _startAdminMemberAutoSync(); // keep refreshing every 90s while on these tabs
+  } else {
+    _stopAdminMemberAutoSync(); // stop polling when leaving members/profiles tab
+  }
+
   if(name==='duplicates') renderDuplicatesTable();
   if(name==='ads') renderAdminAds();
   if(name==='issues') renderAdminIssues();
@@ -4926,6 +5095,82 @@ function failPayment(id){
   if(currentUser&&currentUser!=='admin'&&currentUser.id===id){currentUser=members[idx];showPaymentFailed(reason);}
   renderPaymentsTable(); renderMembersTable(); refreshAdminMetrics();
   adminAlert('Payment marked as failed. Member notified.');
+}
+
+// ── ADMIN: GHANA CARD LOOKUP ───────────────────────────
+function doGhanaCardLookup(){
+  var resultEl=el('gcLookupResult');
+  var cardNum=(val('gcLookupInput')||'').trim().toUpperCase();
+  if(!resultEl) return;
+  if(!cardNum){resultEl.innerHTML='<p style="font-size:13px;color:var(--red)">Please enter a Ghana Card number.</p>'; return;}
+  if(!/^GHA-\d{9}-\d$/.test(cardNum)){resultEl.innerHTML='<p style="font-size:13px;color:var(--red)">Invalid format. Please use: GHA-XXXXXXXXX-X</p>'; return;}
+
+  resultEl.innerHTML='<p style="font-size:13px;color:#6b7280">&#x1F50D; Searching...</p>';
+
+  // Search local records first, then fall back to Firebase
+  var members=getMembers();
+  var m=members.find(function(x){return (x.ghanaCard||'').toUpperCase()===cardNum;});
+  if(m){
+    renderGhanaCardResult(resultEl,m,cardNum);
+  } else {
+    // Not found locally — query Firebase directly
+    fetch(FB_URL+'/members.json')
+    .then(function(r){return r.ok?r.json():null;})
+    .then(function(data){
+      var remote=data&&typeof data==='object'?Object.values(data).filter(Boolean):[];
+      var fm=remote.find(function(x){return (x.ghanaCard||'').toUpperCase()===cardNum;});
+      if(fm){
+        // Save into local store so future lookups are instant
+        var local=getMembers();
+        if(!local.find(function(x){return x.id===fm.id;})){local.push(fm);saveMembers(local);}
+        renderGhanaCardResult(resultEl,fm,cardNum);
+      } else {
+        resultEl.innerHTML='<div style="background:#fdeaec;border:1.5px solid #f5c6cb;border-radius:10px;padding:16px 18px;font-size:13.5px;color:var(--red)">&#x274C; No member found with Ghana Card <strong>'+cardNum+'</strong> in local records or Firebase.</div>';
+      }
+    })
+    .catch(function(){
+      resultEl.innerHTML='<div style="background:#fdeaec;border:1.5px solid #f5c6cb;border-radius:10px;padding:16px 18px;font-size:13.5px;color:var(--red)">&#x274C; No local match found. Could not reach Firebase to check further — please check your connection.</div>';
+    });
+  }
+}
+
+function renderGhanaCardResult(resultEl,m,cardNum){
+  function row(label,val2){
+    return '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:9px 12px">'+
+      '<div style="font-size:11px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;color:#9ca3af;margin-bottom:3px">'+label+'</div>'+
+      '<div style="font-weight:500;color:var(--text)">'+val2+'</div></div>';
+  }
+  var tierColors={Bronze:'#d4a06a',Silver:'#adb5bd',Gold:'#c9a500'};
+  var statusColors={active:'var(--green)',suspended:'var(--red)',pending_deletion:'var(--orange)',awaiting_verification:'var(--blue)'};
+  var tc=tierColors[m.tier]||'#6b7280';
+  var sc=statusColors[m.status]||'#6b7280';
+  var surveysCount=(m.completedSurveys||[]).length+(m.dailySurveyCount||0);
+  var videosCount=(m.completedVideos||[]).length;
+  var joinedStr=m.joinedDate||(m.joinedAt?new Date(m.joinedAt).toLocaleDateString('en-GB'):'—');
+  var lastLoginStr=m.lastLoginAt?new Date(m.lastLoginAt).toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:true}):'Never';
+  resultEl.innerHTML=
+    '<div style="background:#f0fdf4;border:1.5px solid var(--green);border-radius:12px;padding:20px 22px">'+
+    '<div style="font-size:12px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--green);margin-bottom:12px">&#x2705; Member Found</div>'+
+    '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;font-size:13.5px">'+
+    row('Full Name',(m.firstName||'')+' '+(m.lastName||''))+
+    row('Ghana Card','<span style="font-family:monospace;font-weight:700;color:var(--blue);background:#e3f2fd;padding:2px 8px;border-radius:6px">'+cardNum+'</span>')+
+    row('Phone',m.phone||'—')+
+    row('Email',m.email||'—')+
+    row('Region',m.region||'—')+
+    row('Gender',m.gender||'—')+
+    row('Age',m.age||'—')+
+    row('Tier','<span style="font-weight:700;color:'+tc+'">'+( m.tier||'—')+'</span>')+
+    row('Status','<span style="font-weight:700;color:'+sc+'">'+( m.status||'—')+'</span>')+
+    row('Balance','GHS '+(+(m.balance||0)).toFixed(2))+
+    row('Month Earned','GHS '+(+(m.monthEarned||0)).toFixed(2))+
+    row('Surveys Done',surveysCount)+
+    row('Videos Done',videosCount)+
+    row('Referrals',(m.referrals||0)+' · GHS '+(+(m.referralEarnings||0)).toFixed(2))+
+    row('Streak',(m.streakDays||0)+' day'+(m.streakDays!==1?'s':''))+
+    row('Joined',joinedStr)+
+    row('Last Login',lastLoginStr)+
+    row('Login Count',(m.loginCount||0)+' time'+(m.loginCount!==1?'s':''))+
+    '</div></div>';
 }
 
 // ── ADMIN: MEMBERS ────────────────────────────────────
@@ -8532,25 +8777,38 @@ function getSmsLog(){try{return JSON.parse(localStorage.getItem('gop_sms_log')||
 function saveSmsLog(v){try{localStorage.setItem('gop_sms_log',JSON.stringify(v));}catch(e){}}
 
 function initSmsTab(){
-  // Load saved API settings into form
-  var s=getSmsSettings();
-  var keyEl=el('smsApiKey'); if(keyEl&&s.apiKey) keyEl.value=s.apiKey;
-  var sidEl=el('smsSenderId'); if(sidEl&&s.senderId) sidEl.value=s.senderId;
+  // Show/hide API settings card based on admin role
+  var apiCard=el('smsApiSettingsCard');
+  if(apiCard){
+    if(isSubAdmin()){
+      apiCard.style.display='none';
+    } else {
+      apiCard.style.display='';
+    }
+  }
 
-  // Save settings button
-  var saveBtn=el('saveSmsApiBtn');
-  if(saveBtn&&!saveBtn._smsBound){
-    saveBtn._smsBound=true;
-    saveBtn.addEventListener('click',function(){
-      var apiKey=(val('smsApiKey')||'').trim();
-      var senderId=(val('smsSenderId')||'').trim();
-      if(!apiKey){setText('smsApiStatus','Please enter your Arkesel API key.');el('smsApiStatus').style.color='var(--red)';return;}
-      if(!senderId){setText('smsApiStatus','Please enter a Sender ID.');el('smsApiStatus').style.color='var(--red)';return;}
-      saveSmsSettings({apiKey:apiKey,senderId:senderId});
-      el('smsApiStatus').style.color='var(--green)';
-      setText('smsApiStatus','Settings saved successfully.');
-      setTimeout(function(){setText('smsApiStatus','');},3000);
-    });
+  // Load saved API settings into form (super-admin only)
+  if(!isSubAdmin()){
+    var s=getSmsSettings();
+    var keyEl=el('smsApiKey'); if(keyEl&&s.apiKey) keyEl.value=s.apiKey;
+    var sidEl=el('smsSenderId'); if(sidEl&&s.senderId) sidEl.value=s.senderId;
+
+    // Save settings button
+    var saveBtn=el('saveSmsApiBtn');
+    if(saveBtn&&!saveBtn._smsBound){
+      saveBtn._smsBound=true;
+      saveBtn.addEventListener('click',function(){
+        if(isSubAdmin()){adminAlert('Only the Super Admin can change SMS API settings.');return;}
+        var apiKey=(val('smsApiKey')||'').trim();
+        var senderId=(val('smsSenderId')||'').trim();
+        if(!apiKey){setText('smsApiStatus','Please enter your Arkesel API key.');el('smsApiStatus').style.color='var(--red)';return;}
+        if(!senderId){setText('smsApiStatus','Please enter a Sender ID.');el('smsApiStatus').style.color='var(--red)';return;}
+        saveSmsSettings({apiKey:apiKey,senderId:senderId});
+        el('smsApiStatus').style.color='var(--green)';
+        setText('smsApiStatus','Settings saved successfully.');
+        setTimeout(function(){setText('smsApiStatus','');},3000);
+      });
+    }
   }
 
   // Recipient selector — show/hide custom phone field
@@ -8615,18 +8873,33 @@ function initSmsTab(){
   renderSmsHistory();
 }
 
+// Normalise any Ghana phone format to the 233XXXXXXXXX form Arkesel expects.
+// Handles: 0241234567  →  233241234567
+//          +233241234567  →  233241234567
+//          233241234567   →  233241234567  (already correct)
+// Returns null when the input cannot be converted.
+function normalizeGhanaPhone(raw){
+  if(!raw) return null;
+  var p=String(raw).replace(/\s+/g,'');
+  if(/^\+233[2345679]\d{8}$/.test(p)) return p.slice(1);   // +233XX → 233XX
+  if(/^233[2345679]\d{8}$/.test(p))   return p;            // already 233XX
+  if(/^0[2345679]\d{8}$/.test(p))     return '233'+p.slice(1); // 0XX → 233XX
+  return null; // unrecognised format
+}
+
 function getSmsRecipients(recipVal){
   var members=getMembers();
   var phones=[];
   if(recipVal==='all'){
-    phones=members.filter(function(m){return m.status==='active'||m.status==='awaiting_verification';}).map(function(m){return m.phone;});
+    phones=members.filter(function(m){return m.status==='active'||m.status==='awaiting_verification';}).map(function(m){return normalizeGhanaPhone(m.phone);}).filter(Boolean);
   } else if(recipVal==='active'){
-    phones=members.filter(function(m){return m.status==='active';}).map(function(m){return m.phone;});
+    phones=members.filter(function(m){return m.status==='active';}).map(function(m){return normalizeGhanaPhone(m.phone);}).filter(Boolean);
   } else if(recipVal==='Bronze'||recipVal==='Silver'||recipVal==='Gold'){
-    phones=members.filter(function(m){return m.tier===recipVal&&(m.status==='active'||m.status==='awaiting_verification');}).map(function(m){return m.phone;});
+    phones=members.filter(function(m){return m.tier===recipVal&&(m.status==='active'||m.status==='awaiting_verification');}).map(function(m){return normalizeGhanaPhone(m.phone);}).filter(Boolean);
   } else if(recipVal==='custom'){
     var cp=(val('smsCustomPhone')||'').trim();
-    if(cp) phones=[cp];
+    var norm=normalizeGhanaPhone(cp);
+    if(norm) phones=[norm];
   }
   return phones;
 }
@@ -8654,8 +8927,8 @@ function doSendSms(){
 
   if(recipVal==='custom'){
     var cp=(val('smsCustomPhone')||'').trim();
-    if(!cp||!/^0[2345679]\d{8}$/.test(cp)){
-      setText('smsSendStatus','Please enter a valid Ghanaian phone number.');
+    if(!cp||!normalizeGhanaPhone(cp)){
+      setText('smsSendStatus','Please enter a valid Ghanaian phone number (e.g. 0241234567, +233241234567 or 233241234567).');
       el('smsSendStatus').style.color='var(--red)';
       return;
     }
@@ -8721,19 +8994,53 @@ function doSendSms(){
       return;
     }
 
-    var phone=phones[i];
-    // Convert 0XX to 233XX for Arkesel international format
-    var intlPhone=phone.replace(/^0/,'233');
+    var phone=phones[i]; // already normalised to 233XXXXXXXXX by getSmsRecipients
 
     // Route through server proxy to avoid browser CORS restrictions
     fetch(GOP_API+'/sms/send',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({apiKey:s.apiKey,senderId:s.senderId,to:intlPhone,message:msg})
+      body:JSON.stringify({apiKey:s.apiKey,senderId:s.senderId,to:phone,message:msg})
     })
-    .then(function(r){return r.json();})
+    .then(function(r){
+      var ct=r.headers.get('content-type')||'';
+      if(!ct.includes('application/json')){
+        return {ok:false,error:'Server error (HTTP '+r.status+'). The API server may be unreachable or the URL is wrong.',data:{}};
+      }
+      return r.json();
+    })
     .then(function(res){
       var data=res.data||{};
+      if(res.errorType==='insufficient_credit'){
+        // Stop sending immediately — out of SMS credits
+        if(sendBtn){sendBtn.disabled=false;sendBtn.innerHTML='&#x1F4F2; Send SMS';}
+        var creditMsg='⚠️ Insufficient Arkesel SMS credit. Sending stopped after '+sent+' sent. Please top up your Arkesel account and try again.';
+        setText('smsSendStatus',creditMsg);
+        el('smsSendStatus').style.color='var(--red)';
+        if(progressEl) progressEl.innerHTML+='<br><span style="color:var(--red);font-weight:600">&#x26A0; Stopped: Insufficient SMS credit. Top up your Arkesel account to continue.</span>';
+        // Show prominent alert banner
+        var alertId='smsCredAlert';
+        if(!el(alertId)){
+          var alertDiv=document.createElement('div');
+          alertDiv.id=alertId;
+          alertDiv.style.cssText='background:#fdeaec;border:1.5px solid var(--red);border-radius:10px;padding:14px 18px;margin:12px 0;display:flex;align-items:flex-start;gap:12px;font-size:13.5px;color:var(--red);line-height:1.6';
+          alertDiv.innerHTML='<span style="font-size:20px;flex-shrink:0">&#x26A0;</span><div><strong>Insufficient SMS Credit</strong><br>Your Arkesel account has run out of credit. Only <strong>'+sent+'</strong> of <strong>'+total+'</strong> messages were sent before sending stopped. Please top up your Arkesel balance at <a href="https://arkesel.com" target="_blank" style="color:var(--red);text-decoration:underline">arkesel.com</a> and retry.</div>';
+          var smsSection=el('atab-sms');
+          if(smsSection) smsSection.insertBefore(alertDiv,smsSection.firstChild);
+        }
+        // Log partial send
+        var logEntry={
+          id:'SMS'+Date.now(),ts:new Date().toISOString(),
+          date:new Date().toLocaleDateString('en-GB'),
+          time:new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}),
+          recipientGroup:getSmsRecipientLabel(recipVal,total),
+          recipientCount:total,message:msg,sent:sent,failed:failed+1,senderId:s.senderId
+        };
+        var log=getSmsLog(); log.unshift(logEntry);
+        if(log.length>200) log=log.slice(0,200);
+        saveSmsLog(log); syncSmsLogToFirebase(); renderSmsHistory();
+        return; // abort loop
+      }
       if(res.ok&&(data.status==='ok'||data.code==='ok'||data.message==='Sent'||data['response-code']==='00'||String(data.status||'').toLowerCase()==='ok')){
         sent++;
         if(progressEl) progressEl.innerHTML+='&#x2705; '+phone+'<br>';
