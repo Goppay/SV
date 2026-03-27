@@ -1791,12 +1791,16 @@ iframe[src*="badge"]{
       <div class="a-card">
         <div class="a-card-title">
           <span>&#x1F4DC; SMS History</span>
-          <button class="abtn" id="refreshSmsLogBtn">&#x21BB; Refresh</button>
+          <div style="display:flex;gap:6px;align-items:center">
+            <button class="abtn" id="refreshSmsLogBtn">&#x21BB; Refresh</button>
+            <button class="abtn" id="clearSmsLogBtn" style="color:var(--red);border-color:var(--red)">&#x1F5D1; Clear All</button>
+            <button class="abtn" id="toggleSmsHistoryBtn" title="Minimise / Maximise">&#x25BC;</button>
+          </div>
         </div>
-        <div style="overflow-x:auto">
+        <div id="smsHistoryBody_wrap" style="overflow-x:auto">
           <table class="atable">
-            <thead><tr><th>#</th><th>Date &amp; Time</th><th>Sent To</th><th>Recipients</th><th>Message</th><th>Status</th></tr></thead>
-            <tbody id="smsHistoryBody"><tr><td colspan="6" class="empty-row">No SMS sent yet.</td></tr></tbody>
+            <thead><tr><th>#</th><th>Date &amp; Time</th><th>Sent To</th><th>Recipients</th><th>Message</th><th>Status</th><th></th></tr></thead>
+            <tbody id="smsHistoryBody"><tr><td colspan="7" class="empty-row">No SMS sent yet.</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -8870,6 +8874,27 @@ function initSmsTab(){
     });
   }
 
+  // Clear all history button
+  var clearBtn=el('clearSmsLogBtn');
+  if(clearBtn&&!clearBtn._smsBound){
+    clearBtn._smsBound=true;
+    clearBtn.addEventListener('click',clearSmsLog);
+  }
+
+  // Minimise / maximise SMS history
+  var toggleBtn=el('toggleSmsHistoryBtn');
+  if(toggleBtn&&!toggleBtn._smsBound){
+    toggleBtn._smsBound=true;
+    toggleBtn.addEventListener('click',function(){
+      var wrap=el('smsHistoryBody_wrap');
+      if(!wrap) return;
+      var isHidden=wrap.style.display==='none';
+      wrap.style.display=isHidden?'':'none';
+      toggleBtn.textContent=isHidden?'\u25BC':'\u25B2';
+      toggleBtn.title=isHidden?'Minimise':'Maximise';
+    });
+  }
+
   renderSmsHistory();
 }
 
@@ -9047,22 +9072,47 @@ function renderSmsHistory(){
   var log=getSmsLog();
   var tbody=el('smsHistoryBody');
   if(!tbody) return;
-  if(!log.length){tbody.innerHTML='<tr><td colspan="6" class="empty-row">No SMS sent yet.</td></tr>';return;}
+  if(!log.length){tbody.innerHTML='<tr><td colspan="7" class="empty-row">No SMS sent yet.</td></tr>';return;}
   var rows='';
   log.forEach(function(entry,i){
-    var statusHtml='<span style="font-size:12px;font-weight:600;color:var(--green)">'+entry.sent+' sent</span>'
-      +(entry.failed?' <span style="font-size:12px;color:var(--red)">'+entry.failed+' failed</span>':'');
-    var shortMsg=entry.message.length>60?entry.message.substring(0,60)+'…':entry.message;
+    if(!entry||!entry.id) return;
+    var sent=entry.sent!=null?entry.sent:0;
+    var failed=entry.failed!=null?entry.failed:0;
+    var msg=entry.message||'(no message)';
+    var date=entry.date||'—';
+    var time=entry.time||'—';
+    var group=entry.recipientGroup||'—';
+    var count=entry.recipientCount!=null?entry.recipientCount:'—';
+    var statusHtml='<span style="font-size:12px;font-weight:600;color:var(--green)">'+sent+' sent</span>'
+      +(failed?' <span style="font-size:12px;color:var(--red)">'+failed+' failed</span>':'');
+    var shortMsg=msg.length>60?msg.substring(0,60)+'…':msg;
+    var safeId=entry.id.replace(/'/g,"\\'");
     rows+='<tr>'
       +'<td style="font-size:12px;color:#9ca3af">'+(i+1)+'</td>'
-      +'<td style="font-size:12px"><strong>'+entry.date+'</strong><br><span style="color:#9ca3af">'+entry.time+'</span></td>'
-      +'<td style="font-size:12.5px;font-weight:600">'+entry.recipientGroup+'</td>'
-      +'<td style="text-align:center;font-size:13.5px;font-weight:700;color:var(--green)">'+entry.recipientCount+'</td>'
-      +'<td style="font-size:12px;color:#374151;max-width:220px;word-break:break-word">'+shortMsg+'</td>'
+      +'<td style="font-size:12px"><strong>'+date+'</strong><br><span style="color:#9ca3af">'+time+'</span></td>'
+      +'<td style="font-size:12.5px;font-weight:600">'+group+'</td>'
+      +'<td style="text-align:center;font-size:13.5px;font-weight:700;color:var(--green)">'+count+'</td>'
+      +'<td style="font-size:12px;color:#374151;max-width:220px;word-break:break-word" title="'+msg.replace(/"/g,'&quot;')+'">'+shortMsg+'</td>'
       +'<td>'+statusHtml+'</td>'
+      +'<td><button onclick="deleteSmsEntry(\''+safeId+'\')" style="background:none;border:none;cursor:pointer;color:#d1d5db;font-size:16px;padding:2px 6px;border-radius:5px;transition:color .15s" title="Delete" onmouseover="this.style.color=\'var(--red)\'" onmouseout="this.style.color=\'#d1d5db\'">&#x1F5D1;</button></td>'
       +'</tr>';
   });
-  tbody.innerHTML=rows;
+  tbody.innerHTML=rows||'<tr><td colspan="7" class="empty-row">No SMS sent yet.</td></tr>';
+}
+
+function deleteSmsEntry(id){
+  if(!confirm('Delete this SMS history entry?')) return;
+  var log=getSmsLog().filter(function(e){return e&&e.id!==id;});
+  saveSmsLog(log);
+  syncSmsLogToFirebase();
+  renderSmsHistory();
+}
+
+function clearSmsLog(){
+  if(!confirm('Delete ALL SMS history? This cannot be undone.')) return;
+  saveSmsLog([]);
+  syncSmsLogToFirebase();
+  renderSmsHistory();
 }
 
 // ── GHANA CARD PROMPT (shown after login if member has no Ghana Card recorded) ──
