@@ -8958,113 +8958,78 @@ function doSendSms(){
   var progressEl=el('smsSendProgress');
   if(progressEl){progressEl.style.display='block';progressEl.innerHTML='<strong>Sending SMS...</strong><br>';}
 
-  var sent=0,failed=0,total=phones.length;
-  var logEntries=[];
+  var total=phones.length;
 
-  function sendNext(i){
-    if(i>=total){
-      // Done
-      if(sendBtn){sendBtn.disabled=false;sendBtn.innerHTML='&#x1F4F2; Send SMS';}
-      var statusMsg='Done! '+sent+' sent, '+failed+' failed.';
-      setText('smsSendStatus',statusMsg);
-      el('smsSendStatus').style.color=failed>0?'var(--orange)':'var(--green)';
-      if(progressEl) progressEl.innerHTML+='<br><strong>'+statusMsg+'</strong>';
+  // Send all recipients in ONE batch request — avoids multiple round-trips that
+  // can be blocked by the browser or proxy after the first succeeds.
+  fetch(GOP_API+'/sms/send',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({apiKey:s.apiKey,senderId:s.senderId,recipients:phones,message:msg})
+  })
+  .then(function(r){
+    var ct=r.headers.get('content-type')||'';
+    if(!ct.includes('application/json')){
+      throw new Error('Server error (HTTP '+r.status+'). The API server may be unreachable or the URL is wrong.');
+    }
+    return r.json();
+  })
+  .then(function(res){
+    if(sendBtn){sendBtn.disabled=false;sendBtn.innerHTML='&#x1F4F2; Send SMS';}
 
-      // Save to log
-      var logEntry={
-        id:'SMS'+Date.now(),
-        ts:new Date().toISOString(),
-        date:new Date().toLocaleDateString('en-GB'),
-        time:new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}),
-        recipientGroup:getSmsRecipientLabel(recipVal,total),
-        recipientCount:total,
-        message:msg,
-        sent:sent,
-        failed:failed,
-        senderId:s.senderId
-      };
-      var log=getSmsLog();
-      log.unshift(logEntry);
-      if(log.length>200) log=log.slice(0,200);
-      saveSmsLog(log);
-      syncSmsLogToFirebase();
-      renderSmsHistory();
-
-      // Clear message field
-      var msgTA=el('smsMessage');
-      if(msgTA) msgTA.value='';
-      setText('smsCharCount','0 / 160');
-      el('smsPreviewBox').style.display='none';
+    if(res.errorType==='insufficient_credit'){
+      setText('smsSendStatus','⚠️ Insufficient Arkesel SMS credit. Please top up your Arkesel account and try again.');
+      el('smsSendStatus').style.color='var(--red)';
+      var alertId='smsCredAlert';
+      if(!el(alertId)){
+        var alertDiv=document.createElement('div');
+        alertDiv.id=alertId;
+        alertDiv.style.cssText='background:#fdeaec;border:1.5px solid var(--red);border-radius:10px;padding:14px 18px;margin:12px 0;display:flex;align-items:flex-start;gap:12px;font-size:13.5px;color:var(--red);line-height:1.6';
+        alertDiv.innerHTML='<span style="font-size:20px;flex-shrink:0">&#x26A0;</span><div><strong>Insufficient SMS Credit</strong><br>Please top up your Arkesel balance at <a href="https://arkesel.com" target="_blank" style="color:var(--red);text-decoration:underline">arkesel.com</a> and retry.</div>';
+        var smsSection=el('atab-sms');
+        if(smsSection) smsSection.insertBefore(alertDiv,smsSection.firstChild);
+      }
       return;
     }
 
-    var phone=phones[i]; // already normalised to 233XXXXXXXXX by getSmsRecipients
+    var sent=res.sent||0;
+    var failed=res.failed||0;
+    var statusMsg='Done! '+sent+' sent'+(failed?' · '+failed+' failed':'')+'.';
+    if(progressEl) progressEl.innerHTML='<strong>'+statusMsg+'</strong>'+(res.detail?'<br>'+res.detail:'');
+    setText('smsSendStatus',statusMsg);
+    el('smsSendStatus').style.color=failed>0?'var(--orange)':'var(--green)';
 
-    // Route through server proxy to avoid browser CORS restrictions
-    fetch(GOP_API+'/sms/send',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({apiKey:s.apiKey,senderId:s.senderId,to:phone,message:msg})
-    })
-    .then(function(r){
-      var ct=r.headers.get('content-type')||'';
-      if(!ct.includes('application/json')){
-        return {ok:false,error:'Server error (HTTP '+r.status+'). The API server may be unreachable or the URL is wrong.',data:{}};
-      }
-      return r.json();
-    })
-    .then(function(res){
-      var data=res.data||{};
-      if(res.errorType==='insufficient_credit'){
-        // Stop sending immediately — out of SMS credits
-        if(sendBtn){sendBtn.disabled=false;sendBtn.innerHTML='&#x1F4F2; Send SMS';}
-        var creditMsg='⚠️ Insufficient Arkesel SMS credit. Sending stopped after '+sent+' sent. Please top up your Arkesel account and try again.';
-        setText('smsSendStatus',creditMsg);
-        el('smsSendStatus').style.color='var(--red)';
-        if(progressEl) progressEl.innerHTML+='<br><span style="color:var(--red);font-weight:600">&#x26A0; Stopped: Insufficient SMS credit. Top up your Arkesel account to continue.</span>';
-        // Show prominent alert banner
-        var alertId='smsCredAlert';
-        if(!el(alertId)){
-          var alertDiv=document.createElement('div');
-          alertDiv.id=alertId;
-          alertDiv.style.cssText='background:#fdeaec;border:1.5px solid var(--red);border-radius:10px;padding:14px 18px;margin:12px 0;display:flex;align-items:flex-start;gap:12px;font-size:13.5px;color:var(--red);line-height:1.6';
-          alertDiv.innerHTML='<span style="font-size:20px;flex-shrink:0">&#x26A0;</span><div><strong>Insufficient SMS Credit</strong><br>Your Arkesel account has run out of credit. Only <strong>'+sent+'</strong> of <strong>'+total+'</strong> messages were sent before sending stopped. Please top up your Arkesel balance at <a href="https://arkesel.com" target="_blank" style="color:var(--red);text-decoration:underline">arkesel.com</a> and retry.</div>';
-          var smsSection=el('atab-sms');
-          if(smsSection) smsSection.insertBefore(alertDiv,smsSection.firstChild);
-        }
-        // Log partial send
-        var logEntry={
-          id:'SMS'+Date.now(),ts:new Date().toISOString(),
-          date:new Date().toLocaleDateString('en-GB'),
-          time:new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}),
-          recipientGroup:getSmsRecipientLabel(recipVal,total),
-          recipientCount:total,message:msg,sent:sent,failed:failed+1,senderId:s.senderId
-        };
-        var log=getSmsLog(); log.unshift(logEntry);
-        if(log.length>200) log=log.slice(0,200);
-        saveSmsLog(log); syncSmsLogToFirebase(); renderSmsHistory();
-        return; // abort loop
-      }
-      if(res.ok&&(data.status==='ok'||data.code==='ok'||data.message==='Sent'||data['response-code']==='00'||String(data.status||'').toLowerCase()==='ok')){
-        sent++;
-        if(progressEl) progressEl.innerHTML+='&#x2705; '+phone+'<br>';
-      } else {
-        failed++;
-        var errMsg=res.error||(data.message||data.status||'Error');
-        if(progressEl) progressEl.innerHTML+='&#x274C; '+phone+' — '+errMsg+'<br>';
-      }
-      if(progressEl) progressEl.scrollTop=progressEl.scrollHeight;
-      setTimeout(function(){sendNext(i+1);}, 600);
-    })
-    .catch(function(err){
-      failed++;
-      if(progressEl) progressEl.innerHTML+='&#x274C; '+phone+' — '+(err.message||'Network error')+'<br>';
-      if(progressEl) progressEl.scrollTop=progressEl.scrollHeight;
-      setTimeout(function(){sendNext(i+1);}, 600);
-    });
-  }
+    var logEntry={
+      id:'SMS'+Date.now(),
+      ts:new Date().toISOString(),
+      date:new Date().toLocaleDateString('en-GB'),
+      time:new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}),
+      recipientGroup:getSmsRecipientLabel(recipVal,total),
+      recipientCount:total,
+      message:msg,
+      sent:sent,
+      failed:failed,
+      senderId:s.senderId
+    };
+    var log=getSmsLog();
+    log.unshift(logEntry);
+    if(log.length>200) log=log.slice(0,200);
+    saveSmsLog(log);
+    syncSmsLogToFirebase();
+    renderSmsHistory();
 
-  sendNext(0);
+    var msgTA=el('smsMessage');
+    if(msgTA) msgTA.value='';
+    setText('smsCharCount','0 / 160');
+    el('smsPreviewBox').style.display='none';
+  })
+  .catch(function(err){
+    if(sendBtn){sendBtn.disabled=false;sendBtn.innerHTML='&#x1F4F2; Send SMS';}
+    var errTxt=err.message||'Network error — could not reach the SMS server.';
+    setText('smsSendStatus',errTxt);
+    el('smsSendStatus').style.color='var(--red)';
+    if(progressEl){progressEl.style.display='block';progressEl.innerHTML='&#x274C; '+errTxt;}
+  });
 }
 
 function renderSmsHistory(){
