@@ -395,6 +395,30 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
   .d-metrics,.a-metrics{grid-template-columns:1fr 1fr}
   .form-row-3{grid-template-columns:1fr 1fr}
 }
+
+  /* POOL SECTION */
+  .pool-card{background:#fff;border:1.5px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:14px;transition:box-shadow .25s,border-color .25s;position:relative;overflow:hidden}
+  .pool-card:hover{box-shadow:var(--shadow);border-color:var(--green)}
+  .pool-card-hdr{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+  .pool-title{font-family:var(--font-display);font-size:1.1rem;font-weight:700;color:var(--green);margin-bottom:4px}
+  .pool-prize{display:inline-flex;align-items:center;gap:5px;background:var(--gold-pale);border:1.5px solid var(--gold-dark);color:var(--gold-dark);font-size:13px;font-weight:700;padding:4px 12px;border-radius:20px}
+  .pool-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+  .pool-stat{background:var(--warm-gray);border-radius:10px;padding:10px;text-align:center}
+  .pool-stat-val{font-size:18px;font-weight:700;color:var(--green)}
+  .pool-stat-label{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+  .pool-slots-bar{margin-bottom:14px}
+  .pool-slots-track{height:10px;background:var(--warm-gray);border-radius:10px;overflow:hidden;margin-top:6px}
+  .pool-slots-fill{height:100%;background:linear-gradient(90deg,var(--green),var(--green-light));border-radius:10px;transition:width .4s}
+  .pool-info-note{font-size:12.5px;color:var(--text-muted);background:var(--gold-pale);border:1px solid var(--gold-dark);border-radius:8px;padding:9px 12px;margin-bottom:12px;line-height:1.6}
+  .pool-buy-btn{background:var(--green);color:#fff;border:none;border-radius:9px;padding:10px 22px;font-size:13.5px;font-weight:700;cursor:pointer;transition:all .2s;width:100%;font-family:var(--font-body)}
+  .pool-buy-btn:hover{background:var(--green-light);transform:translateY(-1px)}
+  .pool-buy-btn:disabled{background:#ccc;cursor:not-allowed;transform:none}
+  .pool-ended-badge{background:var(--red-pale);color:var(--red);font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;display:inline-block}
+  .pool-active-badge{background:var(--green-pale);color:var(--green);font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;display:inline-block}
+  .pool-sold-out{background:var(--red-pale);color:var(--red);font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;display:inline-block}
+  .a-pool-card{background:#fff;border:1.5px solid #e5e7eb;border-radius:12px;padding:16px;margin-bottom:12px}
+  .a-pool-prize{font-size:18px;font-weight:700;color:var(--gold-dark)}
+  
 .reveal{opacity:0;transform:translateY(28px);transition:opacity .6s ease,transform .6s ease}
 .reveal.visible{opacity:1;transform:translateY(0)}
 /* ── Suppress any injected third-party floating badges ── */
@@ -1081,6 +1105,7 @@ iframe[src*="badge"]{
       <button class="d-tab" data-tab="referral">&#x1F4E4; Referral</button>
       <button class="d-tab" data-tab="upgrade">&#x2B06; Upgrade</button>
       <button class="d-tab" data-tab="report">&#x1F6A8; Report Issue</button>
+      <button class="d-tab" data-tab="pool">&#x1F3B1; Pool</button>
       <button class="d-tab" data-tab="settings">&#x2699; Settings</button>
     </div>
     <div class="d-tab-sec active" id="tab-surveys">
@@ -1343,6 +1368,22 @@ iframe[src*="badge"]{
         <div id="myIssuesList"><p style="font-size:13.5px;color:var(--text-muted);text-align:center;padding:18px">No issues submitted yet.</p></div>
       </div>
     </div>
+    <div class="d-tab-sec" id="tab-pool">
+        <div class="d-card">
+          <div class="d-card-title">
+            <span>&#x1F3B1; Pools &mdash; Buy a Slot, Win Big!</span>
+            <span style="font-size:12px;color:var(--text-muted);font-weight:400" id="poolBalanceBadge"></span>
+          </div>
+          <div style="background:var(--green-pale);border:1px solid var(--green);border-radius:9px;padding:12px 14px;margin-bottom:16px;font-size:13px;color:var(--green);line-height:1.65">
+            &#x1F3C6; <strong>How it works:</strong> Purchase a slot in any active pool. The winner is determined randomly by the number of slots &mdash; the more slots sold, the larger the pool of entries. GHS is instantly deducted from your balance when you buy a slot.
+          </div>
+          <div id="poolListWrap"><p style="font-size:13.5px;color:var(--text-muted);text-align:center;padding:20px">Loading pools...</p></div>
+        </div>
+        <div class="d-card" id="myPoolEntriesCard" style="display:none">
+          <div class="d-card-title">&#x1F4CB; My Pool Entries</div>
+          <div id="myPoolEntriesList"></div>
+        </div>
+      </div>
     <div class="d-tab-sec" id="tab-settings">
       <div class="s-stack">
         <div class="s-card"><h3>&#x1F464; Profile Information</h3>
@@ -1448,6 +1489,7 @@ iframe[src*="badge"]{
       <button class="a-tab" data-atab="visits">&#x1F4CA; Site Visits</button>
       <button class="a-tab" data-atab="sms">&#x1F4F2; SMS</button>
       <button class="a-tab" data-atab="schedule">&#x1F4C5; Schedule</button>
+      <button class="a-tab" data-atab="pools">&#x1F3B1; Pools</button>
       <button class="a-tab" data-atab="asettings">&#x2699; Settings</button>
     </div>
     <div class="a-section active" id="atab-payments">
@@ -1865,6 +1907,43 @@ iframe[src*="badge"]{
       </div>
     </div>
 
+    <!-- POOLS TAB -->
+      <div class="a-section" id="atab-pools">
+        <div class="a-card">
+          <div class="a-card-title"><span>&#x1F3B1; Create New Pool</span></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+            <div class="fg" style="margin:0"><label>Pool Title</label><input type="text" id="poolTitle" placeholder="e.g. GHS 500 Lucky Draw"/></div>
+            <div class="fg" style="margin:0"><label>Prize Amount (GHS)</label><input type="number" id="poolPrize" placeholder="e.g. 500" min="1" step="0.01"/></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px">
+            <div class="fg" style="margin:0"><label>Total Slots Available</label><input type="number" id="poolSlots" placeholder="e.g. 100" min="2"/></div>
+            <div class="fg" style="margin:0"><label>Price Per Slot (GHS)</label><input type="number" id="poolSlotPrice" placeholder="e.g. 5.00" min="0.50" step="0.50"/></div>
+            <div class="fg" style="margin:0"><label>Duration (Days)</label><input type="number" id="poolDays" placeholder="e.g. 7" min="1" max="365"/></div>
+          </div>
+          <div style="background:var(--gold-pale);border:1px solid var(--gold-dark);border-radius:9px;padding:10px 14px;margin-bottom:14px;font-size:12.5px;color:#6b5200;line-height:1.65">
+            &#x1F4A1; Winner determined <strong>randomly</strong> from all slot holders. GHS is instantly deducted from member's balance at purchase.
+          </div>
+          <div id="poolCreateStatus" style="display:none;margin-bottom:12px;padding:10px 13px;border-radius:9px;font-size:13px"></div>
+          <button class="add-btn" id="createPoolBtn" style="background:var(--green)">&#x1F3B1; Create Pool</button>
+        </div>
+        <div class="a-card">
+          <div class="a-card-title"><span>&#x1F4CB; All Pools</span><button class="abtn" id="refreshPoolsBtn">&#x21BB; Refresh</button></div>
+          <div id="adminPoolsList"><p class="empty-row">No pools created yet.</p></div>
+        </div>
+        <div class="a-card">
+          <div class="a-card-title">
+            <span>&#x1F465; Pool Slot Purchases &mdash; Member Balance Report</span>
+            <button class="abtn" id="refreshPoolEntriesBtn">&#x21BB; Refresh</button>
+          </div>
+          <p style="font-size:13px;color:#6b7280;margin-bottom:14px;line-height:1.6">Shows all slot purchases with each member's initial balance and balance after purchase.</p>
+          <div style="overflow-x:auto">
+            <table class="atable">
+              <thead><tr><th>#</th><th>Pool</th><th>Member</th><th>Phone</th><th>Slots</th><th>Amount Paid</th><th>Balance Before</th><th>Balance After</th><th>Purchased At</th></tr></thead>
+              <tbody id="adminPoolEntriesBody"><tr><td colspan="9" class="empty-row">No pool purchases yet.</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     <div class="a-section" id="atab-asettings">
       <div class="a-card">
         <div class="a-card-title">&#x1F4E2; Broadcast Announcement</div>
@@ -3076,6 +3155,24 @@ document.addEventListener('DOMContentLoaded', function(){
     });
   });
 
+
+    // Pool tab auto-load for member dashboard
+    document.querySelectorAll('.d-tab').forEach(function(tab){
+      tab.addEventListener('click',function(){
+        if(tab.dataset.tab==='pool') setTimeout(renderMemberPools, 50);
+      });
+    });
+    // Admin pool tab load
+    document.querySelectorAll('.a-tab').forEach(function(tab){
+      tab.addEventListener('click',function(){
+        if(tab.dataset.atab==='pools'){ setTimeout(function(){renderAdminPools();renderAdminPoolEntries();},50); }
+      });
+    });
+    // Admin buttons
+    var cpb=el('createPoolBtn'); if(cpb) cpb.addEventListener('click',adminCreatePool);
+    var rpb=el('refreshPoolsBtn'); if(rpb) rpb.addEventListener('click',renderAdminPools);
+    var rpeb=el('refreshPoolEntriesBtn'); if(rpeb) rpeb.addEventListener('click',renderAdminPoolEntries);
+  
   // Track site visit
   trackSiteVisit();
   // Check and purge accounts past 7-day deletion window
@@ -8497,6 +8594,276 @@ function checkDailyStreakBonus(member){
   renderNotifications(currentUser);
 }
 
+  // ═══════════════════════════════════════════════════════════════
+  // POOL SYSTEM — Backend API powered
+  // ═══════════════════════════════════════════════════════════════
+
+  var API_BASE = '/api';
+
+  function fetchPools(callback) {
+    fetch(API_BASE + '/pools')
+      .then(function(r){ return r.json(); })
+      .then(function(d){ callback(null, d.pools || []); })
+      .catch(function(e){ callback(e.message, []); });
+  }
+
+  function fetchMemberPoolEntries(memberId, callback) {
+    fetch(API_BASE + '/pools/member/' + encodeURIComponent(memberId))
+      .then(function(r){ return r.json(); })
+      .then(function(d){ callback(null, d.entries || []); })
+      .catch(function(e){ callback(e.message, []); });
+  }
+
+  function fetchAdminPoolEntries(callback) {
+    fetch(API_BASE + '/pools/admin/all-entries')
+      .then(function(r){ return r.json(); })
+      .then(function(d){ callback(null, d.entries || []); })
+      .catch(function(e){ callback(e.message, []); });
+  }
+
+  function createPool(data, callback) {
+    fetch(API_BASE + '/pools', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    })
+      .then(function(r){ return r.json().then(function(j){ return {ok:r.ok, data:j}; }); })
+      .then(function(r){ callback(r.ok ? null : (r.data.error||'Error'), r.data); })
+      .catch(function(e){ callback(e.message, null); });
+  }
+
+  function buyPoolSlotAPI(poolId, memberData, callback) {
+    fetch(API_BASE + '/pools/' + poolId + '/buy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(memberData)
+    })
+      .then(function(r){ return r.json().then(function(j){ return {ok:r.ok, data:j}; }); })
+      .then(function(r){ callback(r.ok ? null : (r.data.error||'Error'), r.data); })
+      .catch(function(e){ callback(e.message, null); });
+  }
+
+  function togglePoolAPI(poolId, callback) {
+    fetch(API_BASE + '/pools/' + poolId + '/toggle', { method: 'POST' })
+      .then(function(r){ return r.json(); })
+      .then(function(d){ callback(null, d); })
+      .catch(function(e){ callback(e.message, null); });
+  }
+
+  function fmtPoolDate(dateStr) {
+    if(!dateStr) return '—';
+    var d = new Date(dateStr);
+    return d.toLocaleDateString('en-GB', {day:'2-digit', month:'short', year:'numeric'});
+  }
+
+  function poolDaysRemaining(endsAt) {
+    var diff = Math.ceil((new Date(endsAt) - new Date()) / 86400000);
+    return diff;
+  }
+
+  // Member: render pool list
+  function renderMemberPools() {
+    var wrap = el('poolListWrap');
+    if(!wrap) return;
+    var badge = el('poolBalanceBadge');
+    if(badge && currentUser) badge.textContent = 'Your Balance: GHS ' + (currentUser.balance || 0).toFixed(2);
+    wrap.innerHTML = '<p style="font-size:13.5px;color:var(--text-muted);text-align:center;padding:20px">Loading pools...</p>';
+
+    fetchPools(function(err, pools) {
+      if(err || !pools.length) {
+        wrap.innerHTML = '<p style="font-size:13.5px;color:var(--text-muted);text-align:center;padding:24px">No active pools available right now. Check back soon!</p>';
+        return;
+      }
+      var memberId = currentUser ? currentUser.id : null;
+      if(!memberId) { renderPoolCards(pools, [], wrap); return; }
+      fetchMemberPoolEntries(memberId, function(err2, entries) {
+        renderPoolCards(pools, entries || [], wrap);
+        renderMyPoolEntries(entries || []);
+      });
+    });
+  }
+
+  function renderPoolCards(pools, myEntries, wrap) {
+    var myMap = {};
+    (myEntries||[]).forEach(function(e){ myMap[e.poolId] = e; });
+    var active = pools.filter(function(p){ return p.isActive; });
+    if(!active.length) {
+      wrap.innerHTML = '<p style="font-size:13.5px;color:var(--text-muted);text-align:center;padding:24px">No active pools right now. Check back soon!</p>';
+      return;
+    }
+    var html = '';
+    active.forEach(function(pool) {
+      var sold = Number(pool.slotsSold)||0;
+      var rem = pool.slotsRemaining !== undefined ? Number(pool.slotsRemaining) : (pool.totalSlots - sold);
+      var pct = pool.totalSlots > 0 ? Math.min(100,Math.round((sold/pool.totalSlots)*100)) : 0;
+      var days = poolDaysRemaining(pool.endsAt);
+      var isEnded = days <= 0;
+      var isSoldOut = rem <= 0;
+      var myEntry = myMap[pool.id];
+      var bal = currentUser ? (Number(currentUser.balance)||0) : 0;
+      var price = Number(pool.slotPrice);
+      var canAfford = bal >= price;
+
+      var badge = isEnded ? '<span class="pool-ended-badge">&#x23F0; Ended</span>'
+        : isSoldOut ? '<span class="pool-sold-out">&#x1F512; Sold Out</span>'
+        : '<span class="pool-active-badge">&#x1F7E2; Active</span>';
+
+      var mySlotHtml = myEntry ? '<div style="background:var(--blue-pale);border:1px solid var(--blue);border-radius:8px;padding:7px 12px;margin-bottom:10px;font-size:12.5px;color:var(--blue);font-weight:600">&#x2705; You joined this pool! Slots owned: <strong>' + myEntry.slotsCount + '</strong></div>' : '';
+
+      var btnHtml;
+      if(myEntry) btnHtml = '<button class="pool-buy-btn" disabled>&#x2705; You have joined this pool</button>';
+      else if(isEnded) btnHtml = '<button class="pool-buy-btn" disabled>&#x23F0; Pool has ended</button>';
+      else if(isSoldOut) btnHtml = '<button class="pool-buy-btn" disabled>&#x1F512; All slots sold out</button>';
+      else if(!canAfford) btnHtml = '<button class="pool-buy-btn" disabled>&#x26A0; Insufficient balance (need GHS '+price.toFixed(2)+')</button>';
+      else btnHtml = '<button class="pool-buy-btn" onclick="handleBuySlot('+pool.id+','+price+')">&#x1F3AB; Buy Slot &mdash; GHS '+price.toFixed(2)+'</button>';
+
+      html += '<div class="pool-card">'
+        +'<div class="pool-card-hdr"><div>'
+        +'<div class="pool-title">&#x1F3B1; '+pool.title+'</div>'
+        +'<div class="pool-prize">&#x1F3C6; Prize: GHS '+Number(pool.prizeAmount).toFixed(2)+'</div>'
+        +'</div><div style="text-align:right">'+badge+(days>0?'<div style="font-size:11.5px;color:var(--text-muted);margin-top:4px">&#x23F3; '+days+' day'+(days!==1?'s':'')+' left</div>':'')+'</div></div>'
+        +'<div class="pool-stats">'
+        +'<div class="pool-stat"><div class="pool-stat-val">GHS '+price.toFixed(2)+'</div><div class="pool-stat-label">Per Slot</div></div>'
+        +'<div class="pool-stat"><div class="pool-stat-val">'+rem+'</div><div class="pool-stat-label">Slots Left</div></div>'
+        +'<div class="pool-stat"><div class="pool-stat-val">'+pool.totalSlots+'</div><div class="pool-stat-label">Total Slots</div></div>'
+        +'</div>'
+        +'<div class="pool-slots-bar"><div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);margin-bottom:4px"><span>Slots sold: '+sold+' / '+pool.totalSlots+'</span><span>'+pct+'%</span></div><div class="pool-slots-track"><div class="pool-slots-fill" style="width:'+pct+'%"></div></div></div>'
+        +'<div class="pool-info-note">&#x1F3C6; Winner selected randomly from all slot holders. Ends: <strong>'+fmtPoolDate(pool.endsAt)+'</strong></div>'
+        +mySlotHtml
+        +btnHtml
+        +'</div>';
+    });
+    wrap.innerHTML = html;
+  }
+
+  function renderMyPoolEntries(entries) {
+    var card = el('myPoolEntriesCard');
+    var list = el('myPoolEntriesList');
+    if(!card||!list) return;
+    if(!entries||!entries.length){card.style.display='none';return;}
+    card.style.display='block';
+    var html='<div style="overflow-x:auto"><table class="atable"><thead><tr><th>Pool</th><th>Slots</th><th>Amount Paid</th><th>Balance Before</th><th>Balance After</th><th>Date</th></tr></thead><tbody>';
+    entries.forEach(function(e){
+      html+='<tr><td style="font-weight:600">'+(e.poolTitle||'Pool #'+e.poolId)+'</td><td style="text-align:center">'+e.slotsCount+'</td><td style="color:var(--red);font-weight:700">-GHS '+Number(e.amountPaid).toFixed(2)+'</td><td>GHS '+Number(e.balanceBefore).toFixed(2)+'</td><td style="color:var(--green);font-weight:700">GHS '+Number(e.balanceAfter).toFixed(2)+'</td><td>'+fmtPoolDate(e.purchasedAt)+'</td></tr>';
+    });
+    html+='</tbody></table></div>';
+    list.innerHTML=html;
+  }
+
+  function handleBuySlot(poolId, slotPrice) {
+    if(!currentUser){alert('You must be logged in.');return;}
+    var bal = Number(currentUser.balance)||0;
+    if(bal < slotPrice){alert('Insufficient balance. You need GHS '+slotPrice.toFixed(2)+' but have GHS '+bal.toFixed(2)+'.');return;}
+    if(!confirm('Buy 1 slot for GHS '+slotPrice.toFixed(2)+'? This amount will be instantly deducted from your balance.')) return;
+    var data = {
+      memberId: currentUser.id,
+      memberName: (currentUser.firstName||'')+' '+(currentUser.lastName||''),
+      memberPhone: currentUser.phone||'',
+      currentBalance: bal
+    };
+    buyPoolSlotAPI(poolId, data, function(err, result) {
+      if(err){alert('Error: '+err);return;}
+      var newBal = result.newBalance;
+      var members = getMembers();
+      var idx = members.findIndex(function(m){return m.id===currentUser.id;});
+      if(idx>=0){members[idx].balance=newBal;saveMembers(members);currentUser=members[idx];saveSession();}
+      if(typeof updateDashboardMetrics==='function') updateDashboardMetrics();
+      var dmBal=el('dmBal'); if(dmBal) dmBal.textContent='GHS '+newBal.toFixed(2);
+      var wBal=el('wBalDisplay'); if(wBal) wBal.textContent='GHS '+newBal.toFixed(2);
+      renderMemberPools();
+      alert('\u2705 Slot purchased! GHS '+slotPrice.toFixed(2)+' deducted. New balance: GHS '+newBal.toFixed(2)+'.');
+    });
+  }
+
+  // Admin: render pool list
+  function renderAdminPools() {
+    var list = el('adminPoolsList');
+    if(!list) return;
+    list.innerHTML='<p class="empty-row">Loading...</p>';
+    fetchPools(function(err, pools) {
+      if(err||!pools.length){list.innerHTML='<p class="empty-row">No pools yet. Create one above.</p>';return;}
+      var html='';
+      pools.forEach(function(pool){
+        var days=poolDaysRemaining(pool.endsAt);
+        var sold=Number(pool.slotsSold)||0;
+        var pct=pool.totalSlots>0?Math.min(100,Math.round((sold/pool.totalSlots)*100)):0;
+        var statusLabel=pool.isActive?'<span class="s-active">Active</span>':'<span class="s-suspended">Inactive</span>';
+        var toggleLabel=pool.isActive?'Deactivate':'Activate';
+        html+='<div class="a-pool-card">'
+          +'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px">'
+          +'<div><div style="font-size:15px;font-weight:700;color:#0d1117;margin-bottom:4px">&#x1F3B1; '+pool.title+'</div>'
+          +'<div class="a-pool-prize">&#x1F3C6; Prize: GHS '+Number(pool.prizeAmount).toFixed(2)+'</div></div>'
+          +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'+statusLabel
+          +'<button class="abtn" onclick="adminTogglePool('+pool.id+')">&#x21C4; '+toggleLabel+'</button></div></div>'
+          +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px;font-size:12.5px">'
+          +'<div style="background:#f9fafb;border-radius:8px;padding:8px;text-align:center"><div style="font-weight:700;font-size:14px;color:var(--green)">GHS '+Number(pool.slotPrice).toFixed(2)+'</div><div style="color:#9ca3af;font-size:11px">Per Slot</div></div>'
+          +'<div style="background:#f9fafb;border-radius:8px;padding:8px;text-align:center"><div style="font-weight:700;font-size:14px">'+sold+' / '+pool.totalSlots+'</div><div style="color:#9ca3af;font-size:11px">Slots Sold</div></div>'
+          +'<div style="background:#f9fafb;border-radius:8px;padding:8px;text-align:center"><div style="font-weight:700;font-size:14px">'+(days>0?days+'d left':'Ended')+'</div><div style="color:#9ca3af;font-size:11px">Time Left</div></div>'
+          +'<div style="background:#f9fafb;border-radius:8px;padding:8px;text-align:center"><div style="font-weight:700;font-size:14px">'+fmtPoolDate(pool.endsAt)+'</div><div style="color:#9ca3af;font-size:11px">Ends On</div></div></div>'
+          +'<div style="font-size:11.5px;color:#9ca3af;display:flex;justify-content:space-between;margin-bottom:5px"><span>Slots sold: '+sold+' / '+pool.totalSlots+'</span><span>'+pct+'%</span></div>'
+          +'<div style="height:8px;background:#f3f4f6;border-radius:10px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:linear-gradient(90deg,var(--green),#2e7d47);border-radius:10px;transition:width .4s"></div></div>'
+          +'</div>';
+      });
+      list.innerHTML=html;
+    });
+  }
+
+  function adminTogglePool(poolId) {
+    togglePoolAPI(poolId, function(err){ if(err){alert('Error: '+err);return;} renderAdminPools(); });
+  }
+
+  function renderAdminPoolEntries() {
+    var tbody = el('adminPoolEntriesBody');
+    if(!tbody) return;
+    tbody.innerHTML='<tr><td colspan="9" class="empty-row">Loading...</td></tr>';
+    fetchAdminPoolEntries(function(err, entries) {
+      if(err||!entries.length){tbody.innerHTML='<tr><td colspan="9" class="empty-row">No pool slot purchases yet.</td></tr>';return;}
+      var html='';
+      entries.forEach(function(e,i){
+        html+='<tr><td>'+(i+1)+'</td><td style="font-weight:600">'+(e.poolTitle||'Pool #'+e.poolId)+'</td>'
+          +'<td>'+e.memberName+'</td><td style="font-family:monospace">'+e.memberPhone+'</td>'
+          +'<td style="text-align:center">'+e.slotsCount+'</td>'
+          +'<td style="color:var(--red);font-weight:700">GHS '+Number(e.amountPaid).toFixed(2)+'</td>'
+          +'<td>GHS '+Number(e.balanceBefore).toFixed(2)+'</td>'
+          +'<td style="color:var(--green);font-weight:700">GHS '+Number(e.balanceAfter).toFixed(2)+'</td>'
+          +'<td>'+fmtPoolDate(e.purchasedAt)+'</td></tr>';
+      });
+      tbody.innerHTML=html;
+    });
+  }
+
+  function adminCreatePool() {
+    var title=(val('poolTitle')||'').trim();
+    var prize=parseFloat(val('poolPrize')||'0');
+    var slots=parseInt(val('poolSlots')||'0');
+    var slotPrice=parseFloat(val('poolSlotPrice')||'0');
+    var days=parseInt(val('poolDays')||'0');
+    var statusEl=el('poolCreateStatus');
+    if(!title){showPoolStatus(statusEl,'error','Please enter a pool title.');return;}
+    if(!prize||prize<=0){showPoolStatus(statusEl,'error','Please enter a valid prize amount.');return;}
+    if(!slots||slots<2){showPoolStatus(statusEl,'error','Please enter at least 2 total slots.');return;}
+    if(!slotPrice||slotPrice<=0){showPoolStatus(statusEl,'error','Please enter a valid slot price.');return;}
+    if(!days||days<1){showPoolStatus(statusEl,'error','Please enter duration (minimum 1 day).');return;}
+    var btn=el('createPoolBtn'); if(btn) btn.disabled=true;
+    createPool({title:title,prizeAmount:prize,totalSlots:slots,slotPrice:slotPrice,durationDays:days},function(err,data){
+      if(btn) btn.disabled=false;
+      if(err){showPoolStatus(statusEl,'error','Error: '+err);return;}
+      showPoolStatus(statusEl,'success','\u2705 Pool "'+title+'" created successfully!');
+      setVal('poolTitle','');setVal('poolPrize','');setVal('poolSlots','');setVal('poolSlotPrice','');setVal('poolDays','');
+      renderAdminPools(); renderAdminPoolEntries();
+    });
+  }
+
+  function showPoolStatus(statusEl, type, msg) {
+    if(!statusEl) return;
+    statusEl.style.display='block';
+    statusEl.style.background=type==='success'?'var(--green-pale)':'var(--red-pale)';
+    statusEl.style.border='1px solid '+(type==='success'?'var(--green)':'var(--red)');
+    statusEl.style.color=type==='success'?'var(--green)':'var(--red)';
+    statusEl.textContent=msg;
+    setTimeout(function(){statusEl.style.display='none';},6000);
+  }
+  
 </script>
 <!-- Paystack popup window approach -->
 <script>
