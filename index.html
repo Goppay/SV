@@ -9054,13 +9054,13 @@ function doSendSms(){
         if(progressEl) progressEl.innerHTML+='&#x274C; '+phone+' — '+errMsg+'<br>';
       }
       if(progressEl) progressEl.scrollTop=progressEl.scrollHeight;
-      sendNext(i+1);
+      setTimeout(function(){sendNext(i+1);}, 600);
     })
     .catch(function(err){
       failed++;
       if(progressEl) progressEl.innerHTML+='&#x274C; '+phone+' — '+(err.message||'Network error')+'<br>';
       if(progressEl) progressEl.scrollTop=progressEl.scrollHeight;
-      sendNext(i+1);
+      setTimeout(function(){sendNext(i+1);}, 600);
     });
   }
 
