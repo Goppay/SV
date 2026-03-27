@@ -8960,42 +8960,53 @@ function doSendSms(){
 
   var total=phones.length;
 
-  // Send all recipients in ONE batch request — avoids multiple round-trips that
-  // can be blocked by the browser or proxy after the first succeeds.
-  fetch(GOP_API+'/sms/send',{
+  // Call Arkesel v2 API directly from the browser — no backend proxy needed.
+  fetch('https://sms.arkesel.com/api/v2/sms/send',{
     method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({apiKey:s.apiKey,senderId:s.senderId,recipients:phones,message:msg})
+    headers:{'Content-Type':'application/json','api-key':s.apiKey},
+    body:JSON.stringify({sender:s.senderId,message:msg,recipients:phones})
   })
-  .then(function(r){
-    var ct=r.headers.get('content-type')||'';
-    if(!ct.includes('application/json')){
-      throw new Error('Server error (HTTP '+r.status+'). The API server may be unreachable or the URL is wrong.');
-    }
-    return r.json();
-  })
+  .then(function(r){ return r.json(); })
   .then(function(res){
     if(sendBtn){sendBtn.disabled=false;sendBtn.innerHTML='&#x1F4F2; Send SMS';}
 
-    if(res.errorType==='insufficient_credit'){
+    var code=String(res.code||'').toLowerCase();
+    var status=String(res.status||'').toLowerCase();
+    var resMsg=String(res.message||'').toLowerCase();
+
+    // Insufficient credit
+    var isInsufficientCredit=(code==='1006'||resMsg.includes('insufficient')||resMsg.includes('balance')||resMsg.includes('credit'));
+    if(isInsufficientCredit){
       setText('smsSendStatus','⚠️ Insufficient Arkesel SMS credit. Please top up your Arkesel account and try again.');
       el('smsSendStatus').style.color='var(--red)';
+      if(progressEl) progressEl.innerHTML='<span style="color:var(--red);font-weight:600">&#x26A0; Stopped: Insufficient SMS credit. Top up your Arkesel account to continue.</span>';
       var alertId='smsCredAlert';
       if(!el(alertId)){
         var alertDiv=document.createElement('div');
         alertDiv.id=alertId;
         alertDiv.style.cssText='background:#fdeaec;border:1.5px solid var(--red);border-radius:10px;padding:14px 18px;margin:12px 0;display:flex;align-items:flex-start;gap:12px;font-size:13.5px;color:var(--red);line-height:1.6';
-        alertDiv.innerHTML='<span style="font-size:20px;flex-shrink:0">&#x26A0;</span><div><strong>Insufficient SMS Credit</strong><br>Please top up your Arkesel balance at <a href="https://arkesel.com" target="_blank" style="color:var(--red);text-decoration:underline">arkesel.com</a> and retry.</div>';
+        alertDiv.innerHTML='<span style="font-size:20px;flex-shrink:0">&#x26A0;</span><div><strong>Insufficient SMS Credit</strong><br>Your Arkesel account has run out of credit. Please top up your balance at <a href="https://arkesel.com" target="_blank" style="color:var(--red);text-decoration:underline">arkesel.com</a> and retry.</div>';
         var smsSection=el('atab-sms');
         if(smsSection) smsSection.insertBefore(alertDiv,smsSection.firstChild);
       }
       return;
     }
 
-    var sent=res.sent||0;
-    var failed=res.failed||0;
+    // Count per-recipient results from res.data array if available
+    var sent=0,failed=0;
+    if(Array.isArray(res.data)&&res.data.length){
+      for(var di=0;di<res.data.length;di++){
+        var ds=String(res.data[di].status||'').toLowerCase();
+        if(ds==='success'||ds==='sent'||ds==='ok') sent++; else failed++;
+      }
+    } else {
+      var success=(code==='ok'||status==='success');
+      sent=success?total:0;
+      failed=success?0:total;
+    }
+
     var statusMsg='Done! '+sent+' sent'+(failed?' · '+failed+' failed':'')+'.';
-    if(progressEl) progressEl.innerHTML='<strong>'+statusMsg+'</strong>'+(res.detail?'<br>'+res.detail:'');
+    if(progressEl) progressEl.innerHTML='<strong>'+statusMsg+'</strong>';
     setText('smsSendStatus',statusMsg);
     el('smsSendStatus').style.color=failed>0?'var(--orange)':'var(--green)';
 
@@ -9025,7 +9036,7 @@ function doSendSms(){
   })
   .catch(function(err){
     if(sendBtn){sendBtn.disabled=false;sendBtn.innerHTML='&#x1F4F2; Send SMS';}
-    var errTxt=err.message||'Network error — could not reach the SMS server.';
+    var errTxt='Could not reach Arkesel. Check your internet connection and try again. ('+( err.message||'Network error')+')';
     setText('smsSendStatus',errTxt);
     el('smsSendStatus').style.color='var(--red)';
     if(progressEl){progressEl.style.display='block';progressEl.innerHTML='&#x274C; '+errTxt;}
