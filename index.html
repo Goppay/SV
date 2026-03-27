@@ -294,14 +294,14 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
 .qbar-fill{height:100%;background:var(--green);border-radius:10px;transition:width .4s}
 
 /* ADMIN */
-#adminDashboard{display:none;position:fixed;inset:0;z-index:450;background:#f0f2f5;overflow-y:auto}
+#adminDashboard{display:none;position:fixed;inset:0;z-index:450;background:#f0f2f5;overflow-y:scroll;overscroll-behavior:contain;-webkit-overflow-scrolling:auto}
 .a-nav{background:#0d1117;padding:0 22px;height:62px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
 .a-nav-logo{font-family:var(--font-display);font-size:17px;color:#fff}
 .a-nav-logo span{color:var(--gold)}
 .a-badge{background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:7px;text-transform:uppercase}
 .a-logout{background:rgba(255,255,255,.1);border:none;color:#fff;font-size:12.5px;padding:6px 13px;border-radius:7px;cursor:pointer;transition:background .2s}
 .a-logout:hover{background:rgba(255,255,255,.2)}
-.a-body{max-width:1200px;margin:0 auto;padding:26px 20px}
+.a-body{max-width:1440px;margin:0 auto;padding:26px 28px}
 .a-title{font-family:var(--font-display);font-size:1.7rem;font-weight:700;color:#0d1117;margin-bottom:4px}
 .a-sub{font-size:13.5px;color:#6b7280;margin-bottom:26px}
 .a-metrics{display:grid;grid-template-columns:repeat(6,1fr);gap:13px;margin-bottom:26px}
@@ -1371,17 +1371,38 @@ iframe[src*="badge"]{
     <div class="d-tab-sec" id="tab-pool">
         <div class="d-card">
           <div class="d-card-title">
-            <span>&#x1F3B1; Pools &mdash; Buy a Slot, Win Big!</span>
-            <span style="font-size:12px;color:var(--text-muted);font-weight:400" id="poolBalanceBadge"></span>
+            <span>&#x1F3B1; Pools &mdash; Buy Slots, Win Big!</span>
           </div>
           <div style="background:var(--green-pale);border:1px solid var(--green);border-radius:9px;padding:12px 14px;margin-bottom:16px;font-size:13px;color:var(--green);line-height:1.65">
-            &#x1F3C6; <strong>How it works:</strong> Purchase a slot in any active pool. The winner is determined randomly by the number of slots &mdash; the more slots sold, the larger the pool of entries. GHS is instantly deducted from your balance when you buy a slot.
+            &#x1F3C6; <strong>How it works:</strong> Click <strong>Join Pool</strong> on any active pool, choose the number of slots you want, and pay securely via Paystack. The winner is picked randomly — the more slots you hold, the higher your chances! Pool closes immediately when all slots are sold or the timer runs out.
           </div>
           <div id="poolListWrap"><p style="font-size:13.5px;color:var(--text-muted);text-align:center;padding:20px">Loading pools...</p></div>
         </div>
         <div class="d-card" id="myPoolEntriesCard" style="display:none">
           <div class="d-card-title">&#x1F4CB; My Pool Entries</div>
           <div id="myPoolEntriesList"></div>
+        </div>
+      </div>
+
+      <!-- Pool Join Modal -->
+      <div class="modal-overlay" id="poolJoinOverlay" style="display:none;position:fixed;inset:0;z-index:800;background:rgba(0,0,0,.55);align-items:center;justify-content:center;padding:16px">
+        <div style="background:#fff;border-radius:18px;padding:28px;max-width:420px;width:100%;position:relative;box-shadow:0 8px 40px rgba(0,0,0,.18)">
+          <button onclick="closePoolJoinModal()" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#9ca3af">&#x2715;</button>
+          <div style="font-size:20px;margin-bottom:6px">&#x1F3AB; Join Pool</div>
+          <div id="poolJoinTitle" style="font-size:15px;font-weight:700;color:var(--green);margin-bottom:4px"></div>
+          <div id="poolJoinPrize" style="font-size:13px;color:var(--gold-dark);font-weight:600;margin-bottom:16px"></div>
+          <div style="background:var(--warm-gray);border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:13px;color:var(--text-mid);line-height:1.6">
+            <strong>Price per slot:</strong> <span id="poolJoinPrice" style="color:var(--green);font-weight:700"></span><br>
+            <strong>Slots remaining:</strong> <span id="poolJoinRemaining"></span>
+          </div>
+          <div style="margin-bottom:14px">
+            <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:6px">Number of Slots to Buy</label>
+            <input type="number" id="poolJoinQty" min="1" value="1" style="width:100%;padding:11px 13px;border:1.5px solid #e5e7eb;border-radius:9px;font-size:14px;font-weight:700;outline:none;text-align:center" oninput="updatePoolJoinTotal()"/>
+          </div>
+          <div style="background:var(--green-pale);border:1px solid var(--green);border-radius:9px;padding:10px 14px;margin-bottom:18px;font-size:14px;font-weight:700;color:var(--green);text-align:center" id="poolJoinTotal">Total: GHS 0.00</div>
+          <div id="poolJoinError" style="display:none;background:var(--red-pale);border:1px solid var(--red);border-radius:8px;padding:9px 13px;margin-bottom:12px;font-size:13px;color:var(--red)"></div>
+          <button onclick="proceedPoolPaystack()" id="poolJoinPayBtn" style="width:100%;background:var(--green);color:#fff;border:none;border-radius:10px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font-body)">&#x1F4B3; Proceed to Paystack Payment &#x2192;</button>
+          <div style="font-size:11.5px;color:#9ca3af;text-align:center;margin-top:8px">&#x1F512; Secured by Paystack &mdash; card, MoMo &amp; bank accepted</div>
         </div>
       </div>
     <div class="d-tab-sec" id="tab-settings">
@@ -1921,7 +1942,7 @@ iframe[src*="badge"]{
             <div class="fg" style="margin:0"><label>Duration (Days)</label><input type="number" id="poolDays" placeholder="e.g. 7" min="1" max="365"/></div>
           </div>
           <div style="background:var(--gold-pale);border:1px solid var(--gold-dark);border-radius:9px;padding:10px 14px;margin-bottom:14px;font-size:12.5px;color:#6b5200;line-height:1.65">
-            &#x1F4A1; Winner determined <strong>randomly</strong> from all slot holders. GHS is instantly deducted from member's balance at purchase.
+            &#x1F4A1; Winner determined <strong>randomly</strong> from all slot holders (weighted by slots owned). Pool closes automatically when all slots are purchased. Members pay via <strong>Paystack</strong> — winner is awarded the prize automatically.
           </div>
           <div id="poolCreateStatus" style="display:none;margin-bottom:12px;padding:10px 13px;border-radius:9px;font-size:13px"></div>
           <button class="add-btn" id="createPoolBtn" style="background:var(--green)">&#x1F3B1; Create Pool</button>
@@ -1932,14 +1953,14 @@ iframe[src*="badge"]{
         </div>
         <div class="a-card">
           <div class="a-card-title">
-            <span>&#x1F465; Pool Slot Purchases &mdash; Member Balance Report</span>
+            <span>&#x1F465; Pool Slot Purchases</span>
             <button class="abtn" id="refreshPoolEntriesBtn">&#x21BB; Refresh</button>
           </div>
-          <p style="font-size:13px;color:#6b7280;margin-bottom:14px;line-height:1.6">Shows all slot purchases with each member's initial balance and balance after purchase.</p>
+          <p style="font-size:13px;color:#6b7280;margin-bottom:14px;line-height:1.6">All slot purchases made via Paystack. Paystack reference is stored for cross-verification.</p>
           <div style="overflow-x:auto">
             <table class="atable">
-              <thead><tr><th>#</th><th>Pool</th><th>Member</th><th>Phone</th><th>Slots</th><th>Amount Paid</th><th>Balance Before</th><th>Balance After</th><th>Purchased At</th></tr></thead>
-              <tbody id="adminPoolEntriesBody"><tr><td colspan="9" class="empty-row">No pool purchases yet.</td></tr></tbody>
+              <thead><tr><th>#</th><th>Pool</th><th>Member</th><th>Phone</th><th>Slots</th><th>Amount Paid</th><th>Paystack Ref</th><th>Purchased At</th></tr></thead>
+              <tbody id="adminPoolEntriesBody"><tr><td colspan="8" class="empty-row">No pool purchases yet.</td></tr></tbody>
             </table>
           </div>
         </div>
@@ -8595,244 +8616,384 @@ function checkDailyStreakBonus(member){
 }
 
   // ═══════════════════════════════════════════════════════════════
-  // POOL SYSTEM — Backend API powered
+  // POOL SYSTEM — Firebase-powered, Paystack payments
   // ═══════════════════════════════════════════════════════════════
 
-  var API_BASE = '/api';
+  // ── CONFIG: set your Paystack payment page slug for pool slot payments ──
+  // Create a payment page in your Paystack dashboard (variable amount),
+  // set the slug here. Members will be directed to this page for slot payment.
+  var POOL_PAYSTACK_SLUG = 'goppay-pool';  // ← replace with your actual slug
 
-  function fetchPools(callback) {
-    fetch(API_BASE + '/pools')
-      .then(function(r){ return r.json(); })
-      .then(function(d){ callback(null, d.pools || []); })
-      .catch(function(e){ callback(e.message, []); });
+  // ── STORAGE HELPERS ──────────────────────────────────────────
+  function getPools(){try{return JSON.parse(localStorage.getItem('gop_pools')||'[]');}catch(e){return [];}}
+  function savePools(arr){try{localStorage.setItem('gop_pools',JSON.stringify(arr));}catch(e){}; syncPoolsToFirebase();}
+  function getPoolEntries(){try{return JSON.parse(localStorage.getItem('gop_pool_entries')||'[]');}catch(e){return [];}}
+  function savePoolEntries(arr){try{localStorage.setItem('gop_pool_entries',JSON.stringify(arr));}catch(e){}; syncPoolEntriesToFirebase();}
+
+  function syncPoolsToFirebase(){
+    try{fetch(FB_URL+'/pools.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(getPools())}).catch(function(){});}catch(e){}
+  }
+  function syncPoolsFromFirebase(cb){
+    try{fetch(FB_URL+'/pools.json').then(function(r){return r.json();}).then(function(d){
+      if(Array.isArray(d)&&d.length) {localStorage.setItem('gop_pools',JSON.stringify(d));}
+      if(cb) cb();
+    }).catch(function(){if(cb) cb();});}catch(e){if(cb) cb();}
+  }
+  function syncPoolEntriesToFirebase(){
+    try{fetch(FB_URL+'/pool_entries.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(getPoolEntries())}).catch(function(){});}catch(e){}
+  }
+  function syncPoolEntriesFromFirebase(cb){
+    try{fetch(FB_URL+'/pool_entries.json').then(function(r){return r.json();}).then(function(d){
+      if(Array.isArray(d)&&d.length) {localStorage.setItem('gop_pool_entries',JSON.stringify(d));}
+      if(cb) cb();
+    }).catch(function(){if(cb) cb();});}catch(e){if(cb) cb();}
   }
 
-  function fetchMemberPoolEntries(memberId, callback) {
-    fetch(API_BASE + '/pools/member/' + encodeURIComponent(memberId))
-      .then(function(r){ return r.json(); })
-      .then(function(d){ callback(null, d.entries || []); })
-      .catch(function(e){ callback(e.message, []); });
-  }
-
-  function fetchAdminPoolEntries(callback) {
-    fetch(API_BASE + '/pools/admin/all-entries')
-      .then(function(r){ return r.json(); })
-      .then(function(d){ callback(null, d.entries || []); })
-      .catch(function(e){ callback(e.message, []); });
-  }
-
-  function createPool(data, callback) {
-    fetch(API_BASE + '/pools', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    })
-      .then(function(r){ return r.json().then(function(j){ return {ok:r.ok, data:j}; }); })
-      .then(function(r){ callback(r.ok ? null : (r.data.error||'Error'), r.data); })
-      .catch(function(e){ callback(e.message, null); });
-  }
-
-  function buyPoolSlotAPI(poolId, memberData, callback) {
-    fetch(API_BASE + '/pools/' + poolId + '/buy', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(memberData)
-    })
-      .then(function(r){ return r.json().then(function(j){ return {ok:r.ok, data:j}; }); })
-      .then(function(r){ callback(r.ok ? null : (r.data.error||'Error'), r.data); })
-      .catch(function(e){ callback(e.message, null); });
-  }
-
-  function togglePoolAPI(poolId, callback) {
-    fetch(API_BASE + '/pools/' + poolId + '/toggle', { method: 'POST' })
-      .then(function(r){ return r.json(); })
-      .then(function(d){ callback(null, d); })
-      .catch(function(e){ callback(e.message, null); });
-  }
-
-  function fmtPoolDate(dateStr) {
+  function fmtPoolDate(dateStr){
     if(!dateStr) return '—';
-    var d = new Date(dateStr);
-    return d.toLocaleDateString('en-GB', {day:'2-digit', month:'short', year:'numeric'});
+    var d=new Date(dateStr);
+    return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+  }
+  function poolDaysRemaining(endsAt){
+    return Math.ceil((new Date(endsAt)-new Date())/86400000);
   }
 
-  function poolDaysRemaining(endsAt) {
-    var diff = Math.ceil((new Date(endsAt) - new Date()) / 86400000);
-    return diff;
-  }
-
-  // Member: render pool list
-  function renderMemberPools() {
-    var wrap = el('poolListWrap');
-    if(!wrap) return;
-    var badge = el('poolBalanceBadge');
-    if(badge && currentUser) badge.textContent = 'Your Balance: GHS ' + (currentUser.balance || 0).toFixed(2);
-    wrap.innerHTML = '<p style="font-size:13.5px;color:var(--text-muted);text-align:center;padding:20px">Loading pools...</p>';
-
-    fetchPools(function(err, pools) {
-      if(err || !pools.length) {
-        wrap.innerHTML = '<p style="font-size:13.5px;color:var(--text-muted);text-align:center;padding:24px">No active pools available right now. Check back soon!</p>';
-        return;
+  // ── WINNER LOGIC ─────────────────────────────────────────────
+  // Called when a pool is full (all slots sold) or time expires.
+  function resolvePool(pool){
+    if(pool.winnerId) return; // already resolved
+    var entries=getPoolEntries().filter(function(e){return e.poolId===pool.id;});
+    if(!entries.length) return;
+    // Build weighted ticket array (each slot = 1 ticket)
+    var tickets=[];
+    entries.forEach(function(e){
+      for(var i=0;i<(e.slotsCount||1);i++) tickets.push(e);
+    });
+    var winner=tickets[Math.floor(Math.random()*tickets.length)];
+    // Mark pool as closed with winner
+    var pools=getPools();
+    var pi=pools.findIndex(function(p){return p.id===pool.id;});
+    if(pi<0) return;
+    pools[pi].isActive=false;
+    pools[pi].closedAt=new Date().toISOString();
+    pools[pi].winnerId=winner.memberId;
+    pools[pi].winnerName=winner.memberName;
+    pools[pi].winnerPhone=winner.memberPhone;
+    // Award prize to winner's balance
+    var members=getMembers();
+    var mi=members.findIndex(function(m){return m.id===winner.memberId;});
+    if(mi>=0){
+      members[mi].balance=(Number(members[mi].balance)||0)+Number(pools[pi].prizeAmount);
+      members[mi].monthEarned=(Number(members[mi].monthEarned)||0)+Number(pools[pi].prizeAmount);
+      var notif='&#x1F3C6; <strong>Congratulations!</strong> You won the <strong>'+pools[pi].title+'</strong> pool! <strong>GHS '+Number(pools[pi].prizeAmount).toFixed(2)+'</strong> has been added to your balance!';
+      members[mi].notifications=members[mi].notifications||[];
+      members[mi].notifications.push(notif);
+      saveMembers(members);
+      syncMemberToBackend(members[mi]);
+      // Update current session if winner is logged in
+      if(currentUser&&currentUser.id===winner.memberId){
+        currentUser=members[mi]; saveSession();
+        if(typeof updateDashboardMetrics==='function') updateDashboardMetrics();
       }
-      var memberId = currentUser ? currentUser.id : null;
-      if(!memberId) { renderPoolCards(pools, [], wrap); return; }
-      fetchMemberPoolEntries(memberId, function(err2, entries) {
-        renderPoolCards(pools, entries || [], wrap);
-        renderMyPoolEntries(entries || []);
+    }
+    // Save updated pools list with winner info
+    localStorage.setItem('gop_pools',JSON.stringify(pools));
+    syncPoolsToFirebase();
+  }
+
+  // Check if any active pool has expired or is sold out and resolve it
+  function checkPoolExpiry(){
+    var pools=getPools();
+    var changed=false;
+    pools.forEach(function(p){
+      if(!p.isActive||p.winnerId) return;
+      var days=poolDaysRemaining(p.endsAt);
+      var soldOut=(p.slotsSold||0)>=p.totalSlots;
+      if(days<=0||soldOut){ resolvePool(p); changed=true; }
+    });
+    if(changed) renderMemberPools();
+  }
+
+  // ── MEMBER POOL RENDER ───────────────────────────────────────
+  var _poolJoinTarget=null; // currently open pool in join modal
+
+  function renderMemberPools(){
+    var wrap=el('poolListWrap');
+    if(!wrap) return;
+    wrap.innerHTML='<p style="font-size:13.5px;color:var(--text-muted);text-align:center;padding:20px">Loading pools...</p>';
+    syncPoolsFromFirebase(function(){
+      syncPoolEntriesFromFirebase(function(){
+        var pools=getPools();
+        var entries=getPoolEntries();
+        var memberId=currentUser?currentUser.id:null;
+        var myEntries=memberId?entries.filter(function(e){return e.memberId===memberId;}):[]; 
+        renderPoolCards(pools, myEntries, wrap);
+        renderMyPoolEntries(myEntries);
+        checkPoolExpiry();
       });
     });
   }
 
-  function renderPoolCards(pools, myEntries, wrap) {
-    var myMap = {};
-    (myEntries||[]).forEach(function(e){ myMap[e.poolId] = e; });
-    var active = pools.filter(function(p){ return p.isActive; });
-    if(!active.length) {
-      wrap.innerHTML = '<p style="font-size:13.5px;color:var(--text-muted);text-align:center;padding:24px">No active pools right now. Check back soon!</p>';
+  function renderPoolCards(pools, myEntries, wrap){
+    var myMap={};
+    (myEntries||[]).forEach(function(e){ (myMap[e.poolId]=myMap[e.poolId]||{slotsCount:0}); myMap[e.poolId].slotsCount+=e.slotsCount; myMap[e.poolId].ref=e; });
+    // Split into active and ended
+    var activePools=pools.filter(function(p){return p.isActive&&!p.winnerId&&poolDaysRemaining(p.endsAt)>0&&(p.slotsSold||0)<p.totalSlots;});
+    var endedPools=pools.filter(function(p){return !p.isActive||p.winnerId||poolDaysRemaining(p.endsAt)<=0||(p.slotsSold||0)>=p.totalSlots;});
+    var html='';
+    if(!activePools.length&&!endedPools.length){
+      wrap.innerHTML='<p style="font-size:13.5px;color:var(--text-muted);text-align:center;padding:24px">No pools available right now. Check back soon!</p>';
       return;
     }
-    var html = '';
-    active.forEach(function(pool) {
-      var sold = Number(pool.slotsSold)||0;
-      var rem = pool.slotsRemaining !== undefined ? Number(pool.slotsRemaining) : (pool.totalSlots - sold);
-      var pct = pool.totalSlots > 0 ? Math.min(100,Math.round((sold/pool.totalSlots)*100)) : 0;
-      var days = poolDaysRemaining(pool.endsAt);
-      var isEnded = days <= 0;
-      var isSoldOut = rem <= 0;
-      var myEntry = myMap[pool.id];
-      var bal = currentUser ? (Number(currentUser.balance)||0) : 0;
-      var price = Number(pool.slotPrice);
-      var canAfford = bal >= price;
-
-      var badge = isEnded ? '<span class="pool-ended-badge">&#x23F0; Ended</span>'
-        : isSoldOut ? '<span class="pool-sold-out">&#x1F512; Sold Out</span>'
-        : '<span class="pool-active-badge">&#x1F7E2; Active</span>';
-
-      var mySlotHtml = myEntry ? '<div style="background:var(--blue-pale);border:1px solid var(--blue);border-radius:8px;padding:7px 12px;margin-bottom:10px;font-size:12.5px;color:var(--blue);font-weight:600">&#x2705; You joined this pool! Slots owned: <strong>' + myEntry.slotsCount + '</strong></div>' : '';
-
-      var btnHtml;
-      if(myEntry) btnHtml = '<button class="pool-buy-btn" disabled>&#x2705; You have joined this pool</button>';
-      else if(isEnded) btnHtml = '<button class="pool-buy-btn" disabled>&#x23F0; Pool has ended</button>';
-      else if(isSoldOut) btnHtml = '<button class="pool-buy-btn" disabled>&#x1F512; All slots sold out</button>';
-      else if(!canAfford) btnHtml = '<button class="pool-buy-btn" disabled>&#x26A0; Insufficient balance (need GHS '+price.toFixed(2)+')</button>';
-      else btnHtml = '<button class="pool-buy-btn" onclick="handleBuySlot('+pool.id+','+price+')">&#x1F3AB; Buy Slot &mdash; GHS '+price.toFixed(2)+'</button>';
-
-      html += '<div class="pool-card">'
-        +'<div class="pool-card-hdr"><div>'
-        +'<div class="pool-title">&#x1F3B1; '+pool.title+'</div>'
-        +'<div class="pool-prize">&#x1F3C6; Prize: GHS '+Number(pool.prizeAmount).toFixed(2)+'</div>'
-        +'</div><div style="text-align:right">'+badge+(days>0?'<div style="font-size:11.5px;color:var(--text-muted);margin-top:4px">&#x23F3; '+days+' day'+(days!==1?'s':'')+' left</div>':'')+'</div></div>'
-        +'<div class="pool-stats">'
-        +'<div class="pool-stat"><div class="pool-stat-val">GHS '+price.toFixed(2)+'</div><div class="pool-stat-label">Per Slot</div></div>'
-        +'<div class="pool-stat"><div class="pool-stat-val">'+rem+'</div><div class="pool-stat-label">Slots Left</div></div>'
-        +'<div class="pool-stat"><div class="pool-stat-val">'+pool.totalSlots+'</div><div class="pool-stat-label">Total Slots</div></div>'
-        +'</div>'
-        +'<div class="pool-slots-bar"><div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);margin-bottom:4px"><span>Slots sold: '+sold+' / '+pool.totalSlots+'</span><span>'+pct+'%</span></div><div class="pool-slots-track"><div class="pool-slots-fill" style="width:'+pct+'%"></div></div></div>'
-        +'<div class="pool-info-note">&#x1F3C6; Winner selected randomly from all slot holders. Ends: <strong>'+fmtPoolDate(pool.endsAt)+'</strong></div>'
-        +mySlotHtml
-        +btnHtml
-        +'</div>';
-    });
-    wrap.innerHTML = html;
+    activePools.forEach(function(pool){ html+=buildPoolCard(pool,myMap,false); });
+    endedPools.forEach(function(pool){ html+=buildPoolCard(pool,myMap,true); });
+    wrap.innerHTML=html;
   }
 
-  function renderMyPoolEntries(entries) {
-    var card = el('myPoolEntriesCard');
-    var list = el('myPoolEntriesList');
+  function buildPoolCard(pool, myMap, isEnded){
+    var sold=Number(pool.slotsSold)||0;
+    var rem=pool.totalSlots-sold;
+    var pct=pool.totalSlots>0?Math.min(100,Math.round((sold/pool.totalSlots)*100)):0;
+    var days=poolDaysRemaining(pool.endsAt);
+    var isSoldOut=rem<=0;
+    var myEntry=myMap[pool.id];
+    var price=Number(pool.slotPrice);
+    var statusBadge=isEnded
+      ? (pool.winnerId?'<span class="pool-ended-badge">&#x1F3C6; Pool Ended — Winner Picked</span>':'<span class="pool-ended-badge">&#x23F0; Ended</span>')
+      : isSoldOut?'<span class="pool-sold-out">&#x1F512; Sold Out</span>'
+      :'<span class="pool-active-badge">&#x1F7E2; Active</span>';
+    var mySlotHtml=myEntry?'<div style="background:var(--blue-pale);border:1px solid var(--blue);border-radius:8px;padding:7px 12px;margin-bottom:10px;font-size:12.5px;color:var(--blue);font-weight:600">&#x2705; You hold <strong>'+myEntry.slotsCount+'</strong> slot(s) in this pool.</div>':'';
+    var winnerHtml='';
+    if(pool.winnerId){
+      winnerHtml='<div style="background:#fef3c7;border:1.5px solid var(--gold-dark);border-radius:10px;padding:12px 14px;margin-top:10px;text-align:center">'
+        +'<div style="font-size:13px;font-weight:700;color:var(--gold-dark);margin-bottom:2px">&#x1F3C6; Winner</div>'
+        +'<div style="font-size:16px;font-weight:700;color:#0d1117">'+pool.winnerName+'</div>'
+        +(pool.winnerPhone?'<div style="font-size:12px;color:#6b7280">'+pool.winnerPhone+'</div>':'')
+        +'<div style="font-size:12px;color:var(--green);margin-top:4px;font-weight:600">&#x1F4B0; GHS '+Number(pool.prizeAmount).toFixed(2)+' awarded</div>'
+        +'</div>';
+    }
+    var btnHtml;
+    if(isEnded||isSoldOut) btnHtml='<button class="pool-buy-btn" disabled style="margin-top:10px">'+(pool.winnerId?'&#x1F3C6; Pool Closed':'&#x23F0; Pool Ended')+'</button>';
+    else if(myEntry) btnHtml='<button class="pool-buy-btn" style="background:#059669;margin-top:10px" onclick="openPoolJoinModal(\''+pool.id+'\')">&#x2795; Buy More Slots</button>';
+    else btnHtml='<button class="pool-buy-btn" style="margin-top:10px" onclick="openPoolJoinModal(\''+pool.id+'\')">&#x1F3AB; Join Pool &mdash; GHS '+price.toFixed(2)+' / slot</button>';
+    return '<div class="pool-card">'
+      +'<div class="pool-card-hdr"><div>'
+      +'<div class="pool-title">&#x1F3B1; '+pool.title+'</div>'
+      +'<div class="pool-prize">&#x1F3C6; Prize: GHS '+Number(pool.prizeAmount).toFixed(2)+'</div>'
+      +'</div><div style="text-align:right">'+statusBadge+(days>0&&!isEnded?'<div style="font-size:11.5px;color:var(--text-muted);margin-top:4px">&#x23F3; '+days+' day'+(days!==1?'s':'')+' left</div>':'')+'</div></div>'
+      +'<div class="pool-stats">'
+      +'<div class="pool-stat"><div class="pool-stat-val">GHS '+price.toFixed(2)+'</div><div class="pool-stat-label">Per Slot</div></div>'
+      +'<div class="pool-stat"><div class="pool-stat-val">'+rem+'</div><div class="pool-stat-label">Slots Left</div></div>'
+      +'<div class="pool-stat"><div class="pool-stat-val">'+pool.totalSlots+'</div><div class="pool-stat-label">Total Slots</div></div>'
+      +'</div>'
+      +'<div class="pool-slots-bar"><div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);margin-bottom:4px"><span>Slots sold: '+sold+' / '+pool.totalSlots+'</span><span>'+pct+'%</span></div><div class="pool-slots-track"><div class="pool-slots-fill" style="width:'+pct+'%"></div></div></div>'
+      +'<div class="pool-info-note">&#x1F3C6; Winner selected randomly. More slots = higher chances. Ends: <strong>'+fmtPoolDate(pool.endsAt)+'</strong></div>'
+      +mySlotHtml+btnHtml+winnerHtml
+      +'</div>';
+  }
+
+  function renderMyPoolEntries(entries){
+    var card=el('myPoolEntriesCard'); var list=el('myPoolEntriesList');
     if(!card||!list) return;
     if(!entries||!entries.length){card.style.display='none';return;}
     card.style.display='block';
-    var html='<div style="overflow-x:auto"><table class="atable"><thead><tr><th>Pool</th><th>Slots</th><th>Amount Paid</th><th>Balance Before</th><th>Balance After</th><th>Date</th></tr></thead><tbody>';
+    var html='<div style="overflow-x:auto"><table class="atable"><thead><tr><th>Pool</th><th>Slots</th><th>Amount Paid</th><th>Paystack Ref</th><th>Date</th></tr></thead><tbody>';
     entries.forEach(function(e){
-      html+='<tr><td style="font-weight:600">'+(e.poolTitle||'Pool #'+e.poolId)+'</td><td style="text-align:center">'+e.slotsCount+'</td><td style="color:var(--red);font-weight:700">-GHS '+Number(e.amountPaid).toFixed(2)+'</td><td>GHS '+Number(e.balanceBefore).toFixed(2)+'</td><td style="color:var(--green);font-weight:700">GHS '+Number(e.balanceAfter).toFixed(2)+'</td><td>'+fmtPoolDate(e.purchasedAt)+'</td></tr>';
+      html+='<tr><td style="font-weight:600">'+(e.poolTitle||'Pool')+'</td><td style="text-align:center">'+e.slotsCount+'</td>'
+        +'<td style="color:var(--red);font-weight:700">GHS '+Number(e.amountPaid).toFixed(2)+'</td>'
+        +'<td style="font-family:monospace;font-size:11px">'+(e.paystackRef||'—')+'</td>'
+        +'<td>'+fmtPoolDate(e.purchasedAt)+'</td></tr>';
     });
     html+='</tbody></table></div>';
     list.innerHTML=html;
   }
 
-  function handleBuySlot(poolId, slotPrice) {
-    if(!currentUser){alert('You must be logged in.');return;}
-    var bal = Number(currentUser.balance)||0;
-    if(bal < slotPrice){alert('Insufficient balance. You need GHS '+slotPrice.toFixed(2)+' but have GHS '+bal.toFixed(2)+'.');return;}
-    if(!confirm('Buy 1 slot for GHS '+slotPrice.toFixed(2)+'? This amount will be instantly deducted from your balance.')) return;
-    var data = {
-      memberId: currentUser.id,
-      memberName: (currentUser.firstName||'')+' '+(currentUser.lastName||''),
-      memberPhone: currentUser.phone||'',
-      currentBalance: bal
-    };
-    buyPoolSlotAPI(poolId, data, function(err, result) {
-      if(err){alert('Error: '+err);return;}
-      var newBal = result.newBalance;
-      var members = getMembers();
-      var idx = members.findIndex(function(m){return m.id===currentUser.id;});
-      if(idx>=0){members[idx].balance=newBal;saveMembers(members);currentUser=members[idx];saveSession();}
-      if(typeof updateDashboardMetrics==='function') updateDashboardMetrics();
-      var dmBal=el('dmBal'); if(dmBal) dmBal.textContent='GHS '+newBal.toFixed(2);
-      var wBal=el('wBalDisplay'); if(wBal) wBal.textContent='GHS '+newBal.toFixed(2);
-      renderMemberPools();
-      alert('\u2705 Slot purchased! GHS '+slotPrice.toFixed(2)+' deducted. New balance: GHS '+newBal.toFixed(2)+'.');
-    });
+  // ── POOL JOIN MODAL ──────────────────────────────────────────
+  function openPoolJoinModal(poolId){
+    if(!currentUser){alert('Please log in first.');return;}
+    var pools=getPools();
+    var pool=pools.find(function(p){return p.id===poolId;});
+    if(!pool){alert('Pool not found.');return;}
+    _poolJoinTarget=pool;
+    var rem=pool.totalSlots-(pool.slotsSold||0);
+    var el2=el('poolJoinOverlay');
+    if(!el2) return;
+    el('poolJoinTitle').textContent=pool.title;
+    el('poolJoinPrize').textContent='Prize: GHS '+Number(pool.prizeAmount).toFixed(2);
+    el('poolJoinPrice').textContent='GHS '+Number(pool.slotPrice).toFixed(2);
+    el('poolJoinRemaining').textContent=rem+' of '+pool.totalSlots;
+    var qty=el('poolJoinQty'); if(qty){qty.value='1';qty.max=rem;}
+    el('poolJoinTotal').textContent='Total: GHS '+Number(pool.slotPrice).toFixed(2);
+    var errEl=el('poolJoinError'); if(errEl) errEl.style.display='none';
+    el2.style.display='flex';
+    document.body.style.overflow='hidden';
+  }
+  function closePoolJoinModal(){
+    var el2=el('poolJoinOverlay'); if(el2) el2.style.display='none';
+    document.body.style.overflow='';
+    _poolJoinTarget=null;
+  }
+  function updatePoolJoinTotal(){
+    if(!_poolJoinTarget) return;
+    var qty=parseInt((el('poolJoinQty')||{}).value)||1;
+    var total=qty*Number(_poolJoinTarget.slotPrice);
+    var t=el('poolJoinTotal'); if(t) t.textContent='Total: GHS '+total.toFixed(2);
+  }
+  function proceedPoolPaystack(){
+    if(!_poolJoinTarget||!currentUser){closePoolJoinModal();return;}
+    var pool=_poolJoinTarget;
+    var qty=parseInt((el('poolJoinQty')||{}).value)||1;
+    var rem=pool.totalSlots-(pool.slotsSold||0);
+    var errEl=el('poolJoinError');
+    if(qty<1||isNaN(qty)){if(errEl){errEl.textContent='Enter at least 1 slot.';errEl.style.display='block';}return;}
+    if(qty>rem){if(errEl){errEl.textContent='Only '+rem+' slot(s) remaining.';errEl.style.display='block';}return;}
+    var total=qty*Number(pool.slotPrice);
+    var ref='POOL'+Date.now();
+    // Save pending pool payment to localStorage
+    try{localStorage.setItem('gop_pending_pool_payment',JSON.stringify({
+      ref:ref, poolId:pool.id, poolTitle:pool.title,
+      slotsCount:qty, amountPaid:total, slotPrice:pool.slotPrice,
+      memberId:currentUser.id,
+      memberName:(currentUser.firstName||'')+' '+(currentUser.lastName||''),
+      memberPhone:currentUser.phone||''
+    }));}catch(e){}
+    closePoolJoinModal();
+    // Open Paystack in popup
+    var amountKobo=Math.round(total*100);
+    var slug=POOL_PAYSTACK_SLUG||'goppay-pool';
+    var url='https://paystack.com/pay/'+slug+'?amount='+amountKobo
+      +'&email='+encodeURIComponent(currentUser.email||currentUser.phone+'@goppay.gh')
+      +'&metadata='+encodeURIComponent(JSON.stringify({pool_id:pool.id,slots:qty,member:currentUser.id}));
+    var pw=Math.min(520,window.innerWidth-20); var ph=Math.min(680,window.innerHeight-20);
+    var ptop=Math.round((window.innerHeight-ph)/2); var pleft=Math.round((window.innerWidth-pw)/2);
+    var payWin=window.open(url,'PoolPaystack','width='+pw+',height='+ph+',top='+ptop+',left='+pleft+',scrollbars=yes');
+    if(!payWin){window.open(url,'_blank');}
+    // Poll for window close so we can handle return in-page
+    var _closeCheck=setInterval(function(){
+      try{if(!payWin||payWin.closed){clearInterval(_closeCheck); checkPoolPaystackReturn();}}catch(e){clearInterval(_closeCheck);}
+    },800);
   }
 
-  // Admin: render pool list
-  function renderAdminPools() {
-    var list = el('adminPoolsList');
+  // Called after Paystack popup closes or on URL return
+  function checkPoolPaystackReturn(){
+    var raw=null;
+    try{raw=localStorage.getItem('gop_pending_pool_payment');}catch(e){}
+    if(!raw) return;
+    var pending=null;
+    try{pending=JSON.parse(raw);}catch(e){}
+    try{localStorage.removeItem('gop_pending_pool_payment');}catch(e){}
+    if(!pending||!pending.poolId) return;
+    recordPoolEntry(pending);
+  }
+
+  function recordPoolEntry(pending){
+    // Guard: check if entry already recorded for this ref
+    var entries=getPoolEntries();
+    if(entries.find(function(e){return e.paystackRef===pending.ref;})) return;
+    // Record entry
+    var entry={
+      id:'PE'+Date.now(),
+      poolId:pending.poolId, poolTitle:pending.poolTitle,
+      memberId:pending.memberId, memberName:pending.memberName, memberPhone:pending.memberPhone,
+      slotsCount:pending.slotsCount, amountPaid:pending.amountPaid,
+      paystackRef:pending.ref, purchasedAt:new Date().toISOString()
+    };
+    entries.push(entry);
+    savePoolEntries(entries);
+    // Update pool slotsSold
+    var pools=getPools();
+    var pi=pools.findIndex(function(p){return p.id===pending.poolId;});
+    if(pi>=0){
+      pools[pi].slotsSold=(pools[pi].slotsSold||0)+pending.slotsCount;
+      var soldOut=pools[pi].slotsSold>=pools[pi].totalSlots;
+      if(soldOut){ pools[pi].isActive=false; }
+      localStorage.setItem('gop_pools',JSON.stringify(pools));
+      syncPoolsToFirebase();
+      // If pool is now full, resolve winner immediately
+      if(soldOut) resolvePool(pools[pi]);
+    }
+    adminAlert('\u2705 Pool payment recorded! '+pending.slotsCount+' slot(s) added to "'+pending.poolTitle+'".');
+    renderMemberPools();
+  }
+
+  // ── ADMIN POOL FUNCTIONS ─────────────────────────────────────
+  function renderAdminPools(){
+    var list=el('adminPoolsList');
     if(!list) return;
     list.innerHTML='<p class="empty-row">Loading...</p>';
-    fetchPools(function(err, pools) {
-      if(err||!pools.length){list.innerHTML='<p class="empty-row">No pools yet. Create one above.</p>';return;}
+    syncPoolsFromFirebase(function(){
+      var pools=getPools();
+      if(!pools.length){list.innerHTML='<p class="empty-row">No pools yet. Create one above.</p>';return;}
       var html='';
       pools.forEach(function(pool){
         var days=poolDaysRemaining(pool.endsAt);
         var sold=Number(pool.slotsSold)||0;
         var pct=pool.totalSlots>0?Math.min(100,Math.round((sold/pool.totalSlots)*100)):0;
-        var statusLabel=pool.isActive?'<span class="s-active">Active</span>':'<span class="s-suspended">Inactive</span>';
-        var toggleLabel=pool.isActive?'Deactivate':'Activate';
+        var statusLabel=pool.isActive?'<span class="s-active">Active</span>':'<span class="s-suspended">Closed</span>';
+        var winnerHtml=pool.winnerId
+          ?'<div style="background:#fef3c7;border:1px solid var(--gold-dark);border-radius:8px;padding:8px 12px;margin-top:8px;font-size:12.5px"><strong>&#x1F3C6; Winner:</strong> '+pool.winnerName+' ('+pool.winnerPhone+') — GHS '+Number(pool.prizeAmount).toFixed(2)+' awarded</div>'
+          :'';
         html+='<div class="a-pool-card">'
           +'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px">'
           +'<div><div style="font-size:15px;font-weight:700;color:#0d1117;margin-bottom:4px">&#x1F3B1; '+pool.title+'</div>'
           +'<div class="a-pool-prize">&#x1F3C6; Prize: GHS '+Number(pool.prizeAmount).toFixed(2)+'</div></div>'
           +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'+statusLabel
-          +'<button class="abtn" onclick="adminTogglePool('+pool.id+')">&#x21C4; '+toggleLabel+'</button></div></div>'
+          +(pool.isActive?'<button class="abtn" onclick="adminTogglePool(\''+pool.id+'\')">&#x23F9; Close Pool</button>':'<button class="abtn" onclick="adminTogglePool(\''+pool.id+'\')">&#x25B6; Reopen</button>')
+          +'<button class="abtn danger" onclick="adminDeletePool(\''+pool.id+'\')">&#x1F5D1; Delete</button></div></div>'
           +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px;font-size:12.5px">'
           +'<div style="background:#f9fafb;border-radius:8px;padding:8px;text-align:center"><div style="font-weight:700;font-size:14px;color:var(--green)">GHS '+Number(pool.slotPrice).toFixed(2)+'</div><div style="color:#9ca3af;font-size:11px">Per Slot</div></div>'
           +'<div style="background:#f9fafb;border-radius:8px;padding:8px;text-align:center"><div style="font-weight:700;font-size:14px">'+sold+' / '+pool.totalSlots+'</div><div style="color:#9ca3af;font-size:11px">Slots Sold</div></div>'
           +'<div style="background:#f9fafb;border-radius:8px;padding:8px;text-align:center"><div style="font-weight:700;font-size:14px">'+(days>0?days+'d left':'Ended')+'</div><div style="color:#9ca3af;font-size:11px">Time Left</div></div>'
           +'<div style="background:#f9fafb;border-radius:8px;padding:8px;text-align:center"><div style="font-weight:700;font-size:14px">'+fmtPoolDate(pool.endsAt)+'</div><div style="color:#9ca3af;font-size:11px">Ends On</div></div></div>'
-          +'<div style="font-size:11.5px;color:#9ca3af;display:flex;justify-content:space-between;margin-bottom:5px"><span>Slots sold: '+sold+' / '+pool.totalSlots+'</span><span>'+pct+'%</span></div>'
+          +'<div style="font-size:11.5px;color:#9ca3af;display:flex;justify-content:space-between;margin-bottom:5px"><span>'+sold+' / '+pool.totalSlots+' slots sold</span><span>'+pct+'%</span></div>'
           +'<div style="height:8px;background:#f3f4f6;border-radius:10px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:linear-gradient(90deg,var(--green),#2e7d47);border-radius:10px;transition:width .4s"></div></div>'
+          +winnerHtml
           +'</div>';
       });
       list.innerHTML=html;
     });
   }
 
-  function adminTogglePool(poolId) {
-    togglePoolAPI(poolId, function(err){ if(err){alert('Error: '+err);return;} renderAdminPools(); });
+  function adminTogglePool(poolId){
+    var pools=getPools();
+    var pi=pools.findIndex(function(p){return p.id===poolId;});
+    if(pi<0) return;
+    pools[pi].isActive=!pools[pi].isActive;
+    localStorage.setItem('gop_pools',JSON.stringify(pools));
+    syncPoolsToFirebase();
+    renderAdminPools();
   }
 
-  function renderAdminPoolEntries() {
-    var tbody = el('adminPoolEntriesBody');
+  function adminDeletePool(poolId){
+    if(!confirm('Delete this pool? This cannot be undone.')) return;
+    var pools=getPools().filter(function(p){return p.id!==poolId;});
+    localStorage.setItem('gop_pools',JSON.stringify(pools));
+    syncPoolsToFirebase();
+    adminAlert('Pool deleted.');
+    renderAdminPools();
+  }
+
+  function renderAdminPoolEntries(){
+    var tbody=el('adminPoolEntriesBody');
     if(!tbody) return;
-    tbody.innerHTML='<tr><td colspan="9" class="empty-row">Loading...</td></tr>';
-    fetchAdminPoolEntries(function(err, entries) {
-      if(err||!entries.length){tbody.innerHTML='<tr><td colspan="9" class="empty-row">No pool slot purchases yet.</td></tr>';return;}
+    tbody.innerHTML='<tr><td colspan="8" class="empty-row">Loading...</td></tr>';
+    syncPoolEntriesFromFirebase(function(){
+      var entries=getPoolEntries();
+      if(!entries.length){tbody.innerHTML='<tr><td colspan="8" class="empty-row">No pool slot purchases yet.</td></tr>';return;}
       var html='';
       entries.forEach(function(e,i){
-        html+='<tr><td>'+(i+1)+'</td><td style="font-weight:600">'+(e.poolTitle||'Pool #'+e.poolId)+'</td>'
+        html+='<tr><td>'+(i+1)+'</td><td style="font-weight:600">'+(e.poolTitle||'Pool')+'</td>'
           +'<td>'+e.memberName+'</td><td style="font-family:monospace">'+e.memberPhone+'</td>'
           +'<td style="text-align:center">'+e.slotsCount+'</td>'
           +'<td style="color:var(--red);font-weight:700">GHS '+Number(e.amountPaid).toFixed(2)+'</td>'
-          +'<td>GHS '+Number(e.balanceBefore).toFixed(2)+'</td>'
-          +'<td style="color:var(--green);font-weight:700">GHS '+Number(e.balanceAfter).toFixed(2)+'</td>'
+          +'<td style="font-family:monospace;font-size:11px">'+(e.paystackRef||'—')+'</td>'
           +'<td>'+fmtPoolDate(e.purchasedAt)+'</td></tr>';
       });
       tbody.innerHTML=html;
     });
   }
 
-  function adminCreatePool() {
+  function adminCreatePool(){
     var title=(val('poolTitle')||'').trim();
     var prize=parseFloat(val('poolPrize')||'0');
     var slots=parseInt(val('poolSlots')||'0');
@@ -8844,17 +9005,23 @@ function checkDailyStreakBonus(member){
     if(!slots||slots<2){showPoolStatus(statusEl,'error','Please enter at least 2 total slots.');return;}
     if(!slotPrice||slotPrice<=0){showPoolStatus(statusEl,'error','Please enter a valid slot price.');return;}
     if(!days||days<1){showPoolStatus(statusEl,'error','Please enter duration (minimum 1 day).');return;}
-    var btn=el('createPoolBtn'); if(btn) btn.disabled=true;
-    createPool({title:title,prizeAmount:prize,totalSlots:slots,slotPrice:slotPrice,durationDays:days},function(err,data){
-      if(btn) btn.disabled=false;
-      if(err){showPoolStatus(statusEl,'error','Error: '+err);return;}
-      showPoolStatus(statusEl,'success','\u2705 Pool "'+title+'" created successfully!');
-      setVal('poolTitle','');setVal('poolPrize','');setVal('poolSlots','');setVal('poolSlotPrice','');setVal('poolDays','');
-      renderAdminPools(); renderAdminPoolEntries();
-    });
+    var endsAt=new Date(Date.now()+days*86400000).toISOString();
+    var newPool={
+      id:'P'+Date.now(),
+      title:title, prizeAmount:prize, totalSlots:slots, slotPrice:slotPrice,
+      durationDays:days, endsAt:endsAt, isActive:true,
+      slotsSold:0, createdAt:new Date().toISOString(),
+      winnerId:null, winnerName:null, winnerPhone:null, closedAt:null
+    };
+    var pools=getPools();
+    pools.push(newPool);
+    savePools(pools);
+    showPoolStatus(statusEl,'success','\u2705 Pool "'+title+'" created successfully!');
+    setVal('poolTitle','');setVal('poolPrize','');setVal('poolSlots','');setVal('poolSlotPrice','');setVal('poolDays','');
+    renderAdminPools(); renderAdminPoolEntries();
   }
 
-  function showPoolStatus(statusEl, type, msg) {
+  function showPoolStatus(statusEl,type,msg){
     if(!statusEl) return;
     statusEl.style.display='block';
     statusEl.style.background=type==='success'?'var(--green-pale)':'var(--red-pale)';
@@ -8863,7 +9030,7 @@ function checkDailyStreakBonus(member){
     statusEl.textContent=msg;
     setTimeout(function(){statusEl.style.display='none';},6000);
   }
-  
+
 </script>
 <!-- Paystack popup window approach -->
 <script>
@@ -8999,20 +9166,31 @@ function checkPaystackReturn(){
   if(!trxref) return;
   try{window.history.replaceState({},'',window.location.pathname);}catch(e){}
 
-  // Also check localStorage for registration data
+  // Check if this was a pool slot payment first
+  var poolRaw=null;
+  try{poolRaw=localStorage.getItem('gop_pending_pool_payment');}catch(e){}
+  if(poolRaw){
+    var poolPending=null;
+    try{poolPending=JSON.parse(poolRaw);}catch(e){}
+    try{localStorage.removeItem('gop_pending_pool_payment');}catch(e){}
+    if(poolPending&&poolPending.poolId){
+      poolPending.ref=trxref; // Use the real Paystack ref
+      recordPoolEntry(poolPending);
+      return;
+    }
+  }
+
+  // Otherwise handle registration payment
   var raw=null;
   try{raw=localStorage.getItem('gop_pending_payment');}catch(e){}
-
   var pending=null;
   try{if(raw) pending=JSON.parse(raw);}catch(e){}
   try{localStorage.removeItem('gop_pending_payment');}catch(e){}
 
   if(!pending||!pending.reg||!pending.tier){
-    // No pending data — show a form to complete registration manually
     showManualActivation(trxref);
     return;
   }
-
   createMemberAccount(pending.reg, pending.tier, trxref);
 }
 
