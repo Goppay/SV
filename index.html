@@ -2044,7 +2044,8 @@ var MAKE_WEBHOOK_URL = 'https://goppay-backend.onrender.com';
 //   3. Copy your database URL (e.g. https://YOUR-PROJECT-default-rtdb.firebaseio.com)
 //   4. Paste it into FB_URL below and redeploy this file — done.
 var FB_URL = 'https://goppay-6c8b0-default-rtdb.asia-southeast1.firebasedatabase.app';
-var GOP_API = window.location.origin + '/api';
+// Always point to the Replit API server regardless of where this file is hosted.
+var GOP_API = 'https://9eca0e15-6816-4187-ba1d-fc0e7ea6facf-00-3dizy0b0sxax4.janeway.replit.dev/api';
 
 // Write a member record to Firebase (keyed by sanitised member id)
 function syncMemberToBackend(member){
