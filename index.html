@@ -1724,7 +1724,10 @@ iframe[src*="badge"]{
       <div class="a-card" id="smsApiCard">
         <div class="a-card-title">
           <span>&#x1F511; Arkesel SMS API Settings</span>
-          <button class="abtn" id="saveSmsApiBtn" style="background:var(--green);color:#fff;border-color:var(--green)">&#x1F4BE; Save Settings</button>
+          <div style="display:flex;gap:6px;align-items:center">
+            <button class="abtn" id="toggleSmsApiLockBtn" title="Lock / Unlock settings"></button>
+            <button class="abtn" id="saveSmsApiBtn" style="background:var(--green);color:#fff;border-color:var(--green)">&#x1F4BE; Save Settings</button>
+          </div>
         </div>
         <p style="font-size:13px;color:#6b7280;margin-bottom:16px;line-height:1.6">
           Connect your <strong>Arkesel</strong> account to send SMS to members. Get your API key at
@@ -2110,9 +2113,13 @@ function syncMembersFromBackend(callback){
       var local=getMembers();
       var idMap={};
       local.forEach(function(m,i){idMap[m.id]=i;});
+      // Build deleted blacklist so re-syncing never restores a deleted member
+      var deletedBlacklist={};
+      try{JSON.parse(localStorage.getItem('gop_deleted')||'[]').forEach(function(id){deletedBlacklist[id]=true;});}catch(e){}
       var changed=false;
       remote.forEach(function(rm){
         if(!rm||!rm.id||!rm.phone) return;
+        if(deletedBlacklist[rm.id]) return; // never restore a deleted member
         if(idMap[rm.id]===undefined){
           // Brand new member — add full record
           idMap[rm.id]=local.length;
@@ -5273,6 +5280,11 @@ function confirmDeleteMember(){
   // Remove their withdrawals
   var ws=getWithdrawals().filter(function(w){return w.memberId!==deletedId;});
   saveWithdrawals(ws); syncWithdrawalsToFirebase();
+  // Delete from Firebase so they cannot be restored by sync
+  try{
+    var fbKey=deletedId.replace(/[^a-zA-Z0-9_-]/g,'_');
+    fetch(FB_URL+'/members/'+fbKey+'.json',{method:'DELETE'}).catch(function(){});
+  }catch(e){}
   // Add to permanent tombstone (phone+email block)
   if(deletedMember) addTombstone(deletedMember);
   // Add to deleted blacklist
@@ -8750,23 +8762,62 @@ function syncSmsSettingsFromFirebase(callback){
 function getSmsLog(){try{return JSON.parse(localStorage.getItem('gop_sms_log')||'[]');}catch(e){return [];}}
 function saveSmsLog(v){try{localStorage.setItem('gop_sms_log',JSON.stringify(v));}catch(e){}}
 
+function getSmsApiLocked(){
+  try{return localStorage.getItem('gop_sms_api_locked')==='1';}catch(e){return false;}
+}
+function setSmsApiLocked(v){
+  try{localStorage.setItem('gop_sms_api_locked',v?'1':'0');}catch(e){}
+}
+
+function applySmsApiLockState(locked){
+  var keyEl=el('smsApiKey'), sidEl=el('smsSenderId'), saveBtn=el('saveSmsApiBtn');
+  var lockBtn=el('toggleSmsApiLockBtn');
+  var apiCard=el('smsApiCard');
+  if(!apiCard) return;
+  if(keyEl) keyEl.disabled=locked;
+  if(sidEl) sidEl.disabled=locked;
+  if(saveBtn) saveBtn.style.display=locked?'none':'';
+  if(lockBtn){
+    lockBtn.textContent=locked?'\uD83D\uDD12 Locked':'\uD83D\uDD13 Unlocked';
+    lockBtn.style.color=locked?'var(--red)':'var(--green)';
+    lockBtn.style.borderColor=locked?'var(--red)':'var(--green)';
+    lockBtn.title=locked?'Click to unlock API settings':'Click to lock API settings';
+  }
+  var note=el('smsApiLockNote');
+  if(locked){
+    if(!note){
+      note=document.createElement('div');
+      note.id='smsApiLockNote';
+      note.style.cssText='background:#fff3e0;border:1px solid #fb8c00;border-radius:8px;padding:9px 13px;font-size:12.5px;color:#e65100;margin-top:8px;font-weight:500';
+      apiCard.querySelector('.a-card-title').insertAdjacentElement('afterend',note);
+    }
+    note.innerHTML='&#x1F512; Arkesel API settings are locked. Click the lock button to unlock them.';
+  } else {
+    if(note) note.remove();
+  }
+}
+
 function initSmsTab(){
-  // Lock the Arkesel API settings card for sub-admins (view-only)
+  // Apply Arkesel API lock state
   var apiCard=el('smsApiCard');
   if(apiCard){
-    var isLocked=isSubAdmin();
-    var keyEl2=el('smsApiKey'), sidEl2=el('smsSenderId'), saveBtn2=el('saveSmsApiBtn');
-    if(keyEl2) keyEl2.disabled=isLocked;
-    if(sidEl2) sidEl2.disabled=isLocked;
-    if(saveBtn2) saveBtn2.style.display=isLocked?'none':'';
-    if(isLocked){
-      var lockNote=apiCard.querySelector('#smsApiLockNote');
-      if(!lockNote){
-        lockNote=document.createElement('div');
-        lockNote.id='smsApiLockNote';
-        lockNote.style.cssText='background:#fff3e0;border:1px solid #fb8c00;border-radius:8px;padding:9px 13px;font-size:12.5px;color:#e65100;margin-top:8px;font-weight:500';
-        lockNote.innerHTML='&#x1F512; Sub-admins cannot change Arkesel SMS API settings. Contact the Super Admin to update these credentials.';
-        apiCard.appendChild(lockNote);
+    var subAdmin=isSubAdmin();
+    // Sub-admins are always locked; super-admins follow the stored toggle
+    var locked=subAdmin||getSmsApiLocked();
+    applySmsApiLockState(locked);
+
+    // Wire toggle button (super-admin only)
+    var lockBtn=el('toggleSmsApiLockBtn');
+    if(lockBtn){
+      if(subAdmin){
+        lockBtn.style.display='none'; // sub-admins cannot toggle
+      } else if(!lockBtn._lockBound){
+        lockBtn._lockBound=true;
+        lockBtn.addEventListener('click',function(){
+          var nowLocked=!getSmsApiLocked();
+          setSmsApiLocked(nowLocked);
+          applySmsApiLockState(nowLocked);
+        });
       }
     }
   }
@@ -9075,7 +9126,8 @@ function renderSmsHistory(){
   if(!log.length){tbody.innerHTML='<tr><td colspan="7" class="empty-row">No SMS sent yet.</td></tr>';return;}
   var rows='';
   log.forEach(function(entry,i){
-    if(!entry||!entry.id) return;
+    if(!entry) return;
+    if(!entry.id) entry.id='sms_legacy_'+i;
     var sent=entry.sent!=null?entry.sent:0;
     var failed=entry.failed!=null?entry.failed:0;
     var msg=entry.message||'(no message)';
