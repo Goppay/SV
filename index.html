@@ -917,7 +917,20 @@ iframe[src*="badge"]{
     <h2 style="color:var(--red)">Delete Member Account</h2>
     <p style="font-size:13.5px;color:var(--text-muted);margin-bottom:16px">This is permanent. The member will be notified with the reason provided.</p>
     <div class="fg"><label>Member</label><div style="padding:9px 12px;background:var(--warm-gray);border-radius:9px;font-size:13.5px;font-weight:600" id="delMemberName">—</div></div>
-    <div class="fg"><label>Reason for Deletion *</label><textarea id="delReason" rows="3" style="resize:vertical" placeholder="e.g. Fraudulent activity detected — multiple accounts from same device..."></textarea></div>
+    <div class="fg">
+      <label>Reason for Deletion *</label>
+      <select id="delReasonSelect" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:9px;font-size:13.5px;background:#fff;color:var(--text);outline:none;margin-bottom:8px">
+        <option value="">Select a reason...</option>
+        <option value="Duplicate or multiple accounts detected">Duplicate/multiple accounts</option>
+        <option value="Fraudulent activity detected on account">Fraudulent activity</option>
+        <option value="Fake or invalid survey responses submitted">Fake survey responses</option>
+        <option value="User requested account deletion">User requested deletion</option>
+        <option value="Violation of GhanaOpinionPay terms of service">Terms of service violation</option>
+        <option value="Referral abuse detected">Referral abuse</option>
+        <option value="Other">Other (enter below)</option>
+      </select>
+      <textarea id="delReason" rows="2" style="resize:vertical" placeholder="Add details or enter custom reason here..."></textarea>
+    </div>
     <div class="err-box" id="delError"></div>
     <button class="sbtn" style="background:var(--red)" id="doDeleteBtn">Delete Account Permanently</button>
   </div>
@@ -958,9 +971,49 @@ iframe[src*="badge"]{
     <div class="fg"><label>Member</label><div style="padding:9px 12px;background:var(--warm-gray);border-radius:9px;font-size:13.5px;font-weight:600" id="penaltyMemberName">—</div></div>
     <div class="fg"><label>Current Balance</label><div style="padding:9px 12px;background:var(--warm-gray);border-radius:9px;font-size:13.5px;font-weight:700;color:var(--green)" id="penaltyMemberBalance">GHS 0.00</div></div>
     <div class="fg"><label>Amount to Deduct (GHS) *</label><input type="number" id="penaltyAmount" placeholder="e.g. 5.00" min="0.10" step="0.10"/></div>
-    <div class="fg"><label>Reason for Penalty *</label><textarea id="penaltyReason" rows="3" style="resize:vertical" placeholder="e.g. Violation of terms — fake survey responses detected..."></textarea></div>
+    <div class="fg">
+      <label>Reason for Penalty *</label>
+      <select id="penaltyReasonSelect" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:9px;font-size:13.5px;background:#fff;color:var(--text);outline:none;margin-bottom:8px">
+        <option value="">Select a reason...</option>
+        <option value="Fake or invalid survey responses detected">Fake survey responses</option>
+        <option value="Referral abuse — fraudulent referrals detected">Referral abuse</option>
+        <option value="Violation of GhanaOpinionPay terms of service">Terms of service violation</option>
+        <option value="Automated bot activity detected on account">Survey bot activity</option>
+        <option value="Manual balance correction by admin">Manual correction</option>
+        <option value="Withdrawal reversed or disputed payment">Reversed/disputed payment</option>
+        <option value="Other">Other (enter below)</option>
+      </select>
+      <textarea id="penaltyReason" rows="2" style="resize:vertical" placeholder="Add details or enter custom reason here..."></textarea>
+    </div>
     <div class="err-box" id="penaltyError"></div>
     <button class="sbtn" style="background:var(--orange)" id="doPenaltyBtn">Apply Penalty Deduction &#x2192;</button>
+  </div>
+</div>
+
+<!-- POOL SLOTS MODAL -->
+<div class="modal-overlay" id="poolSlotsModal">
+  <div class="modal modal-sm">
+    <button class="modal-close" onclick="closePoolSlotsModal()">&#x2715;</button>
+    <h2 style="color:#0369a1">&#x1F3AB; Change Pool Slots</h2>
+    <p style="font-size:13.5px;color:var(--text-muted);margin-bottom:16px">Set the total number of pool slots for this member. The member will be notified of any change.</p>
+    <div class="fg"><label>Member</label><div style="padding:9px 12px;background:var(--warm-gray);border-radius:9px;font-size:13.5px;font-weight:600" id="poolSlotsMemberName">—</div></div>
+    <div class="fg"><label>New Total Pool Slots *</label><input type="number" id="poolSlotsNewCount" min="0" step="1" placeholder="e.g. 3"/></div>
+    <div class="fg">
+      <label>Reason for Change *</label>
+      <select id="poolSlotsReasonSelect" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:9px;font-size:13.5px;background:#fff;color:var(--text);outline:none;margin-bottom:8px">
+        <option value="">Select a reason...</option>
+        <option value="Loyalty reward — extra pool slots granted">Loyalty reward</option>
+        <option value="Tier upgrade bonus">Tier upgrade bonus</option>
+        <option value="Promotional campaign reward">Promotional campaign reward</option>
+        <option value="Correcting system error">Correcting system error</option>
+        <option value="Reduced due to policy violation">Reduced due to policy violation</option>
+        <option value="Manual admin adjustment">Manual admin adjustment</option>
+        <option value="Other">Other (enter below)</option>
+      </select>
+      <textarea id="poolSlotsReasonText" rows="2" style="resize:vertical" placeholder="Add details or enter custom reason here..."></textarea>
+    </div>
+    <div class="err-box" id="poolSlotsError"></div>
+    <button class="sbtn" style="background:#0369a1" onclick="applyPoolSlots()">&#x1F3AB; Apply Pool Slots Change &#x2192;</button>
   </div>
 </div>
 
@@ -3278,6 +3331,24 @@ document.addEventListener('DOMContentLoaded', function(){
     if(srs.value && srs.value!=='Other') setVal('suspendReason','');
   });
 
+  // Delete modal reason select — clear textarea when a preset is chosen (except Other)
+  var drs=el('delReasonSelect');
+  if(drs) drs.addEventListener('change',function(){
+    if(drs.value && drs.value!=='Other') setVal('delReason','');
+  });
+
+  // Penalty modal reason select — clear textarea when a preset is chosen (except Other)
+  var prs=el('penaltyReasonSelect');
+  if(prs) prs.addEventListener('change',function(){
+    if(prs.value && prs.value!=='Other') setVal('penaltyReason','');
+  });
+
+  // Pool slots modal reason select — clear textarea when a preset is chosen (except Other)
+  var psrs=el('poolSlotsReasonSelect');
+  if(psrs) psrs.addEventListener('change',function(){
+    if(psrs.value && psrs.value!=='Other') setVal('poolSlotsReasonText','');
+  });
+
   // Admin manual refresh button
   var arb=el('adminRefreshBtn');
   if(arb) arb.addEventListener('click',function(){
@@ -3933,8 +4004,8 @@ function renderSurveyList(member){
   var html='';
   if(!surveys.length) html='<p style="color:var(--text-muted);font-size:13.5px;text-align:center;padding:18px">No surveys available right now.</p>';
   surveys.forEach(function(s){
-    var completed=(member.completedSurveys||[]).includes(s.id)&&s.type==='gh-affairs';
-    var overLim=done>=lim&&s.type!=='gh-affairs';
+    var completed=(member.completedSurveys||[]).includes(s.id);
+    var overLim=!completed&&done>=lim&&s.type!=='gh-affairs';
     var dis=completed||overLim;
     var btnTxt=completed?'Done ✓':overLim?'Limit reached':'Start';
     html+='<div class="c-item"><div class="c-info"><h4>'+s.title+(s.type==='gh-affairs'?' 🇬🇭':'')+'</h4><p>'+s.questions+' questions · '+s.timeMin+' min</p></div>';
@@ -4012,10 +4083,10 @@ function completeSurvey(){
     var earnAmt=s.type==='gh-affairs'?s.earn:tierEarn;
     members[idx].balance=(members[idx].balance||0)+earnAmt;
     members[idx].monthEarned=(members[idx].monthEarned||0)+earnAmt;
+    var cs=members[idx].completedSurveys||[];
+    if(!cs.includes(s.id)) cs.push(s.id);
+    members[idx].completedSurveys=cs;
     if(s.type==='gh-affairs'){
-      var cs=members[idx].completedSurveys||[];
-      if(!cs.includes(s.id)) cs.push(s.id);
-      members[idx].completedSurveys=cs;
       members[idx].ghSurveyDone=true;
     } else {
       if(members[idx].dailySurveyDate!==today()){members[idx].dailySurveyDate=today();members[idx].dailySurveyCount=0;}
@@ -4334,6 +4405,25 @@ function showWithdrawConfirm(){
     }
   }
 
+  // ── PAID TIERS: After 3rd withdrawal, switch to monthly cycle ──
+  // Once wCount >= 3 (meaning 3 withdrawals already done), next withdrawal
+  // must be at least 1 calendar month after the last one, still on Mon/Thu only.
+  if(!isFreeAcct && wCount>=3){
+    var lastWDate=currentUser.lastWithdrawalDate||null;
+    if(lastWDate){
+      var lastD=new Date(lastWDate);
+      // Compute the monthly unlock date: same day-of-month as last withdrawal, next month
+      var monthlyUnlock=new Date(lastD);
+      monthlyUnlock.setMonth(monthlyUnlock.getMonth()+1);
+      var nowD=new Date();
+      if(nowD<monthlyUnlock){
+        var unlockStr=monthlyUnlock.toLocaleDateString('en-GB',{day:'2-digit',month:'long',year:'numeric'});
+        showWithdrawMsg('error','&#x1F4C5; <strong>Monthly withdrawal cycle active.</strong><br>After your 3rd withdrawal, withdrawals are once per calendar month.<br>Your next withdrawal window opens on or after <strong>'+unlockStr+'</strong> (on a Monday or Thursday).');
+        return;
+      }
+    }
+  }
+
   var isFirst=wCount===0;
   var fee,youGet,feeDesc;
   if(isFreeAcct){
@@ -4491,6 +4581,7 @@ function submitWithdrawal(){
   if(idx<0){if(btn){btn.disabled=false;btn.textContent='Withdraw Now';}return;}
   members[idx].balance=parseFloat(((members[idx].balance||0)-amount).toFixed(2));
   members[idx].withdrawalCount=(members[idx].withdrawalCount||0)+1;
+  members[idx].lastWithdrawalDate=new Date().toISOString();
   saveMembers(members);
   currentUser=members[idx];
   syncMemberToBackend(currentUser);
@@ -4710,8 +4801,27 @@ function showWithdrawMsg(type, msg){
 
 function renderWithdrawalHistory(member){
   var ws=getWithdrawals().filter(function(w){return w.memberId===member.id;});
-  if(!ws.length){setHTML('wHistory','<p style="font-size:13.5px;color:var(--text-muted);text-align:center;padding:18px">No withdrawal requests yet.</p>');return;}
-  var html='<div style="overflow-x:auto"><table class="atable"><thead><tr><th>Date</th><th>Requested</th><th>Fee</th><th>You Receive</th><th>Method</th><th>Account</th><th>Status</th><th>Action</th></tr></thead><tbody>';
+  var isFreeAcct=(member.tier==='Free');
+  var wCount=member.withdrawalCount||0;
+  // Monthly cycle notice for paid tiers with 3+ withdrawals
+  var monthlyCycleHtml='';
+  if(!isFreeAcct && wCount>=3 && member.lastWithdrawalDate){
+    var lastD=new Date(member.lastWithdrawalDate);
+    var monthlyUnlock=new Date(lastD);
+    monthlyUnlock.setMonth(monthlyUnlock.getMonth()+1);
+    var nowD=new Date();
+    if(nowD<monthlyUnlock){
+      var unlockStr=monthlyUnlock.toLocaleDateString('en-GB',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+      monthlyCycleHtml='<div style="background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:10px;padding:11px 14px;margin-bottom:14px;font-size:13px;color:#1e40af;line-height:1.6">'
+        +'&#x1F4C5; <strong>Monthly withdrawal cycle active.</strong> After your 3rd withdrawal, you may withdraw once per calendar month (on a Monday or Thursday).'
+        +' Your next window opens on or after <strong>'+unlockStr+'</strong>.</div>';
+    } else {
+      monthlyCycleHtml='<div style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;padding:11px 14px;margin-bottom:14px;font-size:13px;color:#15803d;line-height:1.6">'
+        +'&#x1F7E2; <strong>Monthly withdrawal window is now open!</strong> You can withdraw on the next available Monday or Thursday.</div>';
+    }
+  }
+  if(!ws.length){setHTML('wHistory',monthlyCycleHtml+'<p style="font-size:13.5px;color:var(--text-muted);text-align:center;padding:18px">No withdrawal requests yet.</p>');return;}
+  var html=monthlyCycleHtml+'<div style="overflow-x:auto"><table class="atable"><thead><tr><th>Date</th><th>Requested</th><th>Fee</th><th>You Receive</th><th>Method</th><th>Account</th><th>Status</th><th>Action</th></tr></thead><tbody>';
   ws.slice().reverse().forEach(function(w){
     var bc=w.phase==='Complete'?'ph-complete':w.phase==='Processing'?'ph-processing':w.phase==='Reversed'?'ph-failed':'ph-pending';
     var fee=w.fee||0;
@@ -5268,6 +5378,7 @@ function renderMembersTable(){
       if(m.status==='suspended') html+='<button class="abtn reactivate" data-reactivate="'+m.id+'">&#x1F7E2; Reactivate</button>';
       if(m.status==='payment_failed') html+='<button class="abtn vbtn" data-verify="'+m.id+'">&#x2705; Verify</button>';
       if(m.status==='active'||m.status==='suspended') html+='<button class="abtn" data-penalty="'+m.id+'" data-penaltyname="'+m.firstName+' '+m.lastName+'" data-penaltybал="'+(m.balance||0).toFixed(2)+'" style="border-color:var(--orange);color:var(--orange)">&#x26A0; Penalty</button>';
+      html+='<button class="abtn" data-poolslots="'+m.id+'" data-poolslotsname="'+m.firstName+' '+m.lastName+'" data-poolslotsval="'+(m.extraPoolSlots||0)+'" style="border-color:#0369a1;color:#0369a1">&#x1F3AB; Pool Slots</button>';
       html+='<button class="abtn danger" data-del="'+m.id+'" data-delname="'+m.firstName+' '+m.lastName+'">&#x1F5D1; Delete</button>';
       html+='</div></td></tr>';
     });
@@ -5287,6 +5398,7 @@ function renderMembersTable(){
     else if(b.dataset.reactivate) reactivateMember(b.dataset.reactivate);
     else if(b.dataset.penalty)    openPenaltyModal(b.dataset.penalty, b.dataset.penaltyname, b.dataset.penaltybал);
     else if(b.dataset.del)        openDeleteModal(b.dataset.del, b.dataset.delname);
+    else if(b.dataset.poolslots)  openPoolSlotsModal(b.dataset.poolslots, b.dataset.poolslotsname, b.dataset.poolslotsval);
     else if(b.dataset.pollinc)    adjustPollLimit(b.dataset.pollinc, 1);
     else if(b.dataset.polldec)    adjustPollLimit(b.dataset.polldec, -1);
     else if(b.dataset.editage)    editMemberAge(b.dataset.editage, b.dataset.edtagename);
@@ -5336,6 +5448,61 @@ function adjustPollLimit(memberId, delta){
   if(numEl) numEl.textContent=newTotal;
   // Re-render the table to refresh the base/extra annotation
   renderMembersTable();
+}
+
+var _pendingPoolSlotsId=null;
+function openPoolSlotsModal(memberId, memberName, currentExtraSlots){
+  var members=getMembers();
+  var m=members.find(function(x){return x.id===memberId;});
+  if(!m) return;
+  _pendingPoolSlotsId=memberId;
+  var tierBase={'Free':1,'Bronze':2,'Silver':3,'Gold':5};
+  var baseSlots=tierBase[m.tier]||1;
+  var extraSlots=m.extraPoolSlots||0;
+  var totalSlots=baseSlots+extraSlots;
+  setText('poolSlotsMemberName', memberName+' ('+m.tier+' • current total: '+totalSlots+' slots)');
+  setVal('poolSlotsNewCount', totalSlots);
+  setVal('poolSlotsReasonSelect','');
+  setVal('poolSlotsReasonText','');
+  hideErr('poolSlotsError');
+  el('poolSlotsModal').classList.add('open');
+}
+function closePoolSlotsModal(){
+  el('poolSlotsModal').classList.remove('open');
+  _pendingPoolSlotsId=null;
+}
+function applyPoolSlots(){
+  var memberId=_pendingPoolSlotsId;
+  if(!memberId) return;
+  var members=getMembers();
+  var idx=members.findIndex(function(m){return m.id===memberId;});
+  if(idx<0) return;
+  var m=members[idx];
+  var tierBase={'Free':1,'Bronze':2,'Silver':3,'Gold':5};
+  var baseSlots=tierBase[m.tier]||1;
+  var newTotal=parseInt(val('poolSlotsNewCount'),10);
+  if(isNaN(newTotal)||newTotal<0){ showErr('poolSlotsError','Please enter a valid number (0 or more).'); return;}
+  var reasonSel=val('poolSlotsReasonSelect');
+  var reasonText=(val('poolSlotsReasonText')||'').trim();
+  var reason=reasonSel==='Other'||(reasonSel===''&&reasonText)?reasonText:(reasonSel+(reasonText?': '+reasonText:''));
+  if(!reason){ showErr('poolSlotsError','Please select or enter a reason.'); return;}
+  var newExtra=newTotal-baseSlots;
+  var oldTotal=baseSlots+(m.extraPoolSlots||0);
+  members[idx].extraPoolSlots=newExtra;
+  members[idx].notifications=members[idx].notifications||[];
+  var diff=newTotal-oldTotal;
+  if(diff>0){
+    members[idx].notifications.push('&#x1F3AB; <strong>Pool slots increased to '+newTotal+'.</strong> Your pool participation limit has been raised by admin. Reason: <em>'+reason+'</em>');
+  } else if(diff<0){
+    members[idx].notifications.push('&#x1F3AB; <strong>Pool slots changed to '+newTotal+'.</strong> Your pool participation limit has been adjusted by admin. Reason: <em>'+reason+'</em>');
+  } else {
+    members[idx].notifications.push('&#x1F3AB; Admin reviewed your pool slots (no change). Reason: <em>'+reason+'</em>');
+  }
+  saveMembers(members);
+  syncMemberToBackend(members[idx]);
+  closePoolSlotsModal();
+  renderMembersTable();
+  adminAlert('Pool slots for '+m.firstName+' '+m.lastName+' set to '+newTotal+' (extra: '+(newExtra>=0?'+':'')+newExtra+'). Reason: '+reason);
 }
 
 var _pendingSuspendId=null;
@@ -5404,14 +5571,18 @@ function reactivateMember(id){
 function openDeleteModal(id, name){
   pendingDeleteId=id;
   setText('delMemberName', name);
+  setVal('delReasonSelect','');
   setVal('delReason','');
   hideErr('delError');
   el('deleteModal').classList.add('open');
 }
 
 function confirmDeleteMember(){
-  var reason=val('delReason').trim();
-  if(!reason){showErr('delError','Please provide a reason for deletion.'); return;}
+  var reasonSel=val('delReasonSelect')||'';
+  var reasonText=(val('delReason')||'').trim();
+  var reason=reasonSel==='Other'||(reasonSel==='')?reasonText:(reasonSel+(reasonText?': '+reasonText:''));
+  reason=reason.trim();
+  if(!reason){showErr('delError','Please select or enter a reason for deletion.'); return;}
   var members=getMembers();
   var idx=members.findIndex(function(m){return m.id===pendingDeleteId;});
   var deletedId=pendingDeleteId;
@@ -7257,6 +7428,7 @@ function openPenaltyModal(id, name, balance){
   setText('penaltyMemberName', name);
   setText('penaltyMemberBalance','GHS '+(parseFloat(balance)||0).toFixed(2));
   setVal('penaltyAmount','');
+  setVal('penaltyReasonSelect','');
   setVal('penaltyReason','');
   hideErr('penaltyError');
   el('penaltyModal').classList.add('open');
@@ -7269,9 +7441,12 @@ function closePenaltyModal(){
 
 function applyPenalty(){
   var amount=parseFloat(val('penaltyAmount'));
-  var reason=(val('penaltyReason')||'').trim();
+  var reasonSel=val('penaltyReasonSelect')||'';
+  var reasonText=(val('penaltyReason')||'').trim();
+  var reason=reasonSel==='Other'||(reasonSel==='')?reasonText:(reasonSel+(reasonText?': '+reasonText:''));
+  reason=reason.trim();
   if(!amount||amount<0.10){showErr('penaltyError','Please enter a valid amount (min GHS 0.10).');return;}
-  if(!reason){showErr('penaltyError','Please provide a reason for this penalty.');return;}
+  if(!reason){showErr('penaltyError','Please select or enter a reason for this penalty.');return;}
   var members=getMembers();
   var idx=members.findIndex(function(m){return m.id===pendingPenaltyId;});
   if(idx<0){adminAlert('Member not found.');closePenaltyModal();return;}
@@ -9043,7 +9218,17 @@ function checkDailyStreakBonus(member){
     // Show confirmation banner
     showPoolConfirmBanner(true);
 
-    var attempts=0; var maxAttempts=30; // 30 × 3s = 90s
+    var attempts=0; var maxAttempts=200; // 200 × 3s = 600s = 10 minutes
+    var _tenMinTimer=setTimeout(function(){
+      // 10-minute hard cancel — clear the poll interval and show auto-cancel UI
+      clearInterval(poll);
+      try{localStorage.removeItem('gop_pending_pool_payment');}catch(e){}
+      showPoolConfirmBanner(false);
+      // Mark any unverified pending entries for this member in UI
+      renderMemberPools();
+      showPoolPaymentAutoCancelPopup(pending);
+    },600000); // 10 minutes in ms
+
     var poll=setInterval(function(){
       attempts++;
       syncPoolEntriesFromFirebase(function(){
@@ -9052,6 +9237,7 @@ function checkDailyStreakBonus(member){
           return e.poolId===pending.poolId && e.memberId===pending.memberId && e.webhookVerified;
         });
         if(found){
+          clearTimeout(_tenMinTimer);
           clearInterval(poll);
           try{localStorage.removeItem('gop_pending_pool_payment');}catch(e){}
           showPoolConfirmBanner(false);
@@ -9061,10 +9247,12 @@ function checkDailyStreakBonus(member){
           });
           showPoolPaymentSuccessPopup(found.slotsCount, found.poolTitle);
         } else if(attempts>=maxAttempts){
+          clearTimeout(_tenMinTimer);
           clearInterval(poll);
           try{localStorage.removeItem('gop_pending_pool_payment');}catch(e){}
           showPoolConfirmBanner(false);
-          showPoolPaymentFailedPopup();
+          renderMemberPools();
+          showPoolPaymentAutoCancelPopup(pending);
         }
       });
     },3000);
@@ -9124,6 +9312,31 @@ function checkDailyStreakBonus(member){
       +'</div></div>';
     overlay.querySelector('#poolRetryBtn').addEventListener('click',function(){overlay.remove();switchTab('pool');});
     overlay.querySelector('#poolDismissBtn').addEventListener('click',function(){overlay.remove();});
+    document.body.appendChild(overlay);
+  }
+
+  // Auto-cancel popup: shown when 10 minutes pass with no webhook confirmation
+  function showPoolPaymentAutoCancelPopup(pending){
+    var overlay=document.createElement('div');
+    overlay.style.cssText='position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px';
+    var poolTitle=(pending&&pending.poolTitle)||'Pool';
+    overlay.innerHTML='<div style="background:#fff;border-radius:18px;padding:32px 28px;max-width:400px;width:100%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.18)">'
+      +'<div style="width:64px;height:64px;background:#fff3e0;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:32px">&#x23F0;</div>'
+      +'<div style="font-size:20px;font-weight:700;color:#0d1117;margin-bottom:8px">Payment Verification Timed Out</div>'
+      +'<div style="font-size:13.5px;color:#6b7280;margin-bottom:12px;line-height:1.6">Your payment for <strong>"'+poolTitle+'"</strong> could not be confirmed within 10 minutes. The pending reservation has been automatically cancelled.</div>'
+      +'<div style="font-size:12.5px;color:var(--gold-dark);background:var(--gold-pale);border-radius:8px;padding:9px 12px;margin-bottom:20px;text-align:left;line-height:1.7">'
+      +'<strong>&#x26A0; If money was deducted from your account,</strong> please contact support at <strong>Ghanaopinionpay@gmail.com</strong> with your Paystack payment reference — your slots will be manually confirmed.'
+      +'</div>'
+      +'<div style="display:flex;gap:10px">'
+      +'<button id="poolAutoCancelRetryBtn" style="flex:1;background:var(--green);color:#fff;border:none;border-radius:10px;padding:12px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:var(--font-body)">&#x21BB; Try Again</button>'
+      +'<button id="poolAutoCancelDismissBtn" style="flex:1;background:#f3f4f6;color:#374151;border:none;border-radius:10px;padding:12px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:var(--font-body)">Dismiss</button>'
+      +'</div></div>';
+    overlay.querySelector('#poolAutoCancelRetryBtn').addEventListener('click',function(){
+      overlay.remove();
+      switchTab('pool');
+      setTimeout(renderMemberPools,100);
+    });
+    overlay.querySelector('#poolAutoCancelDismissBtn').addEventListener('click',function(){overlay.remove();});
     document.body.appendChild(overlay);
   }
 
