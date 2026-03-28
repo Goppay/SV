@@ -1148,19 +1148,29 @@ iframe[src*="badge"]{
       <div class="dm"><div class="dm-label">Daily Streak</div><div class="dm-val" style="color:var(--red)" id="dmStreak">&#x1F525; 0</div><div class="dm-sub">+GHS 0.20/day</div></div>
       <div class="dm"><div class="dm-label">Surveys Today</div><div class="dm-val" id="dmSurveyCount">0</div><div class="dm-sub" id="dmSurveyLimit">/ 0 limit</div></div>
     </div>
-    <div class="d-tabs">
-      <button class="d-tab active" data-tab="surveys">&#x1F4CB; Surveys</button>
-      <button class="d-tab" data-tab="polls">&#x26A1; Polls</button>
-      <button class="d-tab" data-tab="videos">&#x25B6; Videos</button>
-      <button class="d-tab" data-tab="ads">&#x1F4E2; View Ads</button>
-      <button class="d-tab" data-tab="pages">&#x1F4F1; Pages</button>
-      <button class="d-tab" data-tab="withdraw">&#x1F4B8; Withdraw</button>
-      <button class="d-tab" data-tab="referral">&#x1F4E4; Referral</button>
-      <button class="d-tab" data-tab="upgrade">&#x2B06; Upgrade</button>
-      <button class="d-tab" data-tab="report">&#x1F6A8; Report Issue</button>
-      <button class="d-tab" data-tab="pool">&#x1F3B1; Pool</button>
-      <button class="d-tab" data-tab="settings">&#x2699; Settings</button>
+    <!-- Hamburger menu trigger -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div id="activeDashTabLabel" style="font-size:14px;font-weight:700;color:var(--green)">&#x1F4CB; Surveys</div>
+      <button id="dashMenuBtn" onclick="toggleDashMenu()" style="background:var(--green);color:#fff;border:none;border-radius:9px;padding:9px 14px;font-size:18px;cursor:pointer;line-height:1;font-family:var(--font-body)">&#x2630;</button>
     </div>
+    <!-- Slide-down menu panel -->
+    <div id="dashMenuPanel" style="display:none;background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:10px;margin-bottom:14px;box-shadow:0 4px 18px rgba(0,0,0,.10);z-index:100;position:relative">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+        <button class="d-tab active" data-tab="surveys" onclick="switchDashTabMenu(this,'&#x1F4CB; Surveys')">&#x1F4CB; Surveys</button>
+        <button class="d-tab" data-tab="polls" onclick="switchDashTabMenu(this,'&#x26A1; Polls')">&#x26A1; Polls</button>
+        <button class="d-tab" data-tab="videos" onclick="switchDashTabMenu(this,'&#x25B6; Videos')">&#x25B6; Videos</button>
+        <button class="d-tab" data-tab="ads" onclick="switchDashTabMenu(this,'&#x1F4E2; View Ads')">&#x1F4E2; View Ads</button>
+        <button class="d-tab" data-tab="pages" onclick="switchDashTabMenu(this,'&#x1F4F1; Pages')">&#x1F4F1; Pages</button>
+        <button class="d-tab" data-tab="withdraw" onclick="switchDashTabMenu(this,'&#x1F4B8; Withdraw')">&#x1F4B8; Withdraw</button>
+        <button class="d-tab" data-tab="referral" onclick="switchDashTabMenu(this,'&#x1F4E4; Referral')">&#x1F4E4; Referral</button>
+        <button class="d-tab" data-tab="upgrade" onclick="switchDashTabMenu(this,'&#x2B06; Upgrade')">&#x2B06; Upgrade</button>
+        <button class="d-tab" data-tab="pool" onclick="switchDashTabMenu(this,'&#x1F3B1; Pool')">&#x1F3B1; Pool</button>
+        <button class="d-tab" data-tab="report" onclick="switchDashTabMenu(this,'&#x1F6A8; Report Issue')">&#x1F6A8; Report Issue</button>
+        <button class="d-tab" data-tab="transactions" onclick="switchDashTabMenu(this,'&#x1F4C3; Transactions')">&#x1F4C3; Transactions</button>
+        <button class="d-tab" data-tab="settings" onclick="switchDashTabMenu(this,'&#x2699; Settings')">&#x2699; Settings</button>
+      </div>
+    </div>
+    <div class="d-tabs" style="display:none"></div>
     <div class="d-tab-sec active" id="tab-surveys">
       <div class="d-card">
         <div class="d-card-title"><span>&#x1F4CB; Available Surveys</span><span id="surveyLimitBadge" style="font-size:12px;color:var(--text-muted);font-weight:400"></span></div>
@@ -1177,7 +1187,7 @@ iframe[src*="badge"]{
     </div>
     <div class="d-tab-sec" id="tab-videos">
       <div class="d-card">
-        <div class="d-card-title">&#x25B6; Sponsored Videos — GHS 1.00 each</div>
+        <div class="d-card-title" id="videoTabTitle">&#x25B6; Sponsored Videos</div>
         <div id="videoListWrap"></div>
       </div>
     </div>
@@ -1325,8 +1335,8 @@ iframe[src*="badge"]{
           <span>&#x1F4F1; Follow Pages &amp; Earn</span>
           <span id="pagesEarnBadge" style="font-size:12px;color:var(--text-muted);font-weight:400"></span>
         </div>
-        <div style="background:var(--green-pale);border:1px solid var(--green);border-radius:9px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:var(--green);line-height:1.6">
-          &#x1F4B0; Earn <strong>GHS 0.50</strong> for every page you follow or join. Click the link, follow the page, then click <strong>"Claim Reward"</strong>.
+        <div id="pagesEarnInfo" style="background:var(--green-pale);border:1px solid var(--green);border-radius:9px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:var(--green);line-height:1.6">
+          &#x1F4B0; Earn per page you follow or join. Click the link, follow the page, then your reward is auto-claimed. <strong>Free: GHS 0.20 &middot; Bronze: GHS 0.50 &middot; Silver: GHS 0.75 &middot; Gold: GHS 1.00</strong>
         </div>
         <div id="memberPagesList"></div>
       </div>
@@ -1445,9 +1455,9 @@ iframe[src*="badge"]{
           <div id="poolJoinTitle" style="font-size:15px;font-weight:700;color:var(--green);margin-bottom:4px"></div>
           <div id="poolJoinPrize" style="font-size:13px;color:var(--gold-dark);font-weight:600;margin-bottom:16px"></div>
           <div style="background:var(--warm-gray);border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:13px;color:var(--text-mid);line-height:1.6">
-            <strong>Price per slot:</strong> <span id="poolJoinPrice" style="color:var(--green);font-weight:700"></span><br>
-            <strong>Slots remaining:</strong> <span id="poolJoinRemaining"></span>
+            <strong>Price per slot:</strong> <span id="poolJoinPrice" style="color:var(--green);font-weight:700"></span>
           </div>
+          <span id="poolJoinRemaining" style="display:none"></span>
           <div style="margin-bottom:14px">
             <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:6px">Number of Slots to Buy</label>
             <input type="number" id="poolJoinQty" min="1" value="1" style="width:100%;padding:11px 13px;border:1.5px solid #e5e7eb;border-radius:9px;font-size:14px;font-weight:700;outline:none;text-align:center" oninput="updatePoolJoinTotal()"/>
@@ -1458,6 +1468,13 @@ iframe[src*="badge"]{
           <div style="font-size:11.5px;color:#9ca3af;text-align:center;margin-top:8px">&#x1F512; Secured by Paystack &mdash; card, MoMo &amp; bank accepted</div>
         </div>
       </div>
+    <div class="d-tab-sec" id="tab-transactions">
+      <div class="d-card">
+        <div class="d-card-title">&#x1F4C3; My Transactions</div>
+        <p style="font-size:13.5px;color:var(--text-muted);margin-bottom:14px;line-height:1.6">A full record of all your earnings and withdrawal requests.</p>
+        <div id="transactionsListWrap"><p style="font-size:13.5px;color:var(--text-muted);text-align:center;padding:18px">Loading transactions...</p></div>
+      </div>
+    </div>
     <div class="d-tab-sec" id="tab-settings">
       <div class="s-stack">
         <div class="s-card"><h3>&#x1F464; Profile Information</h3>
@@ -1564,6 +1581,7 @@ iframe[src*="badge"]{
       <button class="a-tab" data-atab="sms">&#x1F4F2; SMS</button>
       <button class="a-tab" data-atab="schedule">&#x1F4C5; Schedule</button>
       <button class="a-tab" data-atab="pools">&#x1F3B1; Pools</button>
+      <button class="a-tab" data-atab="atransactions">&#x1F4C3; Transactions</button>
       <button class="a-tab" data-atab="asettings">&#x2699; Settings</button>
     </div>
     <div class="a-section active" id="atab-payments">
@@ -2020,6 +2038,28 @@ iframe[src*="badge"]{
           </div>
         </div>
       </div>
+    <div class="a-section" id="atab-atransactions">
+      <div class="a-card">
+        <div class="a-card-title">
+          <span>&#x1F4C3; All Member Transactions</span>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <input type="text" id="txSearchInput" placeholder="Search by name or phone..." style="padding:6px 11px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;outline:none;min-width:180px"/>
+            <select id="txTypeFilter" style="padding:6px 10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;outline:none;cursor:pointer">
+              <option value="all">All Types</option>
+              <option value="withdrawal">Withdrawals</option>
+            </select>
+            <button class="abtn" id="txRefreshBtn">&#x21BB; Refresh</button>
+          </div>
+        </div>
+        <p style="font-size:13px;color:#6b7280;margin-bottom:14px;line-height:1.6">All member withdrawal transactions across the platform.</p>
+        <div style="overflow-x:auto">
+          <table class="atable">
+            <thead><tr><th>#</th><th>Member</th><th>Phone</th><th>Tier</th><th>Type</th><th>Amount (GHS)</th><th>Fee</th><th>Received</th><th>Method</th><th>Account</th><th>Date</th><th>Status</th></tr></thead>
+            <tbody id="adminTransactionsBody"><tr><td colspan="12" class="empty-row">Loading...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
     <div class="a-section" id="atab-asettings">
       <div class="a-card">
         <div class="a-card-title">&#x1F4E2; Broadcast Announcement</div>
@@ -2676,6 +2716,7 @@ var TIER_POLLS  = {Free:0, Bronze:1, Silver:2, Gold:3};
 var TIER_ADS    = {Free:1, Bronze:5, Silver:10, Gold:15};
 var TIER_VIDEOS = {Free:1, Bronze:10, Silver:10, Gold:10};
 var TIER_EARN   = {Free:0.50, Bronze:1.00, Silver:1.50, Gold:2.00};
+var TIER_PAGE_EARN = {Free:0.20, Bronze:0.50, Silver:0.75, Gold:1.00};
 var AD_EARN     = 0.30;
 var AD_VIEW_SECS= 25;
 
@@ -2975,9 +3016,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
   // Member dashboard
   bindClick('dLogoutBtn', logout);
-  document.querySelectorAll('.d-tab').forEach(function(tab){
-    tab.addEventListener('click',function(){switchDashTab(tab.dataset.tab, tab);});
-  });
+  // Member dashboard tab clicks handled via onclick="switchDashTabMenu(...)" on each button
   bindClick('submitWithdrawBtn', showWithdrawConfirm);
   bindClick('wFinalSubmitBtn', submitWithdrawal);
   bindClick('wCancelConfirmBtn', function(){
@@ -3129,6 +3168,12 @@ document.addEventListener('DOMContentLoaded', function(){
   bindClick('refreshIssuesBtn', renderAdminIssues);
   var issueFilter=el('issueFilterStatus');
   if(issueFilter) issueFilter.addEventListener('change', renderAdminIssues);
+  // Transactions tab
+  bindClick('txRefreshBtn', function(){ syncWithdrawalsFromFirebase(function(){ renderAdminTransactions(); }); });
+  var txSearch=el('txSearchInput');
+  if(txSearch) txSearch.addEventListener('input', renderAdminTransactions);
+  var txType=el('txTypeFilter');
+  if(txType) txType.addEventListener('change', renderAdminTransactions);
   // Profile tab filters
   var profileSearchEl=el('profileSearch');
   if(profileSearchEl) profileSearchEl.addEventListener('input', renderProfilesTab);
@@ -3874,6 +3919,12 @@ function openMemberDashboard(member){
     populateWithdrawCard(m);
     checkWithdrawalDay();
     checkDailyStreakBonus(m);
+    // Update video tab title with tier earn rate
+    var vtt=el('videoTabTitle');
+    if(vtt) vtt.innerHTML='&#x25B6; Sponsored Videos &mdash; GHS '+(TIER_EARN[m.tier]||1.00).toFixed(2)+' each';
+    // Update pages earn info with tier earn rate
+    var pei=el('pagesEarnInfo');
+    if(pei) pei.innerHTML='&#x1F4B0; Earn <strong>GHS '+(TIER_PAGE_EARN[m.tier]||0.50).toFixed(2)+'</strong> for every page you follow or join. <small style="color:var(--green)">(Free: GHS 0.20 &middot; Bronze: GHS 0.50 &middot; Silver: GHS 0.75 &middot; Gold: GHS 1.00)</small>';
   }
 
   // First pass — render from localStorage immediately (fast, no flicker)
@@ -3966,6 +4017,33 @@ function clearAllNotifications(){
   renderNotifications(currentUser);
 }
 
+function toggleDashMenu(){
+  var panel=el('dashMenuPanel');
+  if(!panel) return;
+  panel.style.display=panel.style.display==='none'?'block':'none';
+}
+
+// Close menu when clicking outside
+document.addEventListener('click',function(e){
+  var panel=el('dashMenuPanel');
+  var btn=el('dashMenuBtn');
+  if(panel&&panel.style.display==='block'&&!panel.contains(e.target)&&e.target!==btn){
+    panel.style.display='none';
+  }
+});
+
+function switchDashTabMenu(btn, label){
+  // Close menu
+  var panel=el('dashMenuPanel');
+  if(panel) panel.style.display='none';
+  // Update label
+  var labelEl=el('activeDashTabLabel');
+  if(labelEl) labelEl.innerHTML=label;
+  // Switch tab
+  var name=btn.dataset.tab;
+  switchDashTab(name, btn);
+}
+
 function switchDashTab(name, btn){
   // Cancel any active ad timer when switching away from ads tab
   if(name!=='ads' && activeAdTimer){
@@ -3976,14 +4054,13 @@ function switchDashTab(name, btn){
     if(ml) ml.style.display='block';
   }
   document.querySelectorAll('.d-tab-sec').forEach(function(s){s.classList.remove('active');});
-  document.querySelectorAll('.d-tab').forEach(function(b){b.classList.remove('active');});
+  document.querySelectorAll('#dashMenuPanel .d-tab').forEach(function(b){b.classList.remove('active');});
   var sec=el('tab-'+name);
   if(sec) sec.classList.add('active');
   if(btn) btn.classList.add('active');
   // Refresh ads tab when opened
   if(name==='ads' && currentUser && !isAdminUser()) renderMemberAdsTab(currentUser);
   if(name==='pages' && currentUser && !isAdminUser()){
-    // Pull latest pages from Firebase first, then render
     syncPagesFromFirebase(function(){
       renderMemberPages(currentUser);
     });
@@ -3993,6 +4070,9 @@ function switchDashTab(name, btn){
     populateWithdrawCard(currentUser);
     updateWithdrawHistoryDisplay(currentUser);
     updateWithdrawMethodLabel();
+  }
+  if(name==='transactions' && currentUser && !isAdminUser()){
+    renderTransactionsList(currentUser);
   }
 }
 
@@ -4894,6 +4974,80 @@ function reverseWithdrawal(wId){
   showWithdrawMsg('info','&#x274C; <strong>Transaction failed. Your GHS '+amount.toFixed(2)+' has been reversed to your account.</strong><br>Please try again in 1 hour.');
 }
 
+// ── MEMBER TRANSACTIONS ────────────────────────────────
+function renderTransactionsList(member){
+  var el2=el('transactionsListWrap');
+  if(!el2) return;
+  var withdrawals=getWithdrawals().filter(function(w){return w.memberId===member.id;}).slice().reverse();
+  if(!withdrawals.length){
+    el2.innerHTML='<p style="font-size:13.5px;color:var(--text-muted);text-align:center;padding:24px">No transactions yet. Complete activities to start earning and withdrawing!</p>';
+    return;
+  }
+  var phaseColor={'Complete':'#22c55e','Processing':'#3b82f6','Pending':'#f59e0b','Reversed':'#ef4444'};
+  var html='<div style="overflow-x:auto"><table class="atable"><thead><tr><th>#</th><th>Date</th><th>Type</th><th>Amount</th><th>Fee</th><th>You Received</th><th>Method</th><th>Status</th></tr></thead><tbody>';
+  withdrawals.forEach(function(w,i){
+    var col=phaseColor[w.phase]||'#9ca3af';
+    var fee=w.fee||0;
+    var received=w.amountAfterFee!=null?w.amountAfterFee:parseFloat(w.amount);
+    var feeCell=w.isFree?'<span style="color:var(--green);font-size:12px">FREE</span>':'GHS '+fee.toFixed(2);
+    html+='<tr>';
+    html+='<td style="color:#9ca3af;font-size:12px">'+(i+1)+'</td>';
+    html+='<td>'+w.date+'</td>';
+    html+='<td><span style="font-size:11.5px;background:#f0f9ff;color:#0369a1;padding:2px 8px;border-radius:6px;font-weight:600">Withdrawal</span></td>';
+    html+='<td style="font-weight:600">GHS '+parseFloat(w.amount).toFixed(2)+'</td>';
+    html+='<td>'+feeCell+'</td>';
+    html+='<td style="font-weight:700;color:var(--green)">GHS '+received.toFixed(2)+'</td>';
+    html+='<td>'+w.method+'</td>';
+    html+='<td><span style="font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:20px;background:'+col+'22;color:'+col+'">'+w.phase+'</span></td>';
+    html+='</tr>';
+  });
+  html+='</tbody></table></div>';
+  el2.innerHTML=html;
+}
+
+// ── ADMIN TRANSACTIONS ─────────────────────────────────
+function renderAdminTransactions(){
+  var tbody=el('adminTransactionsBody');
+  if(!tbody) return;
+  var search=(el('txSearchInput')?el('txSearchInput').value.trim().toLowerCase():'');
+  var typeFilter=el('txTypeFilter')?el('txTypeFilter').value:'all';
+  var withdrawals=getWithdrawals().slice().reverse();
+  if(search){
+    withdrawals=withdrawals.filter(function(w){
+      return (w.memberName||'').toLowerCase().indexOf(search)>=0||(w.phone||'').indexOf(search)>=0;
+    });
+  }
+  // type filter (currently only withdrawals exist; reserved for future transaction types)
+  if(typeFilter&&typeFilter!=='all'){
+    withdrawals=withdrawals.filter(function(w){ return (w.type||'withdrawal')===typeFilter; });
+  }
+  var members=getMembers();
+  var rows='';
+  var phaseColor={'Complete':'#22c55e','Processing':'#3b82f6','Pending':'#f59e0b','Reversed':'#ef4444'};
+  withdrawals.forEach(function(w,i){
+    var col=phaseColor[w.phase]||'#9ca3af';
+    var fee=w.fee||0;
+    var received=w.amountAfterFee!=null?w.amountAfterFee:parseFloat(w.amount);
+    var m=members.find(function(x){return x.id===w.memberId;});
+    var tier=m?m.tier:'-';
+    rows+='<tr>';
+    rows+='<td style="font-size:12px;color:#9ca3af">'+(i+1)+'</td>';
+    rows+='<td style="font-size:13px;font-weight:600">'+(w.memberName||'-')+'</td>';
+    rows+='<td style="font-size:12.5px">'+(w.phone||'-')+'</td>';
+    rows+='<td><span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;background:'+(tier==='Gold'?'#fef9c3':tier==='Silver'?'#f1f5f9':tier==='Bronze'?'#fef3c7':'#f9fafb')+';color:'+(tier==='Gold'?'#854d0e':tier==='Silver'?'#374151':tier==='Bronze'?'#78350f':'#6b7280')+'">'+tier+'</span></td>';
+    rows+='<td><span style="font-size:11.5px;background:#f0f9ff;color:#0369a1;padding:2px 8px;border-radius:6px;font-weight:600">Withdrawal</span></td>';
+    rows+='<td style="font-weight:600">GHS '+parseFloat(w.amount).toFixed(2)+'</td>';
+    rows+='<td style="color:var(--red)">GHS '+fee.toFixed(2)+'</td>';
+    rows+='<td style="font-weight:700;color:var(--green)">GHS '+received.toFixed(2)+'</td>';
+    rows+='<td style="font-size:12.5px">'+(w.method||'-')+'</td>';
+    rows+='<td style="font-size:12.5px;font-family:monospace">'+(w.account||'-')+'</td>';
+    rows+='<td style="font-size:12px;color:#6b7280">'+(w.date||'-')+'</td>';
+    rows+='<td><span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;background:'+col+'22;color:'+col+'">'+w.phase+'</span></td>';
+    rows+='</tr>';
+  });
+  tbody.innerHTML=rows||'<tr><td colspan="12" class="empty-row">No transactions found.</td></tr>';
+}
+
 // ── SETTINGS ──────────────────────────────────────────
 function saveProfile(){
   var members=getMembers();
@@ -5164,6 +5318,9 @@ function switchAdminTab(name, btn){
   }
   if(name==='sms') initSmsTab();
   if(name==='schedule') renderScheduleTab();
+  if(name==='atransactions'){
+    syncWithdrawalsFromFirebase(function(){ renderAdminTransactions(); });
+  }
 }
 
 // ── ADMIN: PENDING PAYMENTS ───────────────────────────
@@ -6732,8 +6889,13 @@ function renderDashAds(member){
 }
 
 function switchDashTabById(name){
-  var btn=document.querySelector('.d-tab[data-tab="'+name+'"]');
-  if(btn) switchDashTab(name, btn);
+  var btn=document.querySelector('#dashMenuPanel .d-tab[data-tab="'+name+'"]');
+  if(btn){
+    var labels={surveys:'&#x1F4CB; Surveys',polls:'&#x26A1; Polls',videos:'&#x25B6; Videos',ads:'&#x1F4E2; View Ads',pages:'&#x1F4F1; Pages',withdraw:'&#x1F4B8; Withdraw',referral:'&#x1F4E4; Referral',upgrade:'&#x2B06; Upgrade',pool:'&#x1F3B1; Pool',report:'&#x1F6A8; Report Issue',transactions:'&#x1F4C3; Transactions',settings:'&#x2699; Settings'};
+    var labelEl=el('activeDashTabLabel');
+    if(labelEl && labels[name]) labelEl.innerHTML=labels[name];
+    switchDashTab(name, btn);
+  }
 }
 
 // Nudge strip for unclaimed pages on member dashboard
@@ -8046,7 +8208,8 @@ function renderMemberPages(member){
     html+='<div style="font-size:12px;color:#6b7280;margin-top:2px">'+p.platform+(p.desc?' &middot; '+p.desc:'')+'</div>';
     html+='</div>';
     html+='<div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">';
-    html+='<span style="font-size:18px;font-weight:700;color:var(--green)">GHS '+p.earn.toFixed(2)+'</span>';
+    var tierPageEarn=TIER_PAGE_EARN[member?member.tier:'Free']||p.earn;
+    html+='<span style="font-size:18px;font-weight:700;color:var(--green)">GHS '+tierPageEarn.toFixed(2)+'</span>';
     html+='<div id="pactions_'+p.id+'" style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">';
     if(done){
       html+='<span style="background:#d1fae5;color:var(--green);font-size:12px;font-weight:700;padding:5px 14px;border-radius:9px">&#x2714; Followed &amp; Earned</span>';
@@ -8088,11 +8251,12 @@ function claimPageReward(pageId){
   if(idx<0) return;
   members[idx].completedPages=members[idx].completedPages||[];
   if(members[idx].completedPages.indexOf(pageId)>=0) return; // already claimed
+  var pageEarnTier=TIER_PAGE_EARN[currentUser?currentUser.tier:'Free']||page.earn;
   members[idx].completedPages.push(pageId);
-  members[idx].balance=parseFloat(((members[idx].balance||0)+page.earn).toFixed(2));
-  members[idx].monthEarned=parseFloat(((members[idx].monthEarned||0)+page.earn).toFixed(2));
+  members[idx].balance=parseFloat(((members[idx].balance||0)+pageEarnTier).toFixed(2));
+  members[idx].monthEarned=parseFloat(((members[idx].monthEarned||0)+pageEarnTier).toFixed(2));
   members[idx].notifications=members[idx].notifications||[];
-  members[idx].notifications.push('&#x1F4F1; <strong>GHS '+page.earn.toFixed(2)+'</strong> earned for following <strong>'+page.name+'</strong> on '+page.platform+'!');
+  members[idx].notifications.push('&#x1F4F1; <strong>GHS '+pageEarnTier.toFixed(2)+'</strong> earned for following <strong>'+page.name+'</strong> on '+page.platform+'!');
   saveMembers(members);
   currentUser=members[idx];
   syncMemberToBackend(currentUser);
