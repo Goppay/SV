@@ -8918,16 +8918,14 @@ function checkDailyStreakBonus(member){
       var verifiedBadge=group.purchases.some(function(p){return p.webhookVerified;})
         ?'<span style="background:#e0f2fe;color:#0369a1;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:12px;margin-left:6px">&#x2714; Payment Verified</span>'
         :'<span style="background:#fef9c3;color:#854d0e;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:12px;margin-left:6px">&#x23F3; Pending Verification</span>';
-      var chancesPct=totalSlots>0?((group.slotsCount/totalSlots)*100).toFixed(1):'—';
       html+='<div style="background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:16px;margin-bottom:12px">'
         +(isWinner?'<div style="background:#fef3c7;border:1.5px solid var(--gold-dark);border-radius:9px;padding:10px 14px;margin-bottom:12px;text-align:center;font-size:14px;font-weight:700;color:var(--gold-dark)">&#x1F3C6; Congratulations! You won this pool and GHS '+Number(pool.prizeAmount||0).toFixed(2)+' has been added to your balance!</div>':'')
         +'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px">'
         +'<div><div style="font-size:15px;font-weight:700;color:#0d1117">&#x1F3B1; '+(group.poolTitle||'Pool')+'</div>'
         +'<div style="font-size:12.5px;color:var(--text-muted);margin-top:2px">&#x1F3C6; Prize: GHS '+Number(pool.prizeAmount||0).toFixed(2)+'</div></div>'
         +'<div style="text-align:right">'+statusBadge+'</div></div>'
-        +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px">'
+        +'<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:10px">'
         +'<div style="background:var(--warm-gray);border-radius:9px;padding:9px;text-align:center"><div style="font-size:20px;font-weight:700;color:var(--green)">'+group.slotsCount+'</div><div style="font-size:11px;color:var(--text-muted)">Slots Owned</div></div>'
-        +'<div style="background:var(--warm-gray);border-radius:9px;padding:9px;text-align:center"><div style="font-size:20px;font-weight:700;color:var(--gold-dark)">'+chancesPct+'%</div><div style="font-size:11px;color:var(--text-muted)">Win Chance</div></div>'
         +'<div style="background:var(--warm-gray);border-radius:9px;padding:9px;text-align:center"><div style="font-size:15px;font-weight:700;color:var(--red)">GHS '+Number(group.amountPaid).toFixed(2)+'</div><div style="font-size:11px;color:var(--text-muted)">Total Paid</div></div>'
         +'</div>'
         +(totalSlots>0?'<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--text-muted);margin-bottom:4px"><span>Pool fill: '+sold+' / '+totalSlots+' slots</span><span>'+pct+'%</span></div><div style="height:7px;background:#f3f4f6;border-radius:10px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:linear-gradient(90deg,var(--green),var(--green-light));border-radius:10px"></div></div></div>':'')
@@ -9014,7 +9012,7 @@ function checkDailyStreakBonus(member){
       slots:qty, member:currentUser.id,
       member_name:memberName, member_phone:memberPhone
     });
-    var url='https://Goppay.github.io/SV/ghs100-luck'
+    var url='https://paystack.shop/pay/'+POOL_PAYSTACK_SLUG
       +'?amount='+amountKobo
       +'&email='+encodeURIComponent(currentUser.email||memberPhone+'@goppay.gh')
       +'&metadata='+encodeURIComponent(meta);
