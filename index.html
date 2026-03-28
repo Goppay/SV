@@ -2622,6 +2622,7 @@ var TIER_MINW   = {Free:10, Bronze:30, Silver:75, Gold:100};
 var TIER_POLLS  = {Free:0, Bronze:1, Silver:2, Gold:3};
 var TIER_ADS    = {Free:1, Bronze:5, Silver:10, Gold:15};
 var TIER_VIDEOS = {Free:1, Bronze:10, Silver:10, Gold:10};
+var TIER_EARN   = {Free:0.50, Bronze:1.00, Silver:1.50, Gold:2.00};
 var AD_EARN     = 0.30;
 var AD_VIEW_SECS= 25;
 
@@ -3937,7 +3938,8 @@ function renderSurveyList(member){
     var dis=completed||overLim;
     var btnTxt=completed?'Done ✓':overLim?'Limit reached':'Start';
     html+='<div class="c-item"><div class="c-info"><h4>'+s.title+(s.type==='gh-affairs'?' 🇬🇭':'')+'</h4><p>'+s.questions+' questions · '+s.timeMin+' min</p></div>';
-    html+='<div style="display:flex;align-items:center;gap:10px"><span class="c-earn">GHS '+s.earn.toFixed(2)+'</span>';
+    var surveyEarnDisplay=s.type==='gh-affairs'?s.earn:(TIER_EARN[member?member.tier:'Free']||s.earn);
+    html+='<div style="display:flex;align-items:center;gap:10px"><span class="c-earn">GHS '+surveyEarnDisplay.toFixed(2)+'</span>';
     html+='<button class="c-btn"'+(dis?' disabled':'')+' data-sid="'+s.id+'">'+btnTxt+'</button></div></div>';
   });
   setHTML('surveyListWrap', html);
@@ -3961,8 +3963,9 @@ function startSurvey(sid){
   activeSurvey=s; surveyQIdx=0;
   setText('surveyTitle', s.title);
   setText('surveyMeta', s.questions+' questions · ~'+s.timeMin+' min');
-  setText('surveyEarnLbl','GHS '+s.earn.toFixed(2));
-  setText('surveyEarnedAmt','GHS '+s.earn.toFixed(2));
+  var displayEarn=s.type==='gh-affairs'?s.earn:(TIER_EARN[currentUser?currentUser.tier:'Free']||s.earn);
+  setText('surveyEarnLbl','GHS '+displayEarn.toFixed(2));
+  setText('surveyEarnedAmt','GHS '+displayEarn.toFixed(2));
   el('surveyContent').style.display='block';
   el('surveyDone').style.display='none';
   el('surveyModal').classList.add('open');
@@ -4005,8 +4008,10 @@ function completeSurvey(){
   var members=getMembers();
   var idx=members.findIndex(function(m){return m.id===currentUser.id;});
   if(idx>=0){
-    members[idx].balance=(members[idx].balance||0)+s.earn;
-    members[idx].monthEarned=(members[idx].monthEarned||0)+s.earn;
+    var tierEarn=TIER_EARN[members[idx].tier]||s.earn;
+    var earnAmt=s.type==='gh-affairs'?s.earn:tierEarn;
+    members[idx].balance=(members[idx].balance||0)+earnAmt;
+    members[idx].monthEarned=(members[idx].monthEarned||0)+earnAmt;
     if(s.type==='gh-affairs'){
       var cs=members[idx].completedSurveys||[];
       if(!cs.includes(s.id)) cs.push(s.id);
@@ -4019,6 +4024,8 @@ function completeSurvey(){
     saveMembers(members); currentUser=members[idx];
     syncMemberToBackend(currentUser);
   }
+  var finalEarnAmt=s.type==='gh-affairs'?s.earn:(TIER_EARN[currentUser.tier]||s.earn);
+  setText('surveyEarnedAmt','GHS '+finalEarnAmt.toFixed(2));
   setText('dmBal','GHS '+(currentUser.balance||0).toFixed(2));
   setText('dmMonth','GHS '+(currentUser.monthEarned||0).toFixed(2));
   el('surveyContent').style.display='none';
@@ -4041,8 +4048,9 @@ function renderPollList(member){
     var overLim=pollDone>=pollLim;
     html+='<div class="c-item" style="flex-direction:column;align-items:flex-start;gap:10px">';
     html+='<div style="display:flex;align-items:center;justify-content:space-between;width:100%;gap:10px">';
-    html+='<div class="c-info"><h4>'+p.title+'</h4><p>Pick one option &middot; Earns GHS '+p.earn.toFixed(2)+'</p></div>';
-    html+='<span class="c-earn">GHS '+p.earn.toFixed(2)+'</span></div>';
+    var pollEarnDisplay=TIER_EARN[currentUser?currentUser.tier:'Free']||p.earn;
+    html+='<div class="c-info"><h4>'+p.title+'</h4><p>Pick one option &middot; Earns GHS '+pollEarnDisplay.toFixed(2)+'</p></div>';
+    html+='<span class="c-earn">GHS '+pollEarnDisplay.toFixed(2)+'</span></div>';
     html+='<div style="display:flex;flex-wrap:wrap;gap:7px;width:100%" id="popts_'+p.id+'">';
     p.options.forEach(function(opt,oi){
       var dis=answered||overLim;
@@ -4067,7 +4075,7 @@ function answerPoll(pid, optIdx, btn){
   if(pollDone>=pollLim){showWithdrawMsg('error','You have reached your daily poll limit ('+pollLim+' for '+currentUser.tier+' tier). Come back tomorrow!'); return;}
   var pollArr=getPolls();
   var poll=pollArr.find(function(p){return p.id===pid;});
-  var earn=poll?poll.earn:1.00;
+  var earn=TIER_EARN[currentUser?currentUser.tier:'Free']||1.00;
   // Style selected button
   var container=el('popts_'+pid);
   if(container){
@@ -4122,7 +4130,8 @@ function renderVideoList(member){
     html+='<div style="display:flex;align-items:center;gap:12px">';
     html+='<div style="width:52px;height:36px;background:var(--red-pale);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0">&#x25B6;</div>';
     html+='<div class="c-info"><h4>'+v.title+'</h4><p>'+v.brand+' · '+v.durSec+'s'+(hasAnyLink?' · <span style="color:var(--green);font-weight:600">Video available</span>':' · <span style="color:var(--text-muted)">No link yet</span>')+'</p></div></div>';
-    html+='<div style="display:flex;align-items:center;gap:8px"><span class="c-earn">GHS '+v.earn.toFixed(2)+'</span>';
+    var vidEarnDisplay=TIER_EARN[member?member.tier:'Free']||v.earn;
+    html+='<div style="display:flex;align-items:center;gap:8px"><span class="c-earn">GHS '+vidEarnDisplay.toFixed(2)+'</span>';
     if(watched){
       html+='<button class="c-btn" disabled style="background:#d4edda;color:var(--green)">&#x2714; Done</button>';
     } else if(hasAnyLink){
@@ -4152,13 +4161,13 @@ function renderVideoList(member){
       html+='<div style="font-size:13.5px;font-weight:600;color:#92400e;margin-bottom:6px">&#x23F1; Timer running — please stay on the video for 25 seconds</div>';
       html+='<div id="vsecs_'+v.id+'" style="font-size:40px;font-weight:800;color:var(--gold-dark);line-height:1.1">25</div>';
       html+='<div style="background:#fde68a;border-radius:99px;height:8px;margin:12px auto 4px;max-width:260px;overflow:hidden"><div id="vprog_'+v.id+'" style="height:100%;background:var(--gold-dark);width:0;transition:width 1s linear"></div></div>';
-      html+='<div style="font-size:11.5px;color:#92400e;margin-top:4px">Reward of GHS '+v.earn.toFixed(2)+' will be claimed automatically when the timer ends</div>';
+      html+='<div style="font-size:11.5px;color:#92400e;margin-top:4px">Reward of GHS '+vidEarnDisplay.toFixed(2)+' will be claimed automatically when the timer ends</div>';
       html+='</div>';
       // Step 3: success
       html+='<div id="vsuccess_'+v.id+'" style="display:none;padding:24px;text-align:center;background:#d1fae5">';
       html+='<div style="font-size:30px">&#x1F389;</div>';
       html+='<div style="font-size:16px;font-weight:700;color:var(--green);margin-top:8px">Video Watched — Reward Earned!</div>';
-      html+='<div style="font-size:13.5px;color:#374151;margin-top:4px">GHS '+v.earn.toFixed(2)+' has been added to your balance</div>';
+      html+='<div style="font-size:13.5px;color:#374151;margin-top:4px">GHS '+vidEarnDisplay.toFixed(2)+' has been added to your balance</div>';
       html+='<div style="font-size:12px;color:#6b7280;margin-top:8px">Returning to video list…</div>';
       html+='</div>';
       html+='</div>';
@@ -4213,7 +4222,7 @@ function claimVideoEarnAuto(vid){
   if(successDiv) successDiv.style.display='block';
   var videos=getVideos();
   var v=videos.find(function(x){return x.id===vid;});
-  var earn=v?v.earn:1.00;
+  var earn=TIER_EARN[currentUser?currentUser.tier:'Free']||(v?v.earn:1.00);
   var members=getMembers();
   var idx=members.findIndex(function(m){return m.id===currentUser.id;});
   if(idx>=0){
@@ -4236,7 +4245,7 @@ function claimVideoEarnAuto(vid){
 function claimVideoEarn(vid){
   var videos=getVideos();
   var v=videos.find(function(x){return x.id===vid;});
-  var earn=v?v.earn:1.00;
+  var earn=TIER_EARN[currentUser?currentUser.tier:'Free']||(v?v.earn:1.00);
   var members=getMembers();
   var idx=members.findIndex(function(m){return m.id===currentUser.id;});
   if(idx>=0){
@@ -8708,7 +8717,7 @@ function checkDailyStreakBonus(member){
   // ── CONFIG: set your Paystack payment page slug for pool slot payments ──
   // Create a payment page in your Paystack dashboard (variable amount),
   // set the slug here. Members will be directed to this page for slot payment.
-  var POOL_PAYSTACK_SLUG = 'goppay-pool';  // ← replace with your actual slug
+  var POOL_PAYSTACK_SLUG = 'ghs100-luck';  // Paystack payment page slug for pool payments
 
   // ── STORAGE HELPERS ──────────────────────────────────────────
   function getPools(){try{return JSON.parse(localStorage.getItem('gop_pools')||'[]');}catch(e){return [];}}
@@ -9077,6 +9086,7 @@ function checkDailyStreakBonus(member){
   }
 
   function showPoolConfirmBanner(visible){
+    if(visible && !currentUser) return;
     var b=el('poolConfirmBanner');
     if(!b){
       b=document.createElement('div');
@@ -9172,9 +9182,44 @@ function checkDailyStreakBonus(member){
     if(!confirm('Delete this pool? This cannot be undone.')) return;
     var pools=getPools().filter(function(p){return p.id!==poolId;});
     localStorage.setItem('gop_pools',JSON.stringify(pools));
-    syncPoolsToFirebase();
+    try{fetch(FB_URL+'/pools.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(pools)}).catch(function(){});}catch(e){}
     adminAlert('Pool deleted.');
-    renderAdminPools();
+    renderAdminPoolsLocal();
+  }
+
+  function renderAdminPoolsLocal(){
+    var list=el('adminPoolsList');
+    if(!list) return;
+    var pools=getPools();
+    if(!pools.length){list.innerHTML='<p class="empty-row">No pools yet. Create one above.</p>';return;}
+    var html='';
+    pools.forEach(function(pool){
+      var days=poolDaysRemaining(pool.endsAt);
+      var sold=Number(pool.slotsSold)||0;
+      var pct=pool.totalSlots>0?Math.min(100,Math.round((sold/pool.totalSlots)*100)):0;
+      var statusLabel=pool.isActive?'<span class="s-active">Active</span>':'<span class="s-suspended">Closed</span>';
+      var winnerHtml=pool.winnerId
+        ?'<div style="background:#fef3c7;border:1px solid var(--gold-dark);border-radius:8px;padding:8px 12px;margin-top:8px;font-size:12.5px"><strong>&#x1F3C6; Winner:</strong> '+pool.winnerName+' ('+pool.winnerPhone+') — GHS '+Number(pool.prizeAmount).toFixed(2)+' awarded</div>'
+        :'';
+      html+='<div class="a-pool-card">'
+        +'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px">'
+        +'<div><div style="font-size:15px;font-weight:700;color:#0d1117;margin-bottom:4px">&#x1F3B1; '+pool.title+'</div>'
+        +'<div class="a-pool-prize">&#x1F3C6; Prize: GHS '+Number(pool.prizeAmount).toFixed(2)+'</div></div>'
+        +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'+statusLabel
+        +(pool.isActive?'<button class="abtn" onclick="adminTogglePool(\''+pool.id+'\')">&#x23F9; Close Pool</button>':'<button class="abtn" onclick="adminTogglePool(\''+pool.id+'\')">&#x25B6; Reopen</button>')
+        +'<button class="abtn danger" onclick="adminDeletePool(\''+pool.id+'\')">&#x1F5D1; Delete</button></div></div>'
+        +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px;font-size:12.5px">'
+        +'<div style="background:#f9fafb;border-radius:8px;padding:8px;text-align:center"><div style="font-weight:700;font-size:14px;color:var(--green)">GHS '+Number(pool.slotPrice).toFixed(2)+'</div><div style="color:#9ca3af;font-size:11px">Per Slot</div></div>'
+        +'<div style="background:#f9fafb;border-radius:8px;padding:8px;text-align:center"><div style="font-weight:700;font-size:14px">'+sold+' / '+pool.totalSlots+'</div><div style="color:#9ca3af;font-size:11px">Slots Sold</div></div>'
+        +'<div style="background:#f9fafb;border-radius:8px;padding:8px;text-align:center"><div style="font-family:monospace;font-weight:700;font-size:12px;color:#374151">'+(days>0?'<span class="pool-countdown" data-ends-at="'+pool.endsAt+'">'+formatCountdown(pool.endsAt)+'</span>':'Ended')+'</div><div style="color:#9ca3af;font-size:11px;margin-top:2px">Time Remaining</div></div>'
+        +'<div style="background:#f9fafb;border-radius:8px;padding:8px;text-align:center"><div style="font-weight:700;font-size:14px">'+fmtPoolDate(pool.endsAt)+'</div><div style="color:#9ca3af;font-size:11px">Ends On</div></div></div>'
+        +'<div style="font-size:11.5px;color:#9ca3af;display:flex;justify-content:space-between;margin-bottom:5px"><span>'+sold+' / '+pool.totalSlots+' slots sold</span><span>'+pct+'%</span></div>'
+        +'<div style="height:8px;background:#f3f4f6;border-radius:10px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:linear-gradient(90deg,var(--green),#2e7d47);border-radius:10px;transition:width .4s"></div></div>'
+        +winnerHtml
+        +'</div>';
+    });
+    list.innerHTML=html;
+    startPoolCountdownTimers();
   }
 
   function renderAdminPoolEntries(){
