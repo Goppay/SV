@@ -7484,7 +7484,7 @@ function submitUpgradeRequest(){
 
   // Open Paystack payment page in popup
   var slug=PAYSTACK_PAGES[targetTier]||PAYSTACK_PAGES['Bronze']||'goppay';
-  var url='https://paystack.com/pay/'+slug
+  var url='https://paystack.shop/pay/'+slug
     +'?email='+encodeURIComponent(currentUser.email)
     +'&name='+encodeURIComponent(currentUser.firstName+' '+currentUser.lastName)
     +'&amount='+(fee*100);
@@ -9377,7 +9377,7 @@ function checkDailyStreakBonus(member){
         +'<div style="background:var(--warm-gray);border-radius:9px;padding:9px;text-align:center"><div style="font-size:20px;font-weight:700;color:var(--green)">'+group.slotsCount+'</div><div style="font-size:11px;color:var(--text-muted)">Slots Owned</div></div>'
         +'<div style="background:var(--warm-gray);border-radius:9px;padding:9px;text-align:center"><div style="font-size:15px;font-weight:700;color:var(--red)">GHS '+Number(group.amountPaid).toFixed(2)+'</div><div style="font-size:11px;color:var(--text-muted)">Total Paid</div></div>'
         +'</div>'
-        +(totalSlots>0?'<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--text-muted);margin-bottom:4px"><span>Pool fill: '+sold+' / '+totalSlots+' slots</span><span>'+pct+'%</span></div><div style="height:7px;background:#f3f4f6;border-radius:10px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:linear-gradient(90deg,var(--green),var(--green-light));border-radius:10px"></div></div></div>':'')
+        +(totalSlots>0?'<div style="margin-bottom:8px"><div style="font-size:11.5px;color:var(--text-muted);margin-bottom:4px">Pool fill: '+sold+'</div><div style="height:7px;background:#f3f4f6;border-radius:10px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:linear-gradient(90deg,var(--green),var(--green-light));border-radius:10px"></div></div></div>':'')
         +'<div style="font-size:11.5px;color:var(--text-muted);display:flex;align-items:center;flex-wrap:wrap;gap:4px">&#x1F4C5; Joined '+fmtPoolDate(group.purchasedAt)+verifiedBadge+'</div>'
         +'</div>';
     });
@@ -9774,9 +9774,9 @@ function checkDailyStreakBonus(member){
 // Copy the page slug (e.g. "goppay-bronze") and set it below
 
 var PAYSTACK_PAGES={
-  Bronze:'goppay-bronze',   // ← replace with your actual page slugs
-  Silver:'goppay-silver',
-  Gold:'goppay-gold'
+  Bronze:'bronze-update',
+  Silver:'silver-update',
+  Gold:'gold-update'
 };
 
 var _paymentWindow=null;
@@ -9852,7 +9852,7 @@ function confirmPayment(){
     return;
   }
   var slug=PAYSTACK_PAGES[tier.tier]||'goppay';
-  var url='https://paystack.com/pay/'+slug
+  var url='https://paystack.shop/pay/'+slug
     +'?email='+encodeURIComponent(reg.email)
     +'&name='+encodeURIComponent(reg.firstName+' '+reg.lastName)
     +'&amount='+(tier.fee*100);
@@ -9872,7 +9872,7 @@ function confirmPayment(){
     try{localStorage.setItem('gop_pending_payment', JSON.stringify({ref:ref, reg:reg, tier:tier}));}catch(e){}
     if(confirm('Popup was blocked by your browser.\n\nClick OK to open Paystack in this tab instead.\n\nYou will be brought back after payment.')){
       var callbackUrl=window.location.href.split('?')[0]+'?ref='+encodeURIComponent(ref);
-      window.location.href='https://paystack.com/pay/'+slug
+      window.location.href='https://paystack.shop/pay/'+slug
         +'?email='+encodeURIComponent(reg.email)
         +'&name='+encodeURIComponent(reg.firstName+' '+reg.lastName)
         +'&amount='+(tier.fee*100)
