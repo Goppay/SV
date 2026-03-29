@@ -7504,15 +7504,9 @@ function submitUpgradeRequest(){
   }
 
   // Poll for popup close
-  var _upgradeApplied=false;
-  var _upgradeCountdown=60;
-  var _upgradeCountdownInterval=null;
 
   function cancelUpgradeAttempt(){
-    _upgradeApplied=true; // prevent auto-apply
-    if(_upgradeCountdownInterval) clearInterval(_upgradeCountdownInterval);
     if(btn){btn.disabled=false;btn.innerHTML='&#x1F4B3; Pay &amp; Upgrade via Paystack &#x2192;';}
-    // Remove pending upgrade request
     try{
       var allReqs2=getUpgradeReqs();
       var ci=allReqs2.findIndex(function(r){return r.id===req.id;});
@@ -7526,48 +7520,19 @@ function submitUpgradeRequest(){
   var pollInterval=setInterval(function(){
     if(!payWin||payWin.closed){
       clearInterval(pollInterval);
-      if(btn){btn.disabled=true; btn.innerHTML='&#x23F3; Verifying payment…';}
-
-      // Show a 60-second countdown with a retry/cancel button
-      showUMsg('info','&#x23F3; Verifying your payment — please wait&hellip; (<span id="upgradeVerifyCountdown">60</span>s)<br><a href="#" id="upgradeCancelRetryLink" style="font-size:12px;color:var(--red);font-weight:600;margin-top:6px;display:inline-block">&#x2716; Didn\'t pay? Cancel &amp; Retry</a>');
+      if(btn){btn.disabled=false; btn.innerHTML='&#x1F4B3; Pay &amp; Upgrade via Paystack &#x2192;';}
+      // Show pending message — upgrade only activates after admin or webhook verifies payment
+      showUMsg('info','&#x23F3; Your upgrade request has been submitted and is awaiting payment verification. Once your payment is confirmed, your account will be upgraded automatically.<br><span style="font-size:12px;color:var(--text-muted)">Didn\'t pay? <a href="#" id="upgradeCancelRetryLink" style="color:var(--red);font-weight:600">Cancel &amp; Retry</a></span>');
       if(msgEl){
-        // Style as info
         msgEl.style.display='block';
         msgEl.style.background='#e0f2fe';
         msgEl.style.border='1px solid #0ea5e9';
         msgEl.style.color='#0369a1';
       }
-
-      // Wire cancel link
       setTimeout(function(){
         var cLink=el('upgradeCancelRetryLink');
         if(cLink) cLink.addEventListener('click',function(e){e.preventDefault(); cancelUpgradeAttempt();});
       },100);
-
-      // Countdown: auto-apply after 60 seconds
-      _upgradeCountdownInterval=setInterval(function(){
-        _upgradeCountdown--;
-        var cdEl=el('upgradeVerifyCountdown');
-        if(cdEl) cdEl.textContent=_upgradeCountdown;
-        if(_upgradeCountdown<=0){
-          clearInterval(_upgradeCountdownInterval);
-          if(_upgradeApplied) return;
-          _upgradeApplied=true;
-          // Mark upgrade ref and auto-apply
-          try{
-            var upData=JSON.parse(localStorage.getItem('gop_pending_upgrade')||'null');
-            if(upData&&upData.reqId===req.id){
-              var allReqs=getUpgradeReqs();
-              var ri=allReqs.findIndex(function(r){return r.id===req.id;});
-              if(ri>=0){allReqs[ri].paystackRef=upData.ref||upgradeRef; allReqs[ri].status='approved'; allReqs[ri].approvedAt=new Date().toISOString(); saveUpgradeReqs(allReqs); syncUpgradesToFirebase();}
-              localStorage.removeItem('gop_pending_upgrade');
-            }
-          }catch(e){}
-          autoApplyUpgrade(currentUser.id, targetTier, fee, req.id);
-          setVal('upgradeNotes','');
-          if(el('upgradeFormWrap')) el('upgradeFormWrap').style.display='none';
-        }
-      },1000);
     }
   },500);
 }
