@@ -1017,6 +1017,43 @@ iframe[src*="badge"]{
   </div>
 </div>
 
+<!-- CHANGE TIER MODAL -->
+<div class="modal-overlay" id="changeTierModal">
+  <div class="modal modal-sm">
+    <button class="modal-close" id="closeChangeTierBtn">&#x2715;</button>
+    <h2 style="color:var(--green)">&#x2B06; Change Member Tier</h2>
+    <p style="font-size:13.5px;color:var(--text-muted);margin-bottom:16px">Change this member's membership tier. They will be notified with the reason.</p>
+    <div class="fg"><label>Member</label><div style="padding:9px 12px;background:var(--warm-gray);border-radius:9px;font-size:13.5px;font-weight:600" id="changeTierMemberName">—</div></div>
+    <div class="fg"><label>Current Tier</label><div style="padding:9px 12px;background:var(--warm-gray);border-radius:9px;font-size:13.5px;font-weight:700;color:var(--green)" id="changeTierCurrentVal">—</div></div>
+    <div class="fg"><label>New Tier *</label>
+      <select id="changeTierNewVal" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:9px;font-size:13.5px;background:#fff;color:var(--text);outline:none">
+        <option value="">Select tier...</option>
+        <option value="Free">&#x1F193; Free</option>
+        <option value="Bronze">&#x1F949; Bronze</option>
+        <option value="Silver">&#x1F948; Silver</option>
+        <option value="Gold">&#x1F947; Gold</option>
+      </select>
+    </div>
+    <div class="fg">
+      <label>Reason *</label>
+      <select id="changeTierReasonSelect" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:9px;font-size:13.5px;background:#fff;color:var(--text);outline:none;margin-bottom:8px">
+        <option value="">Select a reason...</option>
+        <option value="Payment verified and approved by admin">Payment verified and approved by admin</option>
+        <option value="Tier correction — admin error fix">Tier correction — admin error fix</option>
+        <option value="Loyalty promotion granted by admin">Loyalty promotion — admin grant</option>
+        <option value="Downgraded due to prolonged inactivity">Downgraded — prolonged inactivity</option>
+        <option value="Downgraded — failed payment or chargeback">Downgraded — failed payment / chargeback</option>
+        <option value="Downgraded — terms of service violation">Downgraded — terms of service violation</option>
+        <option value="Tier reset by admin">Tier reset by admin</option>
+        <option value="Other">Other (enter below)</option>
+      </select>
+      <textarea id="changeTierReason" rows="2" style="resize:vertical" placeholder="Add details or enter custom reason here..."></textarea>
+    </div>
+    <div class="err-box" id="changeTierError"></div>
+    <button class="sbtn" id="doChangeTierBtn">&#x2705; Apply Tier Change &#x2192;</button>
+  </div>
+</div>
+
 <!-- ADD CONTENT MODAL -->
 <div class="modal-overlay" id="addContentModal">
   <div class="modal modal-wide">
@@ -2989,6 +3026,8 @@ document.addEventListener('DOMContentLoaded', function(){
   bindClose('closeRegisterBtn', closeRegisterModal);
   bindClose('closeDeleteBtn', closeDeleteModal);
   bindClose('closeAddContentBtn', closeAddContentModal);
+  bindClose('closeChangeTierBtn', function(){el('changeTierModal').classList.remove('open');});
+  bindClick('doChangeTierBtn', applyChangeTier);
   bindClose('switchToRegister', function(){closeLoginModal();openRegisterModal();});
 
   // Login / register submit
@@ -5567,6 +5606,7 @@ function renderMembersTable(){
       if(m.status==='payment_failed') html+='<button class="abtn vbtn" data-verify="'+m.id+'">&#x2705; Verify</button>';
       if(m.status==='active'||m.status==='suspended') html+='<button class="abtn" data-penalty="'+m.id+'" data-penaltyname="'+m.firstName+' '+m.lastName+'" data-penaltybал="'+(m.balance||0).toFixed(2)+'" style="border-color:var(--orange);color:var(--orange)">&#x26A0; Penalty</button>';
       html+='<button class="abtn" data-poolslots="'+m.id+'" data-poolslotsname="'+m.firstName+' '+m.lastName+'" data-poolslotsval="'+(m.extraPoolSlots||0)+'" style="border-color:#0369a1;color:#0369a1">&#x1F3AB; Pool Slots</button>';
+      html+='<button class="abtn" data-changetier="'+m.id+'" data-changetiername="'+m.firstName+' '+m.lastName+'" data-changtiercurrent="'+(m.tier||'Free')+'" style="border-color:var(--gold-dark);color:var(--gold-dark)">&#x2B06; Tier</button>';
       html+='<button class="abtn danger" data-del="'+m.id+'" data-delname="'+m.firstName+' '+m.lastName+'">&#x1F5D1; Delete</button>';
       html+='</div></td></tr>';
     });
@@ -5587,6 +5627,7 @@ function renderMembersTable(){
     else if(b.dataset.penalty)    openPenaltyModal(b.dataset.penalty, b.dataset.penaltyname, b.dataset.penaltybал);
     else if(b.dataset.del)        openDeleteModal(b.dataset.del, b.dataset.delname);
     else if(b.dataset.poolslots)  openPoolSlotsModal(b.dataset.poolslots, b.dataset.poolslotsname, b.dataset.poolslotsval);
+    else if(b.dataset.changetier) openChangeTierModal(b.dataset.changetier, b.dataset.changetiername, b.dataset.changtiercurrent);
     else if(b.dataset.pollinc)    adjustPollLimit(b.dataset.pollinc, 1);
     else if(b.dataset.polldec)    adjustPollLimit(b.dataset.polldec, -1);
     else if(b.dataset.editage)    editMemberAge(b.dataset.editage, b.dataset.edtagename);
@@ -5691,6 +5732,44 @@ function applyPoolSlots(){
   closePoolSlotsModal();
   renderMembersTable();
   adminAlert('Pool slots for '+m.firstName+' '+m.lastName+' set to '+newTotal+' (extra: '+(newExtra>=0?'+':'')+newExtra+'). Reason: '+reason);
+}
+
+// ── ADMIN: CHANGE MEMBER TIER ─────────────────────────
+var _changeTierTargetId=null;
+
+function openChangeTierModal(memberId, memberName, currentTier){
+  _changeTierTargetId=memberId;
+  setText('changeTierMemberName', memberName);
+  setText('changeTierCurrentVal', currentTier||'Free');
+  setVal('changeTierNewVal','');
+  setVal('changeTierReasonSelect','');
+  setVal('changeTierReason','');
+  hideErr('changeTierError');
+  el('changeTierModal').classList.add('open');
+}
+
+function applyChangeTier(){
+  if(!_changeTierTargetId) return;
+  var newTier=val('changeTierNewVal');
+  if(!newTier){showErr('changeTierError','Please select a new tier.');return;}
+  var selReason=val('changeTierReasonSelect');
+  var customReason=val('changeTierReason').trim();
+  var reason=selReason==='Other'?customReason:(selReason||customReason);
+  if(!reason){showErr('changeTierError','Please select or enter a reason.');return;}
+  var members=getMembers();
+  var idx=members.findIndex(function(m){return m.id===_changeTierTargetId;});
+  if(idx<0){showErr('changeTierError','Member not found.');return;}
+  var oldTier=members[idx].tier||'Free';
+  if(newTier===oldTier){showErr('changeTierError','New tier must be different from current tier.');return;}
+  members[idx].tier=newTier;
+  members[idx].notifications=members[idx].notifications||[];
+  var icon=newTier==='Gold'?'&#x1F947;':newTier==='Silver'?'&#x1F948;':newTier==='Bronze'?'&#x1F949;':'&#x1F193;';
+  members[idx].notifications.push(icon+' <strong>Your membership tier has been changed to '+newTier+'</strong> by admin. Reason: <em>'+reason+'</em>');
+  saveMembers(members);
+  syncMemberToBackend(members[idx]);
+  el('changeTierModal').classList.remove('open');
+  renderMembersTable();
+  adminAlert('Tier changed: '+members[idx].firstName+' '+members[idx].lastName+' — '+oldTier+' → '+newTier+'. Reason: "'+reason+'"');
 }
 
 var _pendingSuspendId=null;
