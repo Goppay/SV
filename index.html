@@ -3996,6 +3996,7 @@ function openMemberDashboard(member){
     populateWithdrawCard(m);
     checkWithdrawalDay();
     checkDailyStreakBonus(m);
+    renderTransactionsList(m);
     // Update video tab title with tier earn rate
     var vtt=el('videoTabTitle');
     if(vtt) vtt.innerHTML='&#x25B6; Sponsored Videos &mdash; GHS '+(TIER_EARN[m.tier]||1.00).toFixed(2)+' each';
@@ -5078,27 +5079,107 @@ function reverseWithdrawal(wId){
 function renderTransactionsList(member){
   var el2=el('transactionsListWrap');
   if(!el2) return;
-  var withdrawals=getWithdrawals().filter(function(w){return w.memberId===member.id;}).slice().reverse();
-  if(!withdrawals.length){
+
+  // Build unified transaction list from withdrawals + earnings history
+  var transactions=[];
+
+  // ── Withdrawals ──
+  var withdrawals=getWithdrawals().filter(function(w){return w.memberId===member.id;});
+  withdrawals.forEach(function(w){
+    transactions.push({
+      ts: w.createdAt||w.date||'',
+      date: w.date||'—',
+      type: 'Withdrawal',
+      typeColor: '#ef4444',
+      typeBg: '#fef2f2',
+      description: w.method+' → '+w.account,
+      amount: -parseFloat(w.amount||0),
+      net: w.amountAfterFee!=null?parseFloat(w.amountAfterFee):-parseFloat(w.amount||0),
+      fee: w.fee||0,
+      status: w.phase,
+      statusColor: w.phase==='Complete'?'#22c55e':w.phase==='Processing'?'#3b82f6':w.phase==='Reversed'?'#ef4444':'#f59e0b'
+    });
+  });
+
+  // ── Survey earnings ──
+  var allSurveys=getSurveys();
+  (member.completedSurveys||[]).forEach(function(sid){
+    var s=allSurveys.find(function(x){return x.id===sid;});
+    var label=s?s.title:'Survey';
+    var earn=s?(s.type==='gh-affairs'?s.earn:(TIER_EARN[member.tier]||1.00)):1.00;
+    transactions.push({
+      ts:'',date:'—',type:'Survey',typeColor:'#0369a1',typeBg:'#f0f9ff',
+      description:label,amount:earn,net:earn,fee:0,
+      status:'Earned',statusColor:'#22c55e'
+    });
+  });
+
+  // ── Poll earnings ──
+  (member.answeredPolls||[]).forEach(function(pid){
+    transactions.push({
+      ts:'',date:'—',type:'Poll',typeColor:'#7c3aed',typeBg:'#f5f3ff',
+      description:'Daily Poll',amount:1.00,net:1.00,fee:0,
+      status:'Earned',statusColor:'#22c55e'
+    });
+  });
+
+  // ── Video earnings ──
+  (member.completedVideos||[]).forEach(function(vid){
+    transactions.push({
+      ts:'',date:'—',type:'Video',typeColor:'#dc2626',typeBg:'#fef2f2',
+      description:'Sponsored Video',amount:(TIER_EARN[member.tier]||1.00),net:(TIER_EARN[member.tier]||1.00),fee:0,
+      status:'Earned',statusColor:'#22c55e'
+    });
+  });
+
+  // ── Ad earnings ──
+  var adEarned=member.totalAdsEarned||0;
+  if(!adEarned&&member.viewedAdsToday&&member.viewedAdsToday.length){
+    adEarned=member.viewedAdsToday.length*0.30;
+  }
+
+  // ── Pages earnings ──
+  (member.completedPages||[]).forEach(function(pgid){
+    transactions.push({
+      ts:'',date:'—',type:'Page Follow',typeColor:'#0891b2',typeBg:'#ecfeff',
+      description:'Social Media Page',amount:(TIER_PAGE_EARN[member.tier]||0.50),net:(TIER_PAGE_EARN[member.tier]||0.50),fee:0,
+      status:'Earned',statusColor:'#22c55e'
+    });
+  });
+
+  // ── Welcome bonus ──
+  var welcomeBonus=member.tier==='Free'?1.00:5.00;
+  if((member.balance||0)>0||(member.monthEarned||0)>0){
+    transactions.push({
+      ts:member.joinedDate||'',date:member.joinedDate||'—',type:'Bonus',typeColor:'#d97706',typeBg:'#fffbeb',
+      description:'Welcome Bonus',amount:welcomeBonus,net:welcomeBonus,fee:0,
+      status:'Credited',statusColor:'#22c55e'
+    });
+  }
+
+  if(!transactions.length){
     el2.innerHTML='<p style="font-size:13.5px;color:var(--text-muted);text-align:center;padding:24px">No transactions yet. Complete activities to start earning and withdrawing!</p>';
     return;
   }
-  var phaseColor={'Complete':'#22c55e','Processing':'#3b82f6','Pending':'#f59e0b','Reversed':'#ef4444'};
-  var html='<div style="overflow-x:auto"><table class="atable"><thead><tr><th>#</th><th>Date</th><th>Type</th><th>Amount</th><th>Fee</th><th>You Received</th><th>Method</th><th>Status</th></tr></thead><tbody>';
-  withdrawals.forEach(function(w,i){
-    var col=phaseColor[w.phase]||'#9ca3af';
-    var fee=w.fee||0;
-    var received=w.amountAfterFee!=null?w.amountAfterFee:parseFloat(w.amount);
-    var feeCell=w.isFree?'<span style="color:var(--green);font-size:12px">FREE</span>':'GHS '+fee.toFixed(2);
+
+  var html='<div style="overflow-x:auto"><table class="atable"><thead><tr>'
+    +'<th>#</th><th>Date</th><th>Type</th><th>Description</th>'
+    +'<th>Amount</th><th>Fee</th><th>Net</th><th>Status</th>'
+    +'</tr></thead><tbody>';
+
+  transactions.forEach(function(t,i){
+    var isDebit=t.amount<0;
+    var amtColor=isDebit?'var(--red)':'var(--green)';
+    var amtPrefix=isDebit?'− ':'+ ';
     html+='<tr>';
     html+='<td style="color:#9ca3af;font-size:12px">'+(i+1)+'</td>';
-    html+='<td>'+w.date+'</td>';
-    html+='<td><span style="font-size:11.5px;background:#f0f9ff;color:#0369a1;padding:2px 8px;border-radius:6px;font-weight:600">Withdrawal</span></td>';
-    html+='<td style="font-weight:600">GHS '+parseFloat(w.amount).toFixed(2)+'</td>';
-    html+='<td>'+feeCell+'</td>';
-    html+='<td style="font-weight:700;color:var(--green)">GHS '+received.toFixed(2)+'</td>';
-    html+='<td>'+w.method+'</td>';
-    html+='<td><span style="font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:20px;background:'+col+'22;color:'+col+'">'+w.phase+'</span></td>';
+    html+='<td style="font-size:12.5px">'+t.date+'</td>';
+    html+='<td><span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;background:'+t.typeBg+';color:'+t.typeColor+'">'+t.type+'</span></td>';
+    html+='<td style="font-size:12.5px;color:#374151">'+t.description+'</td>';
+    html+='<td style="font-weight:700;color:'+amtColor+'">'+amtPrefix+'GHS '+Math.abs(t.amount).toFixed(2)+'</td>';
+    html+='<td style="font-size:12.5px;color:var(--red)">'+(t.fee>0?'GHS '+t.fee.toFixed(2):'—')+'</td>';
+    html+='<td style="font-weight:700;color:'+(isDebit?'var(--red)':'var(--green)')+'">GHS '+Math.abs(t.net).toFixed(2)+'</td>';
+    html+='<td><span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;background:'+t.statusColor+'22;color:'+t.statusColor+'">'+t.status+'</span></td>';
     html+='</tr>';
   });
   html+='</tbody></table></div>';
