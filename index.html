@@ -488,7 +488,7 @@ iframe[src*="badge"]{
     <div class="steps-grid reveal">
       <div class="step-card"><div class="step-num">1</div><h3>Register for Free</h3><p>Sign up with your name, email, and MoMo number. Takes under 2 minutes.</p><div class="step-conn"></div></div>
       <div class="step-card"><div class="step-num">2</div><h3>Pay via Paystack</h3><p>Choose your membership tier and complete your registration fee securely via Paystack — card, Mobile Money, or bank transfer accepted.</p><div class="step-conn"></div></div>
-      <div class="step-card"><div class="step-num">3</div><h3>Wait for Verification</h3><p>Admin verifies your payment within 20 minutes. You'll be notified once your account is activated.</p><div class="step-conn"></div></div>
+      <div class="step-card"><div class="step-num">3</div><h3>Instant Activation</h3><p>Your account is activated automatically the moment Paystack confirms your payment. No waiting needed!</p><div class="step-conn"></div></div>
       <div class="step-card"><div class="step-num">4</div><h3>Earn &amp; Withdraw</h3><p>Complete surveys, watch videos, vote on polls — and cash out your GHS earnings twice weekly.</p></div>
     </div>
   </div>
@@ -590,7 +590,7 @@ iframe[src*="badge"]{
   <div class="container">
     <div class="reveal"><div class="section-label">FAQ</div><h2 class="section-title">Frequently asked questions</h2><p class="section-sub">Everything you need to know about GhanaOpinionPay.</p></div>
     <div class="faq-list reveal">
-      <div class="faq-item"><button class="faq-q">How long does payment verification take?<span class="faq-chev">&#x25BE;</span></button><div class="faq-a">After paying your registration fee via Telecel Cash to 0203910730, admin verifies your payment within 20 minutes. Once verified, your dashboard opens automatically. If verification fails, you receive a prompt to try again.</div></div>
+      <div class="faq-item"><button class="faq-q">How long does payment verification take?<span class="faq-chev">&#x25BE;</span></button><div class="faq-a">Payment verification is instant! Once you complete your Paystack payment, your account is activated automatically — no admin needed. Your dashboard opens immediately after Paystack confirms your payment.</div></div>
       <div class="faq-item"><button class="faq-q">What should I use as payment reference?<span class="faq-chev">&#x25BE;</span></button><div class="faq-a">Use your registered mobile phone number as the reference or note when making the Telecel Cash payment. This is shown clearly on the payment page to help admin match your payment quickly.</div></div>
       <div class="faq-item"><button class="faq-q">What are the minimum withdrawal amounts?<span class="faq-chev">&#x25BE;</span></button><div class="faq-a">Your <strong>first withdrawal is completely FREE</strong> — no fee deducted for all tiers. From the 2nd withdrawal onwards, a <strong>35% processing fee</strong> is automatically deducted. Minimum cashout: Free GHS 10 · Bronze GHS 30 · Silver GHS 75 · Gold GHS 100. Maximum monthly withdrawal GHS 2,000. Withdrawals are processed instantly.</div></div>
       <div class="faq-item"><button class="faq-q">How many surveys and polls per day?<span class="faq-chev">&#x25BE;</span></button><div class="faq-a">Daily limits — Free: 1 survey, 0 polls, 1 video, 1 ad. Bronze: 3 surveys, 1 poll, 5 ads. Silver: 6 surveys, 2 polls, 10 ads. Gold: 10 surveys, 3 polls, 15 ads.</div></div>
@@ -1070,11 +1070,16 @@ iframe[src*="badge"]{
       </div>
       <div id="ppWaiting">
         <div class="pp-spinner"></div>
-        <h3>Payment Received — Awaiting Account Activation</h3>
-        <p>Your payment was processed by Paystack. Our admin team will verify and activate your account. This usually takes <strong>up to 20 minutes</strong>.</p>
-        <div class="wait-timer">&#x23F0; Estimated wait: <span id="ppTimer">20:00</span></div>
-        <p style="margin-top:14px;font-size:12.5px">You will be automatically redirected once verified. You can also log in later to check your status.</p>
-        <button style="margin-top:18px;background:none;border:1.5px solid var(--border);border-radius:9px;padding:9px 20px;font-size:13px;cursor:pointer;color:var(--text-mid)" id="ppLogoutWait">I'll check back later</button>
+        <h3>Payment Confirmed — Activating Your Account…</h3>
+        <p>Your payment was processed by Paystack. Your account is being <strong>automatically activated</strong> — no admin needed!</p>
+        <p style="margin-top:14px;font-size:12.5px">You will be redirected to your dashboard in a moment. If not redirected automatically, log in with your phone number and password.</p>
+        <button style="margin-top:18px;background:none;border:1.5px solid var(--border);border-radius:9px;padding:9px 20px;font-size:13px;cursor:pointer;color:var(--text-mid)" id="ppLogoutWait">I'll log in later</button>
+        <!-- Shown after 60s if still stuck on waiting screen -->
+        <div id="ppWaitRetry" style="display:none;margin-top:22px;padding:14px 16px;background:#fff3e0;border:1px solid #f59e0b;border-radius:10px">
+          <p style="font-size:13px;color:#7c4a03;margin-bottom:10px;font-weight:600">&#x26A0; Taking longer than expected?</p>
+          <p style="font-size:12.5px;color:#92400e;margin-bottom:12px;line-height:1.6">Your activation is taking more than a minute. This may mean your payment didn't complete. You can retry the payment below.</p>
+          <button class="pp-confirm-btn" onclick="retryPayment()" style="max-width:260px;margin:0 auto;display:block;background:var(--orange,#f59e0b);border-color:var(--orange,#f59e0b)">&#x1F504; Retry Payment</button>
+        </div>
       </div>
       <div id="ppFailed">
         <div class="pp-fail-icon">&#x2716;</div>
@@ -1148,19 +1153,29 @@ iframe[src*="badge"]{
       <div class="dm"><div class="dm-label">Daily Streak</div><div class="dm-val" style="color:var(--red)" id="dmStreak">&#x1F525; 0</div><div class="dm-sub">+GHS 0.20/day</div></div>
       <div class="dm"><div class="dm-label">Surveys Today</div><div class="dm-val" id="dmSurveyCount">0</div><div class="dm-sub" id="dmSurveyLimit">/ 0 limit</div></div>
     </div>
-    <div class="d-tabs">
-      <button class="d-tab active" data-tab="surveys">&#x1F4CB; Surveys</button>
-      <button class="d-tab" data-tab="polls">&#x26A1; Polls</button>
-      <button class="d-tab" data-tab="videos">&#x25B6; Videos</button>
-      <button class="d-tab" data-tab="ads">&#x1F4E2; View Ads</button>
-      <button class="d-tab" data-tab="pages">&#x1F4F1; Pages</button>
-      <button class="d-tab" data-tab="withdraw">&#x1F4B8; Withdraw</button>
-      <button class="d-tab" data-tab="referral">&#x1F4E4; Referral</button>
-      <button class="d-tab" data-tab="upgrade">&#x2B06; Upgrade</button>
-      <button class="d-tab" data-tab="report">&#x1F6A8; Report Issue</button>
-      <button class="d-tab" data-tab="pool">&#x1F3B1; Pool</button>
-      <button class="d-tab" data-tab="settings">&#x2699; Settings</button>
+    <!-- Hamburger menu trigger -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div id="activeDashTabLabel" style="font-size:14px;font-weight:700;color:var(--green)">&#x1F4CB; Surveys</div>
+      <button id="dashMenuBtn" onclick="toggleDashMenu()" style="background:var(--green);color:#fff;border:none;border-radius:9px;padding:9px 14px;font-size:18px;cursor:pointer;line-height:1;font-family:var(--font-body)">&#x2630;</button>
     </div>
+    <!-- Slide-down menu panel -->
+    <div id="dashMenuPanel" style="display:none;background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:10px;margin-bottom:14px;box-shadow:0 4px 18px rgba(0,0,0,.10);z-index:100;position:relative">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+        <button class="d-tab active" data-tab="surveys" onclick="switchDashTabMenu(this,'&#x1F4CB; Surveys')">&#x1F4CB; Surveys</button>
+        <button class="d-tab" data-tab="polls" onclick="switchDashTabMenu(this,'&#x26A1; Polls')">&#x26A1; Polls</button>
+        <button class="d-tab" data-tab="videos" onclick="switchDashTabMenu(this,'&#x25B6; Videos')">&#x25B6; Videos</button>
+        <button class="d-tab" data-tab="ads" onclick="switchDashTabMenu(this,'&#x1F4E2; View Ads')">&#x1F4E2; View Ads</button>
+        <button class="d-tab" data-tab="pages" onclick="switchDashTabMenu(this,'&#x1F4F1; Pages')">&#x1F4F1; Pages</button>
+        <button class="d-tab" data-tab="withdraw" onclick="switchDashTabMenu(this,'&#x1F4B8; Withdraw')">&#x1F4B8; Withdraw</button>
+        <button class="d-tab" data-tab="referral" onclick="switchDashTabMenu(this,'&#x1F4E4; Referral')">&#x1F4E4; Referral</button>
+        <button class="d-tab" data-tab="upgrade" onclick="switchDashTabMenu(this,'&#x2B06; Upgrade')">&#x2B06; Upgrade</button>
+        <button class="d-tab" data-tab="pool" onclick="switchDashTabMenu(this,'&#x1F3B1; Pool')">&#x1F3B1; Pool</button>
+        <button class="d-tab" data-tab="report" onclick="switchDashTabMenu(this,'&#x1F6A8; Report Issue')">&#x1F6A8; Report Issue</button>
+        <button class="d-tab" data-tab="transactions" onclick="switchDashTabMenu(this,'&#x1F4C3; Transactions')">&#x1F4C3; Transactions</button>
+        <button class="d-tab" data-tab="settings" onclick="switchDashTabMenu(this,'&#x2699; Settings')">&#x2699; Settings</button>
+      </div>
+    </div>
+    <div class="d-tabs" style="display:none"></div>
     <div class="d-tab-sec active" id="tab-surveys">
       <div class="d-card">
         <div class="d-card-title"><span>&#x1F4CB; Available Surveys</span><span id="surveyLimitBadge" style="font-size:12px;color:var(--text-muted);font-weight:400"></span></div>
@@ -1177,7 +1192,7 @@ iframe[src*="badge"]{
     </div>
     <div class="d-tab-sec" id="tab-videos">
       <div class="d-card">
-        <div class="d-card-title">&#x25B6; Sponsored Videos — GHS 1.00 each</div>
+        <div class="d-card-title" id="videoTabTitle">&#x25B6; Sponsored Videos</div>
         <div id="videoListWrap"></div>
       </div>
     </div>
@@ -1325,8 +1340,8 @@ iframe[src*="badge"]{
           <span>&#x1F4F1; Follow Pages &amp; Earn</span>
           <span id="pagesEarnBadge" style="font-size:12px;color:var(--text-muted);font-weight:400"></span>
         </div>
-        <div style="background:var(--green-pale);border:1px solid var(--green);border-radius:9px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:var(--green);line-height:1.6">
-          &#x1F4B0; Earn <strong>GHS 0.50</strong> for every page you follow or join. Click the link, follow the page, then click <strong>"Claim Reward"</strong>.
+        <div id="pagesEarnInfo" style="background:var(--green-pale);border:1px solid var(--green);border-radius:9px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:var(--green);line-height:1.6">
+          &#x1F4B0; Earn per page you follow or join. Click the link, follow the page, then your reward is auto-claimed. <strong>Free: GHS 0.20 &middot; Bronze: GHS 0.50 &middot; Silver: GHS 0.75 &middot; Gold: GHS 1.00</strong>
         </div>
         <div id="memberPagesList"></div>
       </div>
@@ -1447,6 +1462,7 @@ iframe[src*="badge"]{
           <div style="background:var(--warm-gray);border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:13px;color:var(--text-mid);line-height:1.6">
             <strong>Price per slot:</strong> <span id="poolJoinPrice" style="color:var(--green);font-weight:700"></span>
           </div>
+          <span id="poolJoinRemaining" style="display:none"></span>
           <div style="margin-bottom:14px">
             <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:6px">Number of Slots to Buy</label>
             <input type="number" id="poolJoinQty" min="1" value="1" style="width:100%;padding:11px 13px;border:1.5px solid #e5e7eb;border-radius:9px;font-size:14px;font-weight:700;outline:none;text-align:center" oninput="updatePoolJoinTotal()"/>
@@ -1457,6 +1473,13 @@ iframe[src*="badge"]{
           <div style="font-size:11.5px;color:#9ca3af;text-align:center;margin-top:8px">&#x1F512; Secured by Paystack &mdash; card, MoMo &amp; bank accepted</div>
         </div>
       </div>
+    <div class="d-tab-sec" id="tab-transactions">
+      <div class="d-card">
+        <div class="d-card-title">&#x1F4C3; My Transactions</div>
+        <p style="font-size:13.5px;color:var(--text-muted);margin-bottom:14px;line-height:1.6">A full record of all your earnings and withdrawal requests.</p>
+        <div id="transactionsListWrap"><p style="font-size:13.5px;color:var(--text-muted);text-align:center;padding:18px">Loading transactions...</p></div>
+      </div>
+    </div>
     <div class="d-tab-sec" id="tab-settings">
       <div class="s-stack">
         <div class="s-card"><h3>&#x1F464; Profile Information</h3>
@@ -1563,6 +1586,7 @@ iframe[src*="badge"]{
       <button class="a-tab" data-atab="sms">&#x1F4F2; SMS</button>
       <button class="a-tab" data-atab="schedule">&#x1F4C5; Schedule</button>
       <button class="a-tab" data-atab="pools">&#x1F3B1; Pools</button>
+      <button class="a-tab" data-atab="atransactions">&#x1F4C3; Transactions</button>
       <button class="a-tab" data-atab="asettings">&#x2699; Settings</button>
     </div>
     <div class="a-section active" id="atab-payments">
@@ -2019,6 +2043,28 @@ iframe[src*="badge"]{
           </div>
         </div>
       </div>
+    <div class="a-section" id="atab-atransactions">
+      <div class="a-card">
+        <div class="a-card-title">
+          <span>&#x1F4C3; All Member Transactions</span>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <input type="text" id="txSearchInput" placeholder="Search by name or phone..." style="padding:6px 11px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;outline:none;min-width:180px"/>
+            <select id="txTypeFilter" style="padding:6px 10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;outline:none;cursor:pointer">
+              <option value="all">All Types</option>
+              <option value="withdrawal">Withdrawals</option>
+            </select>
+            <button class="abtn" id="txRefreshBtn">&#x21BB; Refresh</button>
+          </div>
+        </div>
+        <p style="font-size:13px;color:#6b7280;margin-bottom:14px;line-height:1.6">All member withdrawal transactions across the platform.</p>
+        <div style="overflow-x:auto">
+          <table class="atable">
+            <thead><tr><th>#</th><th>Member</th><th>Phone</th><th>Tier</th><th>Type</th><th>Amount (GHS)</th><th>Fee</th><th>Received</th><th>Method</th><th>Account</th><th>Date</th><th>Status</th></tr></thead>
+            <tbody id="adminTransactionsBody"><tr><td colspan="12" class="empty-row">Loading...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
     <div class="a-section" id="atab-asettings">
       <div class="a-card">
         <div class="a-card-title">&#x1F4E2; Broadcast Announcement</div>
@@ -2675,6 +2721,8 @@ var TIER_POLLS  = {Free:0, Bronze:1, Silver:2, Gold:3};
 var TIER_ADS    = {Free:1, Bronze:5, Silver:10, Gold:15};
 var TIER_VIDEOS = {Free:1, Bronze:10, Silver:10, Gold:10};
 var TIER_EARN   = {Free:0.50, Bronze:1.00, Silver:1.50, Gold:2.00};
+var TIER_PAGE_EARN   = {Free:0.20, Bronze:0.50, Silver:0.75, Gold:1.00};
+var TIER_STREAK_BONUS= {Free:0.10, Bronze:0.20, Silver:0.30, Gold:0.40};
 var AD_EARN     = 0.30;
 var AD_VIEW_SECS= 25;
 
@@ -2871,7 +2919,7 @@ function restoreSession(){
     }catch(e){}
 
     currentUser=m;
-    if(m.status==='awaiting_verification'){showPaymentWaiting(m); startIdleTracking(); return;}
+    if(m.status==='awaiting_verification'){autoActivateMember(m.id, null); startIdleTracking(); return;}
     if(m.status==='payment_failed'){
       pendingReg={firstName:m.firstName,lastName:m.lastName,email:m.email,phone:m.phone,region:m.region,age:m.age,gender:m.gender||'N/A',secQuestion:m.secQuestion||'',secAnswer:m.secAnswer||'',password:m.password};
       showPaymentFailed('Your previous payment was not verified. Please try again.'); startIdleTracking(); return;
@@ -2974,9 +3022,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
   // Member dashboard
   bindClick('dLogoutBtn', logout);
-  document.querySelectorAll('.d-tab').forEach(function(tab){
-    tab.addEventListener('click',function(){switchDashTab(tab.dataset.tab, tab);});
-  });
+  // Member dashboard tab clicks handled via onclick="switchDashTabMenu(...)" on each button
   bindClick('submitWithdrawBtn', showWithdrawConfirm);
   bindClick('wFinalSubmitBtn', submitWithdrawal);
   bindClick('wCancelConfirmBtn', function(){
@@ -3128,6 +3174,12 @@ document.addEventListener('DOMContentLoaded', function(){
   bindClick('refreshIssuesBtn', renderAdminIssues);
   var issueFilter=el('issueFilterStatus');
   if(issueFilter) issueFilter.addEventListener('change', renderAdminIssues);
+  // Transactions tab
+  bindClick('txRefreshBtn', function(){ syncWithdrawalsFromFirebase(function(){ renderAdminTransactions(); }); });
+  var txSearch=el('txSearchInput');
+  if(txSearch) txSearch.addEventListener('input', renderAdminTransactions);
+  var txType=el('txTypeFilter');
+  if(txType) txType.addEventListener('change', renderAdminTransactions);
   // Profile tab filters
   var profileSearchEl=el('profileSearch');
   if(profileSearchEl) profileSearchEl.addEventListener('input', renderProfilesTab);
@@ -3558,7 +3610,7 @@ function doLoginWithMember(m, phone){
     if(bl.indexOf(m.id)>=0||isTombstoned(phone||m.phone,m.email)){showErr('loginError','This account has been permanently deleted and cannot be accessed. Contact support if you believe this is an error.'); return;}
   }catch(e){}
   if(m.status==='awaiting_verification'){
-    closeLoginModal(); currentUser=m; saveSession(); showPaymentWaiting(m); return;
+    closeLoginModal(); autoActivateMember(m.id, null); return;
   }
   if(m.status==='payment_failed'){
     closeLoginModal(); currentUser=m;
@@ -3770,16 +3822,26 @@ function showPaymentWaiting(m){
   hide('ppFormArea');
   hide('ppFailed');
   el('ppWaiting').style.display='block';
+  var retryDiv=el('ppWaitRetry');
+  if(retryDiv) retryDiv.style.display='none';
   if(waitInterval) clearInterval(waitInterval);
-  var secs=20*60;
-  function tick(){
-    var mm=Math.floor(secs/60), ss=secs%60;
-    setText('ppTimer',(mm<10?'0':'')+mm+':'+(ss<10?'0':'')+ss);
-    if(secs<=0) clearInterval(waitInterval);
-    secs--;
-  }
-  tick();
-  waitInterval=setInterval(tick,1000);
+  // Auto-activate after 2 seconds — instant verification
+  var _activationFired=false;
+  setTimeout(function(){
+    if(m && m.status==='awaiting_verification'){
+      _activationFired=true;
+      autoActivateMember(m.id, null);
+    } else if(m && m.status==='active'){
+      _activationFired=true;
+      currentUser=m; saveSession(); openMemberDashboard(m);
+    }
+  }, 2000);
+  // After 60 seconds, if still on waiting screen, show retry option
+  setTimeout(function(){
+    if(!_activationFired && el('ppWaiting') && el('ppWaiting').style.display!=='none'){
+      if(retryDiv) retryDiv.style.display='block';
+    }
+  }, 60000);
 }
 
 function showPaymentFailed(msg){
@@ -3793,6 +3855,8 @@ function showPaymentFailed(msg){
 
 function retryPayment(){
   el('ppFailed').style.display='none';
+  el('ppWaiting').style.display='none';
+  var ppWR=el('ppWaitRetry'); if(ppWR) ppWR.style.display='none';
   el('ppConfirmBtn').style.display='block';
   show('ppFormArea');
   selectedTier=null;
@@ -3873,6 +3937,12 @@ function openMemberDashboard(member){
     populateWithdrawCard(m);
     checkWithdrawalDay();
     checkDailyStreakBonus(m);
+    // Update video tab title with tier earn rate
+    var vtt=el('videoTabTitle');
+    if(vtt) vtt.innerHTML='&#x25B6; Sponsored Videos &mdash; GHS '+(TIER_EARN[m.tier]||1.00).toFixed(2)+' each';
+    // Update pages earn info with tier earn rate
+    var pei=el('pagesEarnInfo');
+    if(pei) pei.innerHTML='&#x1F4B0; Earn <strong>GHS '+(TIER_PAGE_EARN[m.tier]||0.50).toFixed(2)+'</strong> for every page you follow or join. <small style="color:var(--green)">(Free: GHS 0.20 &middot; Bronze: GHS 0.50 &middot; Silver: GHS 0.75 &middot; Gold: GHS 1.00)</small>';
   }
 
   // First pass — render from localStorage immediately (fast, no flicker)
@@ -3965,6 +4035,33 @@ function clearAllNotifications(){
   renderNotifications(currentUser);
 }
 
+function toggleDashMenu(){
+  var panel=el('dashMenuPanel');
+  if(!panel) return;
+  panel.style.display=panel.style.display==='none'?'block':'none';
+}
+
+// Close menu when clicking outside
+document.addEventListener('click',function(e){
+  var panel=el('dashMenuPanel');
+  var btn=el('dashMenuBtn');
+  if(panel&&panel.style.display==='block'&&!panel.contains(e.target)&&e.target!==btn){
+    panel.style.display='none';
+  }
+});
+
+function switchDashTabMenu(btn, label){
+  // Close menu
+  var panel=el('dashMenuPanel');
+  if(panel) panel.style.display='none';
+  // Update label
+  var labelEl=el('activeDashTabLabel');
+  if(labelEl) labelEl.innerHTML=label;
+  // Switch tab
+  var name=btn.dataset.tab;
+  switchDashTab(name, btn);
+}
+
 function switchDashTab(name, btn){
   // Cancel any active ad timer when switching away from ads tab
   if(name!=='ads' && activeAdTimer){
@@ -3975,14 +4072,13 @@ function switchDashTab(name, btn){
     if(ml) ml.style.display='block';
   }
   document.querySelectorAll('.d-tab-sec').forEach(function(s){s.classList.remove('active');});
-  document.querySelectorAll('.d-tab').forEach(function(b){b.classList.remove('active');});
+  document.querySelectorAll('#dashMenuPanel .d-tab').forEach(function(b){b.classList.remove('active');});
   var sec=el('tab-'+name);
   if(sec) sec.classList.add('active');
   if(btn) btn.classList.add('active');
   // Refresh ads tab when opened
   if(name==='ads' && currentUser && !isAdminUser()) renderMemberAdsTab(currentUser);
   if(name==='pages' && currentUser && !isAdminUser()){
-    // Pull latest pages from Firebase first, then render
     syncPagesFromFirebase(function(){
       renderMemberPages(currentUser);
     });
@@ -3992,6 +4088,9 @@ function switchDashTab(name, btn){
     populateWithdrawCard(currentUser);
     updateWithdrawHistoryDisplay(currentUser);
     updateWithdrawMethodLabel();
+  }
+  if(name==='transactions' && currentUser && !isAdminUser()){
+    renderTransactionsList(currentUser);
   }
 }
 
@@ -4408,6 +4507,19 @@ function showWithdrawConfirm(){
   // Once wCount >= 3 (meaning 3 withdrawals already done), next withdrawal
   // must be at least 1 calendar month after the last one, still on Mon/Thu only.
   if(!isFreeAcct && wCount>=3){
+    // One-time notification about the monthly policy change
+    if(!currentUser.notifiedMonthlyPolicy){
+      var allM2=getMembers();
+      var mIdx2=allM2.findIndex(function(m){return m.id===currentUser.id;});
+      if(mIdx2>=0){
+        allM2[mIdx2].notifiedMonthlyPolicy=true;
+        allM2[mIdx2].notifications=allM2[mIdx2].notifications||[];
+        allM2[mIdx2].notifications.push('&#x1F4E2; <strong>Withdrawal Policy Update:</strong> Starting from your 4th withdrawal, you can only make <strong>one withdrawal per month</strong>. Plan your cashouts accordingly. Thank you for being a valued member!');
+        saveMembers(allM2);
+        currentUser=allM2[mIdx2];
+        renderNotifications(currentUser);
+      }
+    }
     var lastWDate=currentUser.lastWithdrawalDate||null;
     if(lastWDate){
       var lastD=new Date(lastWDate);
@@ -4893,6 +5005,80 @@ function reverseWithdrawal(wId){
   showWithdrawMsg('info','&#x274C; <strong>Transaction failed. Your GHS '+amount.toFixed(2)+' has been reversed to your account.</strong><br>Please try again in 1 hour.');
 }
 
+// ── MEMBER TRANSACTIONS ────────────────────────────────
+function renderTransactionsList(member){
+  var el2=el('transactionsListWrap');
+  if(!el2) return;
+  var withdrawals=getWithdrawals().filter(function(w){return w.memberId===member.id;}).slice().reverse();
+  if(!withdrawals.length){
+    el2.innerHTML='<p style="font-size:13.5px;color:var(--text-muted);text-align:center;padding:24px">No transactions yet. Complete activities to start earning and withdrawing!</p>';
+    return;
+  }
+  var phaseColor={'Complete':'#22c55e','Processing':'#3b82f6','Pending':'#f59e0b','Reversed':'#ef4444'};
+  var html='<div style="overflow-x:auto"><table class="atable"><thead><tr><th>#</th><th>Date</th><th>Type</th><th>Amount</th><th>Fee</th><th>You Received</th><th>Method</th><th>Status</th></tr></thead><tbody>';
+  withdrawals.forEach(function(w,i){
+    var col=phaseColor[w.phase]||'#9ca3af';
+    var fee=w.fee||0;
+    var received=w.amountAfterFee!=null?w.amountAfterFee:parseFloat(w.amount);
+    var feeCell=w.isFree?'<span style="color:var(--green);font-size:12px">FREE</span>':'GHS '+fee.toFixed(2);
+    html+='<tr>';
+    html+='<td style="color:#9ca3af;font-size:12px">'+(i+1)+'</td>';
+    html+='<td>'+w.date+'</td>';
+    html+='<td><span style="font-size:11.5px;background:#f0f9ff;color:#0369a1;padding:2px 8px;border-radius:6px;font-weight:600">Withdrawal</span></td>';
+    html+='<td style="font-weight:600">GHS '+parseFloat(w.amount).toFixed(2)+'</td>';
+    html+='<td>'+feeCell+'</td>';
+    html+='<td style="font-weight:700;color:var(--green)">GHS '+received.toFixed(2)+'</td>';
+    html+='<td>'+w.method+'</td>';
+    html+='<td><span style="font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:20px;background:'+col+'22;color:'+col+'">'+w.phase+'</span></td>';
+    html+='</tr>';
+  });
+  html+='</tbody></table></div>';
+  el2.innerHTML=html;
+}
+
+// ── ADMIN TRANSACTIONS ─────────────────────────────────
+function renderAdminTransactions(){
+  var tbody=el('adminTransactionsBody');
+  if(!tbody) return;
+  var search=(el('txSearchInput')?el('txSearchInput').value.trim().toLowerCase():'');
+  var typeFilter=el('txTypeFilter')?el('txTypeFilter').value:'all';
+  var withdrawals=getWithdrawals().slice().reverse();
+  if(search){
+    withdrawals=withdrawals.filter(function(w){
+      return (w.memberName||'').toLowerCase().indexOf(search)>=0||(w.phone||'').indexOf(search)>=0;
+    });
+  }
+  // type filter (currently only withdrawals exist; reserved for future transaction types)
+  if(typeFilter&&typeFilter!=='all'){
+    withdrawals=withdrawals.filter(function(w){ return (w.type||'withdrawal')===typeFilter; });
+  }
+  var members=getMembers();
+  var rows='';
+  var phaseColor={'Complete':'#22c55e','Processing':'#3b82f6','Pending':'#f59e0b','Reversed':'#ef4444'};
+  withdrawals.forEach(function(w,i){
+    var col=phaseColor[w.phase]||'#9ca3af';
+    var fee=w.fee||0;
+    var received=w.amountAfterFee!=null?w.amountAfterFee:parseFloat(w.amount);
+    var m=members.find(function(x){return x.id===w.memberId;});
+    var tier=m?m.tier:'-';
+    rows+='<tr>';
+    rows+='<td style="font-size:12px;color:#9ca3af">'+(i+1)+'</td>';
+    rows+='<td style="font-size:13px;font-weight:600">'+(w.memberName||'-')+'</td>';
+    rows+='<td style="font-size:12.5px">'+(w.phone||'-')+'</td>';
+    rows+='<td><span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;background:'+(tier==='Gold'?'#fef9c3':tier==='Silver'?'#f1f5f9':tier==='Bronze'?'#fef3c7':'#f9fafb')+';color:'+(tier==='Gold'?'#854d0e':tier==='Silver'?'#374151':tier==='Bronze'?'#78350f':'#6b7280')+'">'+tier+'</span></td>';
+    rows+='<td><span style="font-size:11.5px;background:#f0f9ff;color:#0369a1;padding:2px 8px;border-radius:6px;font-weight:600">Withdrawal</span></td>';
+    rows+='<td style="font-weight:600">GHS '+parseFloat(w.amount).toFixed(2)+'</td>';
+    rows+='<td style="color:var(--red)">GHS '+fee.toFixed(2)+'</td>';
+    rows+='<td style="font-weight:700;color:var(--green)">GHS '+received.toFixed(2)+'</td>';
+    rows+='<td style="font-size:12.5px">'+(w.method||'-')+'</td>';
+    rows+='<td style="font-size:12.5px;font-family:monospace">'+(w.account||'-')+'</td>';
+    rows+='<td style="font-size:12px;color:#6b7280">'+(w.date||'-')+'</td>';
+    rows+='<td><span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;background:'+col+'22;color:'+col+'">'+w.phase+'</span></td>';
+    rows+='</tr>';
+  });
+  tbody.innerHTML=rows||'<tr><td colspan="12" class="empty-row">No transactions found.</td></tr>';
+}
+
 // ── SETTINGS ──────────────────────────────────────────
 function saveProfile(){
   var members=getMembers();
@@ -5163,6 +5349,9 @@ function switchAdminTab(name, btn){
   }
   if(name==='sms') initSmsTab();
   if(name==='schedule') renderScheduleTab();
+  if(name==='atransactions'){
+    syncWithdrawalsFromFirebase(function(){ renderAdminTransactions(); });
+  }
 }
 
 // ── ADMIN: PENDING PAYMENTS ───────────────────────────
@@ -6731,8 +6920,13 @@ function renderDashAds(member){
 }
 
 function switchDashTabById(name){
-  var btn=document.querySelector('.d-tab[data-tab="'+name+'"]');
-  if(btn) switchDashTab(name, btn);
+  var btn=document.querySelector('#dashMenuPanel .d-tab[data-tab="'+name+'"]');
+  if(btn){
+    var labels={surveys:'&#x1F4CB; Surveys',polls:'&#x26A1; Polls',videos:'&#x25B6; Videos',ads:'&#x1F4E2; View Ads',pages:'&#x1F4F1; Pages',withdraw:'&#x1F4B8; Withdraw',referral:'&#x1F4E4; Referral',upgrade:'&#x2B06; Upgrade',pool:'&#x1F3B1; Pool',report:'&#x1F6A8; Report Issue',transactions:'&#x1F4C3; Transactions',settings:'&#x2699; Settings'};
+    var labelEl=el('activeDashTabLabel');
+    if(labelEl && labels[name]) labelEl.innerHTML=labels[name];
+    switchDashTab(name, btn);
+  }
 }
 
 // Nudge strip for unclaimed pages on member dashboard
@@ -7255,10 +7449,10 @@ function submitUpgradeRequest(){
 
   // Check no duplicate pending upgrade
   var reqs=getUpgradeReqs();
-  var existingPending=reqs.find(function(r){return r.memberId===currentUser.id&&r.status==='pending';});
-  if(existingPending){showUMsg('error','You already have a pending upgrade request. Please wait for it to be processed.');return;}
+  var pending=reqs.find(function(r){return r.memberId===currentUser.id&&r.status==='pending';});
+  if(pending){showUMsg('error','You already have a pending upgrade request. Please wait for admin to process it.');return;}
 
-  // Build pending upgrade request and save before redirect
+  // Save pending upgrade request before opening Paystack
   var upgradeRef='GOPUP-'+currentUser.id+'-'+Date.now();
   var req={
     id:'U'+Date.now(),
@@ -7275,54 +7469,107 @@ function submitUpgradeRequest(){
   };
   reqs.push(req); saveUpgradeReqs(reqs); syncUpgradesToFirebase();
 
-  // Persist to localStorage so checkPaystackReturn can find it after redirect
-  try{localStorage.setItem('gop_pending_upgrade',JSON.stringify({reqId:req.id,ref:upgradeRef,targetTier:targetTier,fee:fee,memberId:currentUser.id}));}catch(e){}
+  // Save to localStorage for recovery after Paystack redirect
+  try{localStorage.setItem('gop_pending_upgrade',JSON.stringify({reqId:req.id,ref:upgradeRef}));}catch(e){}
 
-  // Redirect same tab to Paystack — Paystack will redirect back here with trxref
+  // Notify member
+  var members=getMembers();
+  var idx=members.findIndex(function(m){return m.id===currentUser.id;});
+  if(idx>=0){
+    members[idx].notifications=members[idx].notifications||[];
+    members[idx].notifications.push('&#x23F3; Your upgrade to <strong>'+targetTier+'</strong> is being processed. Complete your payment via Paystack to activate instantly.');
+    saveMembers(members); currentUser=members[idx];
+    renderNotifications(currentUser);
+  }
+
+  // Open Paystack payment page in popup
   var slug=PAYSTACK_PAGES[targetTier]||PAYSTACK_PAGES['Bronze']||'goppay';
-  var callbackUrl=window.location.href.split('?')[0];
   var url='https://paystack.com/pay/'+slug
-    +'?email='+encodeURIComponent(currentUser.email||currentUser.phone+'@goppay.gh')
+    +'?email='+encodeURIComponent(currentUser.email)
     +'&name='+encodeURIComponent(currentUser.firstName+' '+currentUser.lastName)
-    +'&amount='+(fee*100)
-    +'&callback_url='+encodeURIComponent(callbackUrl);
+    +'&amount='+(fee*100);
 
   var btn=el('submitUpgradeBtn');
-  if(btn){btn.disabled=true;btn.innerHTML='&#x23F3; Redirecting to Paystack...';}
-  showUMsg('info','&#x23F3; Redirecting you to Paystack to complete your payment…');
+  if(btn){btn.disabled=true;btn.innerHTML='&#x23F3; Opening Paystack...';}
 
-  setTimeout(function(){window.location.href=url;},400);
-}
+  var pw=600,ph=700;
+  var pleft=(screen.width/2)-(pw/2);
+  var ptop=(screen.height/2)-(ph/2);
+  var payWin=window.open(url,'PaystackUpgrade','width='+pw+',height='+ph+',top='+ptop+',left='+pleft+',scrollbars=yes');
 
-function autoApplyUpgrade(memberId, targetTier, fee, reqId){
-  var members=getMembers();
-  var mi=members.findIndex(function(m){return m.id===memberId;});
-  if(mi<0) return;
-  members[mi].tier=targetTier;
-  members[mi].fee=(members[mi].fee||0)+fee;
-  members[mi].notifications=members[mi].notifications||[];
-  members[mi].notifications.push('&#x1F389; Your upgrade to <strong>'+targetTier+'</strong> is now <strong>instantly active</strong>! You now have access to '+(targetTier==='Silver'?'6 surveys/day and 2 polls/day':targetTier==='Gold'?'10 surveys/day and 3 polls/day':'3 surveys/day and 1 poll/day')+'. Enjoy your new tier!');
-  saveMembers(members);
-  syncMemberToBackend(members[mi]);
-  if(currentUser&&!isAdminUser()&&currentUser.id===memberId){
-    currentUser=members[mi];
-    saveSession();
-    refreshAdminMetrics();
-    // Show success overlay
-    var overlay=document.createElement('div');
-    overlay.style.cssText='position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px';
-    overlay.innerHTML='<div style="background:#fff;border-radius:18px;padding:32px 28px;max-width:380px;width:100%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.18)">'
-      +'<div style="width:64px;height:64px;background:var(--green-pale);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:32px">&#x1F389;</div>'
-      +'<div style="font-size:20px;font-weight:700;color:#0d1117;margin-bottom:8px">Upgrade Successful!</div>'
-      +'<div style="font-size:14px;color:#6b7280;margin-bottom:20px;line-height:1.6">Your account has been instantly upgraded to <strong>'+targetTier+'</strong>. Enjoy your new earning limits!</div>'
-      +'<button style="background:var(--green);color:#fff;border:none;border-radius:10px;padding:12px 28px;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font-body)">&#x1F4CA; Go to Dashboard</button>'
-      +'</div>';
-    overlay.querySelector('button').addEventListener('click',function(){
-      overlay.remove();
-      openMemberDashboard(currentUser);
-    });
-    document.body.appendChild(overlay);
+  if(!payWin||payWin.closed){
+    // Popup blocked — redirect same tab
+    window.location.href=url;
+    return;
   }
+
+  // Poll for popup close
+  var _upgradeApplied=false;
+  var _upgradeCountdown=60;
+  var _upgradeCountdownInterval=null;
+
+  function cancelUpgradeAttempt(){
+    _upgradeApplied=true; // prevent auto-apply
+    if(_upgradeCountdownInterval) clearInterval(_upgradeCountdownInterval);
+    if(btn){btn.disabled=false;btn.innerHTML='&#x1F4B3; Pay &amp; Upgrade via Paystack &#x2192;';}
+    // Remove pending upgrade request
+    try{
+      var allReqs2=getUpgradeReqs();
+      var ci=allReqs2.findIndex(function(r){return r.id===req.id;});
+      if(ci>=0){allReqs2[ci].status='cancelled'; saveUpgradeReqs(allReqs2); syncUpgradesToFirebase();}
+      localStorage.removeItem('gop_pending_upgrade');
+    }catch(e){}
+    if(el('upgradeFormWrap')) el('upgradeFormWrap').style.display='none';
+    showUMsg('error','&#x26A0; Payment cancelled. You can try again whenever you are ready.');
+  }
+
+  var pollInterval=setInterval(function(){
+    if(!payWin||payWin.closed){
+      clearInterval(pollInterval);
+      if(btn){btn.disabled=true; btn.innerHTML='&#x23F3; Verifying payment…';}
+
+      // Show a 60-second countdown with a retry/cancel button
+      showUMsg('info','&#x23F3; Verifying your payment — please wait&hellip; (<span id="upgradeVerifyCountdown">60</span>s)<br><a href="#" id="upgradeCancelRetryLink" style="font-size:12px;color:var(--red);font-weight:600;margin-top:6px;display:inline-block">&#x2716; Didn\'t pay? Cancel &amp; Retry</a>');
+      if(msgEl){
+        // Style as info
+        msgEl.style.display='block';
+        msgEl.style.background='#e0f2fe';
+        msgEl.style.border='1px solid #0ea5e9';
+        msgEl.style.color='#0369a1';
+      }
+
+      // Wire cancel link
+      setTimeout(function(){
+        var cLink=el('upgradeCancelRetryLink');
+        if(cLink) cLink.addEventListener('click',function(e){e.preventDefault(); cancelUpgradeAttempt();});
+      },100);
+
+      // Countdown: auto-apply after 60 seconds
+      _upgradeCountdownInterval=setInterval(function(){
+        _upgradeCountdown--;
+        var cdEl=el('upgradeVerifyCountdown');
+        if(cdEl) cdEl.textContent=_upgradeCountdown;
+        if(_upgradeCountdown<=0){
+          clearInterval(_upgradeCountdownInterval);
+          if(_upgradeApplied) return;
+          _upgradeApplied=true;
+          // Mark upgrade ref and auto-apply
+          try{
+            var upData=JSON.parse(localStorage.getItem('gop_pending_upgrade')||'null');
+            if(upData&&upData.reqId===req.id){
+              var allReqs=getUpgradeReqs();
+              var ri=allReqs.findIndex(function(r){return r.id===req.id;});
+              if(ri>=0){allReqs[ri].paystackRef=upData.ref||upgradeRef; allReqs[ri].status='approved'; allReqs[ri].approvedAt=new Date().toISOString(); saveUpgradeReqs(allReqs); syncUpgradesToFirebase();}
+              localStorage.removeItem('gop_pending_upgrade');
+            }
+          }catch(e){}
+          autoApplyUpgrade(currentUser.id, targetTier, fee, req.id);
+          setVal('upgradeNotes','');
+          if(el('upgradeFormWrap')) el('upgradeFormWrap').style.display='none';
+        }
+      },1000);
+    }
+  },500);
 }
 
 function renderUpgradeHistory(member){
@@ -7372,6 +7619,40 @@ function renderAdminUpgradeRequests(){
   el2.querySelectorAll('[data-upgdeny]').forEach(function(b){
     b.addEventListener('click',function(){openDenyUpgradeModal(b.dataset.upgdeny);});
   });
+}
+
+// Instantly apply a tier upgrade to a member (no admin needed)
+function autoApplyUpgrade(memberId, targetTier, fee, reqId){
+  var members=getMembers();
+  var mi=members.findIndex(function(m){return m.id===memberId;});
+  if(mi<0) return;
+  members[mi].tier=targetTier;
+  members[mi].fee=(members[mi].fee||0)+fee;
+  members[mi].notifications=members[mi].notifications||[];
+  members[mi].notifications.push('&#x1F389; Your upgrade to <strong>'+targetTier+'</strong> is now <strong>instantly active</strong>! You now have access to '+(targetTier==='Silver'?'6 surveys/day and 2 polls/day':targetTier==='Gold'?'10 surveys/day and 3 polls/day':'3 surveys/day and 1 poll/day')+'. Enjoy your new tier!');
+  saveMembers(members);
+  if(currentUser&&!isAdminUser()&&currentUser.id===memberId){
+    currentUser=members[mi];
+    saveSession();
+    syncMemberToBackend(currentUser);
+    renderUpgradeTab(currentUser);
+    renderUpgradeHistory(currentUser);
+    refreshAdminMetrics();
+    // Show success overlay then reload dashboard
+    var overlay=document.createElement('div');
+    overlay.style.cssText='position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px';
+    overlay.innerHTML='<div style="background:#fff;border-radius:18px;padding:32px 28px;max-width:380px;width:100%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.18)">'
+      +'<div style="width:64px;height:64px;background:var(--green-pale);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:32px">&#x1F389;</div>'
+      +'<div style="font-size:20px;font-weight:700;color:#0d1117;margin-bottom:8px">Upgrade Successful!</div>'
+      +'<div style="font-size:14px;color:#6b7280;margin-bottom:20px;line-height:1.6">Your account has been instantly upgraded to <strong>'+targetTier+'</strong>. Enjoy your new earning limits!</div>'
+      +'<button style="background:var(--green);color:#fff;border:none;border-radius:10px;padding:12px 28px;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font-body)">&#x1F4CA; Go to Dashboard</button>'
+      +'</div>';
+    overlay.querySelector('button').addEventListener('click',function(){
+      overlay.remove();
+      openMemberDashboard(currentUser);
+    });
+    document.body.appendChild(overlay);
+  }
 }
 
 function processUpgrade(reqId, action, denyReason){
@@ -8036,7 +8317,8 @@ function renderMemberPages(member){
     html+='<div style="font-size:12px;color:#6b7280;margin-top:2px">'+p.platform+(p.desc?' &middot; '+p.desc:'')+'</div>';
     html+='</div>';
     html+='<div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">';
-    html+='<span style="font-size:18px;font-weight:700;color:var(--green)">GHS '+p.earn.toFixed(2)+'</span>';
+    var tierPageEarn=TIER_PAGE_EARN[member?member.tier:'Free']||p.earn;
+    html+='<span style="font-size:18px;font-weight:700;color:var(--green)">GHS '+tierPageEarn.toFixed(2)+'</span>';
     html+='<div id="pactions_'+p.id+'" style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">';
     if(done){
       html+='<span style="background:#d1fae5;color:var(--green);font-size:12px;font-weight:700;padding:5px 14px;border-radius:9px">&#x2714; Followed &amp; Earned</span>';
@@ -8078,11 +8360,12 @@ function claimPageReward(pageId){
   if(idx<0) return;
   members[idx].completedPages=members[idx].completedPages||[];
   if(members[idx].completedPages.indexOf(pageId)>=0) return; // already claimed
+  var pageEarnTier=TIER_PAGE_EARN[currentUser?currentUser.tier:'Free']||page.earn;
   members[idx].completedPages.push(pageId);
-  members[idx].balance=parseFloat(((members[idx].balance||0)+page.earn).toFixed(2));
-  members[idx].monthEarned=parseFloat(((members[idx].monthEarned||0)+page.earn).toFixed(2));
+  members[idx].balance=parseFloat(((members[idx].balance||0)+pageEarnTier).toFixed(2));
+  members[idx].monthEarned=parseFloat(((members[idx].monthEarned||0)+pageEarnTier).toFixed(2));
   members[idx].notifications=members[idx].notifications||[];
-  members[idx].notifications.push('&#x1F4F1; <strong>GHS '+page.earn.toFixed(2)+'</strong> earned for following <strong>'+page.name+'</strong> on '+page.platform+'!');
+  members[idx].notifications.push('&#x1F4F1; <strong>GHS '+pageEarnTier.toFixed(2)+'</strong> earned for following <strong>'+page.name+'</strong> on '+page.platform+'!');
   saveMembers(members);
   currentUser=members[idx];
   syncMemberToBackend(currentUser);
@@ -8861,12 +9144,13 @@ function checkDailyStreakBonus(member){
   var idx=members.findIndex(function(m){return m.id===member.id;});
   if(idx<0) return;
   if(members[idx].streakBonusDate===t) return;
-  members[idx].balance=(members[idx].balance||0)+0.20;
-  members[idx].monthEarned=(members[idx].monthEarned||0)+0.20;
+  var streakAmt=TIER_STREAK_BONUS[members[idx].tier]||0.10;
+  members[idx].balance=(members[idx].balance||0)+streakAmt;
+  members[idx].monthEarned=(members[idx].monthEarned||0)+streakAmt;
   members[idx].streakBonusDate=t;
   members[idx].streakDays=(members[idx].streakDays||0)+1;
   members[idx].notifications=members[idx].notifications||[];
-  members[idx].notifications.push('&#x1F525; Daily streak bonus of <strong>GHS 0.20</strong> awarded! Streak: '+members[idx].streakDays+' day'+(members[idx].streakDays!==1?'s':'')+' in a row. Keep it up!');
+  members[idx].notifications.push('&#x1F525; Daily streak bonus of <strong>GHS '+streakAmt.toFixed(2)+'</strong> awarded! Streak: '+members[idx].streakDays+' day'+(members[idx].streakDays!==1?'s':'')+' in a row. Keep it up!');
   saveMembers(members);
   currentUser=members[idx];
   syncMemberToBackend(currentUser);
@@ -9134,6 +9418,7 @@ function checkDailyStreakBonus(member){
     el('poolJoinTitle').textContent=pool.title;
     el('poolJoinPrize').textContent='Prize: GHS '+Number(pool.prizeAmount).toFixed(2);
     el('poolJoinPrice').textContent='GHS '+Number(pool.slotPrice).toFixed(2);
+    el('poolJoinRemaining').textContent=rem+' of '+pool.totalSlots;
     var qty=el('poolJoinQty'); if(qty){qty.value='1';qty.max=rem;}
     el('poolJoinTotal').textContent='Total: GHS '+Number(pool.slotPrice).toFixed(2);
     var errEl=el('poolJoinError'); if(errEl) errEl.style.display='none';
@@ -9207,15 +9492,16 @@ function checkDailyStreakBonus(member){
     // Show confirmation banner
     showPoolConfirmBanner(true);
 
-    var attempts=0; var maxAttempts=100; // 100 × 3s = 300s = 5 minutes
-    var _fiveMinTimer=setTimeout(function(){
-      // 5-minute hard cancel — clear the poll interval and show auto-cancel UI
+    var attempts=0; var maxAttempts=20; // 20 × 3s = 60s = 1 minute
+    var _tenMinTimer=setTimeout(function(){
+      // 1-minute hard cancel — clear the poll interval and show auto-cancel UI
       clearInterval(poll);
       try{localStorage.removeItem('gop_pending_pool_payment');}catch(e){}
       showPoolConfirmBanner(false);
+      // Mark any unverified pending entries for this member in UI
       renderMemberPools();
       showPoolPaymentAutoCancelPopup(pending);
-    },300000); // 5 minutes in ms
+    },60000); // 1 minute in ms
 
     var poll=setInterval(function(){
       attempts++;
@@ -9225,7 +9511,7 @@ function checkDailyStreakBonus(member){
           return e.poolId===pending.poolId && e.memberId===pending.memberId && e.webhookVerified;
         });
         if(found){
-          clearTimeout(_fiveMinTimer);
+          clearTimeout(_tenMinTimer);
           clearInterval(poll);
           try{localStorage.removeItem('gop_pending_pool_payment');}catch(e){}
           showPoolConfirmBanner(false);
@@ -9235,7 +9521,7 @@ function checkDailyStreakBonus(member){
           });
           showPoolPaymentSuccessPopup(found.slotsCount, found.poolTitle);
         } else if(attempts>=maxAttempts){
-          clearTimeout(_fiveMinTimer);
+          clearTimeout(_tenMinTimer);
           clearInterval(poll);
           try{localStorage.removeItem('gop_pending_pool_payment');}catch(e){}
           showPoolConfirmBanner(false);
@@ -9525,7 +9811,7 @@ function confirmPayment(){
     if(existing2){
       currentUser=existing2; saveSession();
       if(existing2.status==='active') openMemberDashboard(existing2);
-      else showPaymentWaiting(existing2);
+      else autoActivateMember(existing2.id, null);
       return;
     }
     var mFreeDevice=getRegDeviceInfo();
@@ -9635,30 +9921,23 @@ function checkPaystackReturn(){
     try{upgradePending=JSON.parse(upgradeRaw);}catch(e){}
     if(upgradePending&&upgradePending.reqId){
       try{localStorage.removeItem('gop_pending_upgrade');}catch(e){}
-      var allUpReqs=getUpgradeReqs();
-      var uReq=allUpReqs.find(function(r){return r.id===upgradePending.reqId;});
+      var allReqs=getUpgradeReqs();
+      var uReq=allReqs.find(function(r){return r.id===upgradePending.reqId;});
       if(uReq&&uReq.status==='pending'){
-        var uIdx=allUpReqs.findIndex(function(r){return r.id===upgradePending.reqId;});
-        allUpReqs[uIdx].paystackRef=trxref;
-        allUpReqs[uIdx].status='approved';
-        allUpReqs[uIdx].approvedAt=new Date().toISOString();
-        saveUpgradeReqs(allUpReqs); syncUpgradesToFirebase();
-        // Restore session and apply upgrade
+        var uIdx=allReqs.findIndex(function(r){return r.id===upgradePending.reqId;});
+        allReqs[uIdx].paystackRef=trxref; allReqs[uIdx].status='approved'; allReqs[uIdx].approvedAt=new Date().toISOString();
+        saveUpgradeReqs(allReqs); syncUpgradesToFirebase();
+        // Load current user from session then apply upgrade
         var sessM=null;
         try{sessM=JSON.parse(sessionStorage.getItem('gop_session')||localStorage.getItem('gop_session')||'null');}catch(e){}
         if(!sessM&&currentUser&&currentUser!=='admin') sessM=currentUser;
         if(sessM&&sessM.id===uReq.memberId){
-          currentUser=sessM;
           autoApplyUpgrade(uReq.memberId, uReq.targetTier, uReq.fee, uReq.id);
         } else {
-          // Session not present — still apply the tier change in members data
+          // User not in session — just save the upgrade and show a message
           var uMembers=getMembers();
           var uMi=uMembers.findIndex(function(m){return m.id===uReq.memberId;});
-          if(uMi>=0){
-            uMembers[uMi].tier=uReq.targetTier;
-            uMembers[uMi].fee=(uMembers[uMi].fee||0)+uReq.fee;
-            saveMembers(uMembers); syncMemberToBackend(uMembers[uMi]);
-          }
+          if(uMi>=0){uMembers[uMi].tier=uReq.targetTier; uMembers[uMi].fee=(uMembers[uMi].fee||0)+uReq.fee; saveMembers(uMembers); syncMemberToBackend(uMembers[uMi]);}
         }
       }
       return;
@@ -9683,9 +9962,17 @@ function createMemberAccount(reg, tier, ref){
   // Guard against duplicates
   var members=getMembers();
   var existing=members.find(function(x){return x.phone===reg.phone;});
-  if(existing){currentUser=existing;saveSession();showPaymentWaiting(existing);return;}
+  if(existing){
+    // If account exists but still awaiting, auto-activate it now
+    if(existing.status==='awaiting_verification'){
+      autoActivateMember(existing.id, ref);
+      return;
+    }
+    currentUser=existing; saveSession(); openMemberDashboard(existing); return;
+  }
 
   var regDevice=getRegDeviceInfo();
+  var welcomeBonus=tier.tier==='Free'?1.00:5.00;
   var m={
     id:'M'+Date.now(),
     firstName:reg.firstName, lastName:reg.lastName,
@@ -9694,28 +9981,61 @@ function createMemberAccount(reg, tier, ref){
     secQuestion:reg.secQuestion||'', secAnswer:reg.secAnswer||'', password:reg.password,
     tier:tier.tier, fee:tier.fee,
     paystackRef:ref,
-    status:'awaiting_verification',
+    status:'active',
     joinedDate:today(),
     paymentSubmittedAt:new Date().toISOString(),
+    verifiedAt:new Date().toISOString(),
     regDevice:regDevice.device, regDeviceName:regDevice.deviceName,
     regDeviceModel:regDevice.deviceModel,
     regBrowser:regDevice.browser, regOS:regDevice.os, regScreen:regDevice.screen,
-    balance:0, monthEarned:0, referrals:0, referralEarnings:0,
+    balance:welcomeBonus, monthEarned:welcomeBonus, referrals:0, referralEarnings:0,
     ghSurveyDone:false, withdrawalCount:0,
     streakBonusDate:'', streakDays:0,
     dailySurveyDate:'', dailySurveyCount:0,
     dailyPollDate:'', dailyPollCount:0,
     dailyAdDate:'', dailyAdCount:0,
     viewedAdsToday:[], answeredPolls:[], completedSurveys:[], completedVideos:[], completedPages:[],
-    notifications:['&#x2705; Payment of GHS '+tier.fee+' received via Paystack (Ref: '+ref+'). Your account is awaiting admin activation — usually within 20 minutes.']
+    notifications:[
+      '&#x2705; Payment of GHS '+tier.fee+' received via Paystack (Ref: '+ref+'). Your account is now <strong>instantly active</strong>!',
+      '&#x1F381; Welcome bonus of <strong>GHS '+welcomeBonus.toFixed(2)+'</strong> has been added to your balance. Complete the Ghana Affairs Survey for another GHS 1.00!'
+    ]
   };
   members.push(m);
   saveMembers(members);
-  // Sync to backend so admin sees this registration from any device
   syncMemberToBackend(m);
   currentUser=m;
   saveSession();
-  showPaymentWaiting(m);
+  // Handle referral credit if applicable
+  if(reg.referredBy){
+    var refIdx=members.findIndex(function(x){return x.id===reg.referredBy;});
+    if(refIdx>=0){
+      members[refIdx].referrals=(members[refIdx].referrals||0)+1;
+      members[refIdx].notifications=members[refIdx].notifications||[];
+      members[refIdx].notifications.push('&#x1F465; Your referral <strong>'+m.firstName+' '+m.lastName+'</strong> just joined '+m.tier+' — your referral count is now '+members[refIdx].referrals+'!');
+      saveMembers(members);
+    }
+  }
+  openMemberDashboard(m);
+}
+
+// Auto-activate a member who was previously in awaiting_verification state
+function autoActivateMember(memberId, ref){
+  var members=getMembers();
+  var idx=members.findIndex(function(m){return m.id===memberId;});
+  if(idx<0) return;
+  var bonus=members[idx].tier==='Free'?1.00:5.00;
+  members[idx].status='active';
+  members[idx].balance=(members[idx].balance||0)+bonus;
+  members[idx].monthEarned=(members[idx].monthEarned||0)+bonus;
+  members[idx].verifiedAt=new Date().toISOString();
+  if(ref) members[idx].paystackRef=members[idx].paystackRef||ref;
+  members[idx].notifications=members[idx].notifications||[];
+  members[idx].notifications.push('&#x2705; Your account is now <strong>instantly active</strong>! Welcome bonus of <strong>GHS '+bonus.toFixed(2)+'</strong> added. Complete the Ghana Affairs Survey for another GHS 1.00!');
+  saveMembers(members);
+  currentUser=members[idx];
+  saveSession();
+  syncMemberToBackend(currentUser);
+  openMemberDashboard(currentUser);
 }
 
 function showManualActivation(ref){
