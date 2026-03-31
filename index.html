@@ -2073,6 +2073,18 @@ iframe[src*="badge"]{
         <div id="annStatus" style="margin-top:9px;font-size:13px;color:var(--green)"></div>
       </div>
       <div class="a-card">
+        <div class="a-card-title">&#x1F4E2; Ad Earning Rates Per Tier <span style="font-size:12px;font-weight:400;color:#9ca3af">(Super Admin only)</span></div>
+        <p style="font-size:13px;color:#6b7280;margin-bottom:14px;line-height:1.6">Set how much members earn per ad view (25 seconds each). Changes are saved to Firebase and apply to all members on their next page load.</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+          <div class="fg" style="margin:0"><label>&#x1F193; Free Tier (GHS)</label><input type="number" id="adEarnFree" min="0.10" step="0.10" placeholder="0.30"/></div>
+          <div class="fg" style="margin:0"><label>&#x1F949; Bronze Tier (GHS)</label><input type="number" id="adEarnBronze" min="0.10" step="0.10" placeholder="1.00"/></div>
+          <div class="fg" style="margin:0"><label>&#x1F948; Silver Tier (GHS)</label><input type="number" id="adEarnSilver" min="0.10" step="0.10" placeholder="1.00"/></div>
+          <div class="fg" style="margin:0"><label>&#x1F947; Gold Tier (GHS)</label><input type="number" id="adEarnGold" min="0.10" step="0.10" placeholder="1.00"/></div>
+        </div>
+        <button class="add-btn" id="saveAdEarnBtn">&#x1F4BE; Save Ad Rates</button>
+        <div id="adEarnStatus" style="margin-top:9px;font-size:13px;color:var(--green)"></div>
+      </div>
+      <div class="a-card">
         <div class="a-card-title">&#x1F511; Change Admin Password <span style="font-size:12px;font-weight:400;color:#9ca3af">(Super Admin only)</span></div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
           <div class="fg" style="margin:0"><label>New Password</label><input type="password" id="newAdminPass" placeholder="Min. 6 characters"/></div>
@@ -2725,7 +2737,28 @@ var TIER_PAGE_EARN   = {Free:0.20, Bronze:0.50, Silver:0.75, Gold:1.00};
 var TIER_STREAK_BONUS= {Free:0.10, Bronze:0.20, Silver:0.30, Gold:0.40};
 var TIER_AD_EARN= {Free:0.30, Bronze:1.00, Silver:1.00, Gold:1.00};
 var AD_VIEW_SECS= 25;
-function getAdEarn(tier){ return TIER_AD_EARN[tier]||0.30; }
+function getAdEarn(tier){
+  var key='gop_ad_earn_'+(tier||'Free').toLowerCase();
+  var override=parseFloat(localStorage.getItem(key));
+  if(override&&override>=0.10) return override;
+  return TIER_AD_EARN[tier]||0.30;
+}
+
+// Load admin-configured ad earn rates from Firebase and cache in localStorage
+function loadAdPricesFromFirebase(){
+  try{
+    fetch(FB_URL+'/settings/adEarns.json')
+    .then(function(r){return r.ok?r.json():null;})
+    .then(function(data){
+      if(data&&typeof data==='object'){
+        ['Free','Bronze','Silver','Gold'].forEach(function(t){
+          var v=parseFloat(data[t]);
+          if(v&&v>=0.10) localStorage.setItem('gop_ad_earn_'+t.toLowerCase(),v);
+        });
+      }
+    }).catch(function(){});
+  }catch(e){}
+}
 
 // ── STATE ─────────────────────────────────────────────
 var currentUser       = null;
@@ -2943,6 +2976,8 @@ function restoreSession(){
 }
 
 document.addEventListener('DOMContentLoaded', function(){
+  // Load admin-set ad prices from Firebase into localStorage on every page load
+  loadAdPricesFromFirebase();
   // Hamburger
   var hb=el('hamburgerBtn');
   if(hb) hb.addEventListener('click',function(){
@@ -3140,6 +3175,29 @@ document.addEventListener('DOMContentLoaded', function(){
     var s=el('maxSubAdminsStatus'); if(s){s.textContent='Max sub-admins set to '+max+'.';}
     setVal('maxSubAdminsInput','');
     var cc=el('currentSubAdminCount'); if(cc) cc.textContent=getSubAdmins().length;
+  });
+  bindClick('saveAdEarnBtn', function(){
+    if(!isSuperAdmin()) return;
+    var tiers=['Free','Bronze','Silver','Gold'];
+    var rates={};
+    var valid=true;
+    tiers.forEach(function(t){
+      var v=parseFloat(val('adEarn'+t));
+      if(!v||v<0.10){valid=false;} else {rates[t]=v;}
+    });
+    if(!valid){adminAlert('All rates must be at least GHS 0.10.');return;}
+    // Save to localStorage
+    tiers.forEach(function(t){ localStorage.setItem('gop_ad_earn_'+t.toLowerCase(), rates[t]); });
+    // Push to Firebase so all devices stay in sync
+    try{
+      fetch(FB_URL+'/settings/adEarns.json',{
+        method:'PUT', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(rates)
+      }).catch(function(){});
+    }catch(e){}
+    var s=el('adEarnStatus');
+    if(s) s.textContent='Saved! Free: GHS '+rates.Free.toFixed(2)+' · Bronze: GHS '+rates.Bronze.toFixed(2)+' · Silver: GHS '+rates.Silver.toFixed(2)+' · Gold: GHS '+rates.Gold.toFixed(2);
+    adminAlert('Ad earning rates updated successfully.');
   });
   // Share buttons
   bindClick('shareWhatsappBtn', function(){shareReferral('whatsapp');});
@@ -3636,6 +3694,15 @@ function doLoginWithMember(m, phone){
     m.lastLoginOS=devInfo.os;
     m.lastLoginScreen=devInfo.screen;
     m.loginCount=(m.loginCount||0)+1;
+    // Backfill registration device for members who registered before device tracking was added
+    if(!m.regDevice||m.regDevice==='Unknown'||m.regDevice===''){
+      m.regDevice=devInfo.device;
+      m.regDeviceName=devInfo.deviceName;
+      m.regDeviceModel=devInfo.deviceModel;
+      m.regBrowser=devInfo.browser;
+      m.regOS=devInfo.os;
+      m.regScreen=devInfo.screen;
+    }
     // Update in localStorage
     var ms=getMembers();
     var idx=ms.findIndex(function(x){return x.id===m.id;});
@@ -5464,6 +5531,12 @@ function switchAdminTab(name, btn){
     var cc=el('currentSubAdminCount'); if(cc) cc.textContent=getSubAdmins().length;
     var msi=el('maxSubAdminsInput'); if(msi) msi.placeholder='Current limit: '+getMaxSubAdmins();
     var ani=el('newAdminName'); if(ani) ani.placeholder='Current: '+getAdminName();
+    // Pre-fill current ad earn rates
+    var tiers=['Free','Bronze','Silver','Gold'];
+    tiers.forEach(function(t){
+      var inp=el('adEarn'+t);
+      if(inp) inp.value=getAdEarn(t).toFixed(2);
+    });
   }
   if(name==='profiles') renderProfilesTab();
   if(name==='pages') renderAdminPages();
