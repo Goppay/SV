@@ -2264,7 +2264,9 @@ var MAKE_WEBHOOK_URL = 'https://goppay-backend.onrender.com';
 //   4. Paste it into FB_URL below and redeploy this file — done.
 var FB_URL = 'https://goppay-6c8b0-default-rtdb.asia-southeast1.firebasedatabase.app';
 // Always point to the Replit API server regardless of where this file is hosted.
-var GOP_API = 'https://9eca0e15-6816-4187-ba1d-fc0e7ea6facf-00-3dizy0b0sxax4.janeway.replit.dev/api';
+var GOP_API = 'https://4a7c4b42-ee8a-41f1-bfb3-c17ac1ac5937-00-ov6asphr13nt.riker.replit.dev/api';
+// Paystack payment verification endpoint (server-side — secret key never exposed to client)
+var VERIFY_URL = GOP_API + '/verify-upgrade';
 
 // Write a member record to Firebase (keyed by sanitised member id)
 function syncMemberToBackend(member){
@@ -3476,6 +3478,133 @@ document.addEventListener('DOMContentLoaded', function(){
       if(st) st.textContent='Updated '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
     });
   });
+  // ── PAYSTACK REGISTRATION CALLBACK ───────────────────────────────────────
+  // When Paystack redirects the registration popup back here after payment, verify it
+  // server-side, set a localStorage flag, then close the popup window.
+  (function(){
+    var _rp=new URLSearchParams(window.location.search);
+    if(_rp.get('reg_callback')!=='1') return;
+    var _trxref=_rp.get('trxref')||_rp.get('reference');
+    var _ref=_rp.get('ref');
+    try{window.history.replaceState({},'',window.location.pathname);}catch(e){}
+    var _ov=document.createElement('div');
+    _ov.id='gopRegCallbackOverlay';
+    _ov.style.cssText='position:fixed;inset:0;z-index:99999;background:#fff;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;font-family:sans-serif;padding:24px;text-align:center';
+    _ov.innerHTML='<div style="width:48px;height:48px;border:4px solid #d4edda;border-top-color:#0d4a22;border-radius:50%;animation:spin 1s linear infinite"></div>'
+      +'<div style="font-size:18px;font-weight:700;color:#0d4a22">Verifying your payment&hellip;</div>'
+      +'<div style="font-size:13px;color:#7a7a70">Please wait while we confirm your registration payment with Paystack.</div>';
+    document.body.appendChild(_ov);
+    if(!_trxref||!_ref){
+      _ov.innerHTML='<div style="font-size:22px">&#x26A0;</div><div style="font-size:16px;font-weight:700;color:#CE1126">Missing payment reference</div><div style="font-size:13px;color:#7a7a70;margin-top:8px">Please contact support at Ghanaopinionpay@gmail.com.</div><button onclick="window.close()" style="margin-top:14px;background:#CE1126;color:#fff;border:none;border-radius:8px;padding:10px 24px;font-size:13px;cursor:pointer;font-family:sans-serif">Close</button>';
+      return;
+    }
+    // Detect whether we are in a popup (has opener) or a same-tab redirect
+    var _isPopup=!!window.opener;
+    // Load pending registration data — needed for same-tab redirect account creation
+    var _pendingRaw=null; var _pendingData=null;
+    try{_pendingRaw=localStorage.getItem('gop_pending_payment');}catch(e){}
+    try{if(_pendingRaw) _pendingData=JSON.parse(_pendingRaw);}catch(e){}
+
+    fetch(VERIFY_URL+'?reference='+encodeURIComponent(_trxref))
+      .then(function(r){return r.json();})
+      .then(function(data){
+        if(data.verified){
+          if(_isPopup){
+            // Popup flow — signal parent window via localStorage then close
+            try{localStorage.setItem('gop_reg_verified_'+_ref,_trxref);}catch(e){}
+            _ov.innerHTML='<div style="width:58px;height:58px;border-radius:50%;background:#d4edda;display:flex;align-items:center;justify-content:center;font-size:28px">&#x2705;</div>'
+              +'<div style="font-size:19px;font-weight:700;color:#0d4a22">Payment Confirmed!</div>'
+              +'<div style="font-size:13px;color:#4a4a42;max-width:300px">Creating your account now. This window will close automatically.</div>';
+            setTimeout(function(){try{window.close();}catch(e){}},1800);
+          } else {
+            // Same-tab redirect flow — create account directly
+            try{localStorage.removeItem('gop_pending_payment');}catch(e){}
+            if(_pendingData&&_pendingData.reg&&_pendingData.tier){
+              _ov.innerHTML='<div style="width:58px;height:58px;border-radius:50%;background:#d4edda;display:flex;align-items:center;justify-content:center;font-size:28px">&#x2705;</div>'
+                +'<div style="font-size:19px;font-weight:700;color:#0d4a22">Payment Confirmed!</div>'
+                +'<div style="font-size:13px;color:#4a4a42;max-width:300px">Setting up your account&hellip;</div>';
+              setTimeout(function(){
+                document.body.removeChild(_ov);
+                createMemberAccount(_pendingData.reg, _pendingData.tier, _trxref);
+              },800);
+            } else {
+              _ov.innerHTML='<div style="font-size:22px">&#x2705;</div>'
+                +'<div style="font-size:16px;font-weight:700;color:#0d4a22">Payment Confirmed</div>'
+                +'<div style="font-size:13px;color:#4a4a42;max-width:300px;line-height:1.6;margin-top:4px">Your payment was verified. Please contact support at Ghanaopinionpay@gmail.com with reference <strong>'+_trxref+'</strong> to have your account activated.</div>';
+            }
+          }
+        } else {
+          if(_isPopup){
+            try{localStorage.setItem('gop_reg_failed_'+_ref,'1');}catch(e){}
+          }
+          _ov.innerHTML='<div style="width:58px;height:58px;border-radius:50%;background:#fdeaec;display:flex;align-items:center;justify-content:center;font-size:28px">&#x26A0;</div>'
+            +'<div style="font-size:19px;font-weight:700;color:#CE1126">Payment Not Verified</div>'
+            +'<div style="font-size:13px;color:#4a4a42;max-width:320px;line-height:1.6;margin-top:4px">'+(data.message||'Your payment was not confirmed by Paystack. If money was deducted, please contact Ghanaopinionpay@gmail.com with your payment reference.')+'</div>'
+            +(_isPopup?'<button onclick="window.close()" style="margin-top:14px;background:#CE1126;color:#fff;border:none;border-radius:8px;padding:10px 24px;font-size:13px;cursor:pointer;font-family:sans-serif">Close Window</button>':'');
+        }
+      })
+      .catch(function(){
+        if(_isPopup){
+          try{localStorage.setItem('gop_reg_failed_'+_ref,'1');}catch(e){}
+        }
+        _ov.innerHTML='<div style="font-size:22px">&#x26A0;</div>'
+          +'<div style="font-size:16px;font-weight:700;color:#CE1126">Verification Unavailable</div>'
+          +'<div style="font-size:13px;color:#4a4a42;max-width:300px;line-height:1.6;margin-top:4px">Could not reach the verification server. Please contact support at Ghanaopinionpay@gmail.com to have your account activated manually.</div>'
+          +(_isPopup?'<button onclick="window.close()" style="margin-top:14px;background:#0d4a22;color:#fff;border:none;border-radius:8px;padding:10px 24px;font-size:13px;cursor:pointer;font-family:sans-serif">Close Window</button>':'');
+      });
+    return;
+  })();
+  // ─────────────────────────────────────────────────────────────────────────
+
+  // ── PAYSTACK UPGRADE CALLBACK ────────────────────────────────────────────
+  // When Paystack redirects the popup back to this page after payment, detect it
+  // early, verify the reference server-side, then set a localStorage flag and close.
+  (function(){
+    var _up=new URLSearchParams(window.location.search);
+    if(_up.get('upgrade_callback')!=='1') return;
+    var _trxref=_up.get('trxref')||_up.get('reference');
+    var _reqId=_up.get('reqId');
+    try{window.history.replaceState({},'',window.location.pathname);}catch(e){}
+    // Show full-page verification overlay (prevents the rest of the app rendering in the popup)
+    var _ov=document.createElement('div');
+    _ov.id='gopUpgradeCallbackOverlay';
+    _ov.style.cssText='position:fixed;inset:0;z-index:99999;background:#fff;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;font-family:sans-serif;padding:24px;text-align:center';
+    _ov.innerHTML='<div style="width:48px;height:48px;border:4px solid #d4edda;border-top-color:#0d4a22;border-radius:50%;animation:spin 1s linear infinite"></div>'
+      +'<div style="font-size:18px;font-weight:700;color:#0d4a22">Verifying your payment&hellip;</div>'
+      +'<div style="font-size:13px;color:#7a7a70">Please wait while we confirm your payment with Paystack.</div>';
+    document.body.appendChild(_ov);
+    if(!_trxref||!_reqId){
+      _ov.innerHTML='<div style="font-size:22px">&#x26A0;</div><div style="font-size:16px;font-weight:700;color:#CE1126">Missing payment reference</div><div style="font-size:13px;color:#7a7a70;margin-top:8px">Please contact support.</div><button onclick="window.close()" style="margin-top:14px;background:#CE1126;color:#fff;border:none;border-radius:8px;padding:10px 24px;font-size:13px;cursor:pointer;font-family:sans-serif">Close</button>';
+      return;
+    }
+    fetch(VERIFY_URL+'?reference='+encodeURIComponent(_trxref))
+      .then(function(r){return r.json();})
+      .then(function(data){
+        if(data.verified){
+          try{localStorage.setItem('gop_upgrade_verified_'+_reqId,_trxref);}catch(e){}
+          _ov.innerHTML='<div style="width:58px;height:58px;border-radius:50%;background:#d4edda;display:flex;align-items:center;justify-content:center;font-size:28px">&#x2705;</div>'
+            +'<div style="font-size:19px;font-weight:700;color:#0d4a22">Payment Confirmed!</div>'
+            +'<div style="font-size:13px;color:#4a4a42;max-width:300px">Your upgrade is being applied. This window will close automatically.</div>';
+          setTimeout(function(){try{window.close();}catch(e){}},1800);
+        } else {
+          try{localStorage.setItem('gop_upgrade_failed_'+_reqId,'1');}catch(e){}
+          _ov.innerHTML='<div style="width:58px;height:58px;border-radius:50%;background:#fdeaec;display:flex;align-items:center;justify-content:center;font-size:28px">&#x26A0;</div>'
+            +'<div style="font-size:19px;font-weight:700;color:#CE1126">Payment Not Verified</div>'
+            +'<div style="font-size:13px;color:#4a4a42;max-width:320px;line-height:1.6;margin-top:4px">'+(data.message||'Your payment was not confirmed by Paystack. If money was deducted, please contact support at Ghanaopinionpay@gmail.com with your payment reference.')+'</div>'
+            +'<button onclick="window.close()" style="margin-top:14px;background:#CE1126;color:#fff;border:none;border-radius:8px;padding:10px 24px;font-size:13px;cursor:pointer;font-family:sans-serif">Close Window</button>';
+        }
+      })
+      .catch(function(){
+        try{localStorage.setItem('gop_upgrade_failed_'+_reqId,'1');}catch(e){}
+        _ov.innerHTML='<div style="font-size:22px">&#x26A0;</div>'
+          +'<div style="font-size:16px;font-weight:700;color:#CE1126">Verification Unavailable</div>'
+          +'<div style="font-size:13px;color:#4a4a42;max-width:300px;line-height:1.6;margin-top:4px">Could not reach the verification server. Your request has been saved as pending — admin will confirm your payment manually.</div>'
+          +'<button onclick="window.close()" style="margin-top:14px;background:#0d4a22;color:#fff;border:none;border-radius:8px;padding:10px 24px;font-size:13px;cursor:pointer;font-family:sans-serif">Close Window</button>';
+      });
+    return; // Skip rest of DOMContentLoaded — we are in the popup callback context
+  })();
+  // ─────────────────────────────────────────────────────────────────────────
+
   // Restore session after refresh — must be last so all DOM elements are ready
   restoreSession();
   // Paystack payment callback check (URL-based returns)
@@ -7759,11 +7888,14 @@ function submitUpgradeRequest(){
   }
 
   // Open Paystack payment page in popup
+  // callback_url brings the popup back to this page with upgrade_callback=1 so we can verify payment
   var slug=PAYSTACK_PAGES[targetTier]||PAYSTACK_PAGES['Bronze']||'goppay';
+  var upgradeCallbackUrl=window.location.href.split('?')[0]+'?upgrade_callback=1&reqId='+encodeURIComponent(req.id);
   var url='https://paystack.shop/pay/'+slug
     +'?email='+encodeURIComponent(currentUser.email)
     +'&name='+encodeURIComponent(currentUser.firstName+' '+currentUser.lastName)
-    +'&amount='+(fee*100);
+    +'&amount='+(fee*100)
+    +'&callback_url='+encodeURIComponent(upgradeCallbackUrl);
 
   var btn=el('submitUpgradeBtn');
   if(btn){btn.disabled=true;btn.innerHTML='&#x23F3; Opening Paystack...';}
@@ -7798,20 +7930,59 @@ function submitUpgradeRequest(){
       clearInterval(pollInterval);
       if(btn){btn.disabled=false; btn.innerHTML='&#x1F4B3; Pay &amp; Upgrade via Paystack &#x2192;';}
 
-      // Show pending-verification message — DO NOT auto-apply upgrade without confirmed payment
-      if(msgEl){
-        msgEl.style.display='block';
-        msgEl.style.background='#e0f2fe';
-        msgEl.style.border='1px solid #0ea5e9';
-        msgEl.style.color='#0369a1';
-        msgEl.innerHTML='&#x23F3; Payment window closed. If you completed payment, your upgrade request has been submitted and is <strong>pending admin verification</strong>. You will be notified once approved.<br><a href="#" id="upgradeCancelRetryLink" style="font-size:12px;color:var(--red);font-weight:600;margin-top:6px;display:inline-block">&#x2716; Didn\'t pay? Cancel this request</a>';
-      }
+      // Check if payment was verified by the callback handler (set in localStorage by upgrade_callback page)
+      var verifiedRef=null;
+      var payFailed=false;
+      try{verifiedRef=localStorage.getItem('gop_upgrade_verified_'+req.id);}catch(e){}
+      try{payFailed=!!localStorage.getItem('gop_upgrade_failed_'+req.id);}catch(e){}
+      try{localStorage.removeItem('gop_upgrade_verified_'+req.id);}catch(e){}
+      try{localStorage.removeItem('gop_upgrade_failed_'+req.id);}catch(e){}
 
-      // Wire cancel link
-      setTimeout(function(){
-        var cLink=el('upgradeCancelRetryLink');
-        if(cLink) cLink.addEventListener('click',function(e){e.preventDefault(); cancelUpgradeAttempt();});
-      },100);
+      if(verifiedRef){
+        // Paystack confirmed payment — apply upgrade immediately
+        if(msgEl){
+          msgEl.style.display='block';
+          msgEl.style.background='var(--green-pale)';
+          msgEl.style.border='1px solid var(--green)';
+          msgEl.style.color='var(--green)';
+          msgEl.innerHTML='&#x23F3; Payment confirmed! Activating your upgrade&hellip;';
+        }
+        var allReqs=getUpgradeReqs();
+        var ri=allReqs.findIndex(function(r){return r.id===req.id;});
+        if(ri>=0){allReqs[ri].paystackRef=verifiedRef; allReqs[ri].status='approved'; allReqs[ri].approvedAt=new Date().toISOString(); saveUpgradeReqs(allReqs); syncUpgradesToFirebase();}
+        try{localStorage.removeItem('gop_pending_upgrade');}catch(e){}
+        autoApplyUpgrade(currentUser.id, targetTier, fee, req.id);
+        setVal('upgradeNotes','');
+        if(el('upgradeFormWrap')) el('upgradeFormWrap').style.display='none';
+
+      } else if(payFailed){
+        // Paystack returned but payment was not successful
+        if(msgEl){
+          msgEl.style.display='block';
+          msgEl.style.background='var(--red-pale)';
+          msgEl.style.border='1px solid var(--red)';
+          msgEl.style.color='var(--red)';
+          msgEl.innerHTML='&#x26A0; Payment could not be verified by Paystack. Your upgrade request remains <strong>pending</strong>. Contact support at Ghanaopinionpay@gmail.com if money was deducted from your account.<br><a href="#" id="upgradeCancelRetryLink" style="font-size:12px;color:var(--red);font-weight:600;margin-top:6px;display:inline-block">&#x2716; Cancel this request and retry</a>';
+        }
+        setTimeout(function(){
+          var cLink=el('upgradeCancelRetryLink');
+          if(cLink) cLink.addEventListener('click',function(e){e.preventDefault(); cancelUpgradeAttempt();});
+        },100);
+
+      } else {
+        // Popup closed without a Paystack callback (user closed manually before completing payment)
+        if(msgEl){
+          msgEl.style.display='block';
+          msgEl.style.background='#e0f2fe';
+          msgEl.style.border='1px solid #0ea5e9';
+          msgEl.style.color='#0369a1';
+          msgEl.innerHTML='&#x23F3; Payment window closed. If you completed payment, your upgrade request is <strong>pending admin verification</strong>. You will be notified once it is confirmed.<br><a href="#" id="upgradeCancelRetryLink" style="font-size:12px;color:var(--red);font-weight:600;margin-top:6px;display:inline-block">&#x2716; Didn\'t pay? Cancel this request</a>';
+        }
+        setTimeout(function(){
+          var cLink=el('upgradeCancelRetryLink');
+          if(cLink) cLink.addEventListener('click',function(e){e.preventDefault(); cancelUpgradeAttempt();});
+        },100);
+      }
     }
   },500);
 }
@@ -10098,10 +10269,13 @@ function confirmPayment(){
     return;
   }
   var slug=PAYSTACK_PAGES[tier.tier]||'goppay';
+  // callback_url brings the popup back to this page with reg_callback=1 so we can verify payment
+  var regCallbackUrl=window.location.href.split('?')[0]+'?reg_callback=1&ref='+encodeURIComponent(ref);
   var url='https://paystack.shop/pay/'+slug
     +'?email='+encodeURIComponent(reg.email)
     +'&name='+encodeURIComponent(reg.firstName+' '+reg.lastName)
-    +'&amount='+(tier.fee*100);
+    +'&amount='+(tier.fee*100)
+    +'&callback_url='+encodeURIComponent(regCallbackUrl);
 
   // Open in popup window
   var w=600, h=700;
@@ -10113,28 +10287,57 @@ function confirmPayment(){
   );
 
   if(!_paymentWindow||_paymentWindow.closed||typeof _paymentWindow.closed==='undefined'){
-    // Popup was blocked — redirect instead
+    // Popup was blocked — redirect instead (callback_url includes reg_callback=1 for verification)
     restoreBtn();
     try{localStorage.setItem('gop_pending_payment', JSON.stringify({ref:ref, reg:reg, tier:tier}));}catch(e){}
     if(confirm('Popup was blocked by your browser.\n\nClick OK to open Paystack in this tab instead.\n\nYou will be brought back after payment.')){
-      var callbackUrl=window.location.href.split('?')[0]+'?ref='+encodeURIComponent(ref);
       window.location.href='https://paystack.shop/pay/'+slug
         +'?email='+encodeURIComponent(reg.email)
         +'&name='+encodeURIComponent(reg.firstName+' '+reg.lastName)
         +'&amount='+(tier.fee*100)
-        +'&callback_url='+encodeURIComponent(callbackUrl);
+        +'&callback_url='+encodeURIComponent(regCallbackUrl);
     }
     return;
   }
 
-  // Poll for popup close — when closed, check localStorage for payment confirmation
+  // Poll for popup close — check localStorage flag set by reg_callback verification handler
   if(_paymentCheckInterval) clearInterval(_paymentCheckInterval);
   _paymentCheckInterval=setInterval(function(){
     if(!_paymentWindow||_paymentWindow.closed){
       clearInterval(_paymentCheckInterval);
       restoreBtn();
-      // Check if payment was confirmed (set by Paystack callback redirect)
-      checkPaystackReturn();
+
+      var verifiedTrxref=null;
+      var regPayFailed=false;
+      try{verifiedTrxref=localStorage.getItem('gop_reg_verified_'+ref);}catch(e){}
+      try{regPayFailed=!!localStorage.getItem('gop_reg_failed_'+ref);}catch(e){}
+      try{localStorage.removeItem('gop_reg_verified_'+ref);}catch(e){}
+      try{localStorage.removeItem('gop_reg_failed_'+ref);}catch(e){}
+
+      if(verifiedTrxref){
+        // Paystack confirmed — create account
+        try{localStorage.removeItem('gop_pending_payment');}catch(e){}
+        createMemberAccount(reg, tier, verifiedTrxref);
+      } else if(regPayFailed){
+        var ppMsg=el('ppMsg');
+        if(ppMsg){
+          ppMsg.style.display='block';
+          ppMsg.style.background='var(--red-pale)';
+          ppMsg.style.border='1px solid var(--red)';
+          ppMsg.style.color='var(--red)';
+          ppMsg.innerHTML='&#x26A0; Payment could not be verified by Paystack. Your account has <strong>not</strong> been created. If money was deducted, please contact support at Ghanaopinionpay@gmail.com with your payment reference.';
+        }
+      } else {
+        // Popup closed manually without completing payment
+        var ppMsg2=el('ppMsg');
+        if(ppMsg2){
+          ppMsg2.style.display='block';
+          ppMsg2.style.background='#e0f2fe';
+          ppMsg2.style.border='1px solid #0ea5e9';
+          ppMsg2.style.color='#0369a1';
+          ppMsg2.innerHTML='&#x23F3; Payment window closed. If you completed payment, please wait a moment or contact support at Ghanaopinionpay@gmail.com with your payment reference to have your account activated.';
+        }
+      }
     }
   },500);
 }
@@ -10159,7 +10362,7 @@ function checkPaystackReturn(){
     }
   }
 
-  // Check if this was an upgrade payment redirect
+  // Check if this was an upgrade payment redirect (popup-blocked fallback — same-tab redirect)
   var upgradeRaw=null;
   try{upgradeRaw=localStorage.getItem('gop_pending_upgrade');}catch(e){}
   if(upgradeRaw){
@@ -10167,25 +10370,36 @@ function checkPaystackReturn(){
     try{upgradePending=JSON.parse(upgradeRaw);}catch(e){}
     if(upgradePending&&upgradePending.reqId){
       try{localStorage.removeItem('gop_pending_upgrade');}catch(e){}
-      var allReqs=getUpgradeReqs();
-      var uReq=allReqs.find(function(r){return r.id===upgradePending.reqId;});
-      if(uReq&&uReq.status==='pending'){
-        var uIdx=allReqs.findIndex(function(r){return r.id===upgradePending.reqId;});
-        allReqs[uIdx].paystackRef=trxref; allReqs[uIdx].status='approved'; allReqs[uIdx].approvedAt=new Date().toISOString();
-        saveUpgradeReqs(allReqs); syncUpgradesToFirebase();
-        // Load current user from session then apply upgrade
-        var sessM=null;
-        try{sessM=JSON.parse(sessionStorage.getItem('gop_session')||localStorage.getItem('gop_session')||'null');}catch(e){}
-        if(!sessM&&currentUser&&currentUser!=='admin') sessM=currentUser;
-        if(sessM&&sessM.id===uReq.memberId){
-          autoApplyUpgrade(uReq.memberId, uReq.targetTier, uReq.fee, uReq.id);
-        } else {
-          // User not in session — just save the upgrade and show a message
-          var uMembers=getMembers();
-          var uMi=uMembers.findIndex(function(m){return m.id===uReq.memberId;});
-          if(uMi>=0){uMembers[uMi].tier=uReq.targetTier; uMembers[uMi].fee=(uMembers[uMi].fee||0)+uReq.fee; saveMembers(uMembers); syncMemberToBackend(uMembers[uMi]);}
-        }
-      }
+      // Verify with Paystack before applying — never upgrade without server confirmation
+      fetch(VERIFY_URL+'?reference='+encodeURIComponent(trxref))
+        .then(function(r){return r.json();})
+        .then(function(data){
+          var allReqs=getUpgradeReqs();
+          var uReq=allReqs.find(function(r){return r.id===upgradePending.reqId;});
+          if(!uReq||uReq.status!=='pending') return;
+          var uIdx=allReqs.findIndex(function(r){return r.id===upgradePending.reqId;});
+          if(data.verified){
+            allReqs[uIdx].paystackRef=trxref; allReqs[uIdx].status='approved'; allReqs[uIdx].approvedAt=new Date().toISOString();
+            saveUpgradeReqs(allReqs); syncUpgradesToFirebase();
+            var sessM=null;
+            try{sessM=JSON.parse(sessionStorage.getItem('gop_session')||localStorage.getItem('gop_session')||'null');}catch(e){}
+            if(!sessM&&currentUser&&currentUser!=='admin') sessM=currentUser;
+            if(sessM&&sessM.id===uReq.memberId){
+              autoApplyUpgrade(uReq.memberId, uReq.targetTier, uReq.fee, uReq.id);
+            } else {
+              var uMembers=getMembers();
+              var uMi=uMembers.findIndex(function(m){return m.id===uReq.memberId;});
+              if(uMi>=0){uMembers[uMi].tier=uReq.targetTier; uMembers[uMi].fee=(uMembers[uMi].fee||0)+uReq.fee; saveMembers(uMembers); syncMemberToBackend(uMembers[uMi]);}
+            }
+          } else {
+            // Payment not confirmed — leave as pending, notify member
+            allReqs[uIdx].paystackRef=trxref; allReqs[uIdx].status='pending'; saveUpgradeReqs(allReqs); syncUpgradesToFirebase();
+            adminAlert('Upgrade payment for request '+upgradePending.reqId+' could not be verified by Paystack. Reference: '+trxref+'. Please check your Paystack dashboard and approve or deny manually.');
+          }
+        })
+        .catch(function(){
+          // Verification server unreachable — leave upgrade as pending for admin review
+        });
       return;
     }
   }
@@ -10201,7 +10415,20 @@ function checkPaystackReturn(){
     showManualActivation(trxref);
     return;
   }
-  createMemberAccount(pending.reg, pending.tier, trxref);
+  // Verify with Paystack before creating account — never activate without server confirmation
+  fetch(VERIFY_URL+'?reference='+encodeURIComponent(trxref))
+    .then(function(r){return r.json();})
+    .then(function(data){
+      if(data.verified){
+        createMemberAccount(pending.reg, pending.tier, trxref);
+      } else {
+        showManualActivation(trxref);
+      }
+    })
+    .catch(function(){
+      // Server unreachable — fall through to manual activation
+      showManualActivation(trxref);
+    });
 }
 
 function createMemberAccount(reg, tier, ref){
