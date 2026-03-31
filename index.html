@@ -1714,7 +1714,10 @@ iframe[src*="badge"]{
           <span>&#x1F4CB; Surveys</span>
           <div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap">
             <button class="add-btn" id="addSurveyBtn">+ Add Survey</button>
-            <button class="abtn" id="genSurveyBtn" style="border-color:var(--green);color:var(--green)" title="Auto-generate a Ghanaian survey question">&#x26A1; Generate Ghana Survey</button>
+            <div style="display:flex;align-items:center;gap:4px">
+              <input type="number" id="genSurveyCount" min="1" max="10" value="1" title="Number of surveys to generate" style="width:44px;padding:4px 6px;border:1.5px solid var(--green);border-radius:7px;font-size:13px;text-align:center;color:var(--green);font-weight:700;background:#fff;outline:none">
+              <button class="abtn" id="genSurveyBtn" style="border-color:var(--green);color:var(--green)" title="Auto-generate Ghanaian surveys using AI">&#x26A1; Generate Survey</button>
+            </div>
             <button class="abtn content-toggle" data-target="surveyCardBody" data-label="Surveys" style="min-width:32px;padding:4px 10px;font-size:13px" title="Expand">&#x25BC;</button>
           </div>
         </div>
@@ -1725,7 +1728,10 @@ iframe[src*="badge"]{
           <span>&#x26A1; Polls</span>
           <div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap">
             <button class="add-btn" id="addPollBtn">+ Add Poll</button>
-            <button class="abtn" id="genPollBtn" style="border-color:var(--green);color:var(--green)" title="Auto-generate a Ghanaian poll question">&#x26A1; Generate Ghana Poll</button>
+            <div style="display:flex;align-items:center;gap:4px">
+              <input type="number" id="genPollCount" min="1" max="10" value="1" title="Number of polls to generate" style="width:44px;padding:4px 6px;border:1.5px solid var(--green);border-radius:7px;font-size:13px;text-align:center;color:var(--green);font-weight:700;background:#fff;outline:none">
+              <button class="abtn" id="genPollBtn" style="border-color:var(--green);color:var(--green)" title="Auto-generate Ghanaian polls using AI">&#x26A1; Generate Poll</button>
+            </div>
             <button class="abtn content-toggle" data-target="pollCardBody" data-label="Polls" style="min-width:32px;padding:4px 10px;font-size:13px" title="Expand">&#x25BC;</button>
           </div>
         </div>
@@ -2315,6 +2321,8 @@ var FB_URL = 'https://goppay-6c8b0-default-rtdb.asia-southeast1.firebasedatabase
 var GOP_API = 'https://4a7c4b42-ee8a-41f1-bfb3-c17ac1ac5937-00-ov6asphr13nt.riker.replit.dev/api';
 // Paystack payment verification endpoint (server-side — secret key never exposed to client)
 var VERIFY_URL = GOP_API + '/verify-upgrade';
+// AI content generation endpoint (OpenAI-powered survey/poll generator)
+var AI_API_URL = 'https://03cea8de-0042-48e3-a514-f782361d2abc-00-3dykvnounflo5.picard.replit.dev/api';
 
 // Write a member record to Firebase (keyed by sanitised member id)
 function syncMemberToBackend(member){
@@ -4209,6 +4217,29 @@ function refreshDailyAssignments(memberRef){
     var regular=availS.filter(function(s){return s.type!=='gh-affairs';});
     m.dailyOfferedSurveys=ghAff.concat(regular.slice(0,lim)).map(function(s){return s.id;});
     changed=true;
+  } else {
+    // Top-up: add any newly active surveys not yet offered or completed today
+    var lim=TIER_DAILY[m.tier]||5;
+    var currentOffered=m.dailyOfferedSurveys;
+    var completedNow=m.completedSurveys||[];
+    var allSurveys=getSurveys();
+    // Ghana Affairs surveys: always add if not yet offered and not completed
+    var newGhAff=allSurveys.filter(function(s){
+      return s.active&&s.type==='gh-affairs'&&!currentOffered.includes(s.id)&&!completedNow.includes(s.id);
+    });
+    // Regular surveys: add new ones up to the daily limit cap
+    var currentRegularOfferedCount=currentOffered.filter(function(sid){
+      var sv=allSurveys.find(function(x){return x.id===sid;});
+      return sv&&sv.type!=='gh-affairs';
+    }).length;
+    var slotsLeft=Math.max(0,lim-currentRegularOfferedCount);
+    var newRegular=allSurveys.filter(function(s){
+      return s.active&&s.type!=='gh-affairs'&&!currentOffered.includes(s.id)&&!completedNow.includes(s.id);
+    }).slice(0,slotsLeft);
+    if(newGhAff.length||newRegular.length){
+      m.dailyOfferedSurveys=currentOffered.concat(newGhAff.map(function(s){return s.id;})).concat(newRegular.map(function(s){return s.id;}));
+      changed=true;
+    }
   }
 
   // ── POLLS ──
@@ -4228,6 +4259,21 @@ function refreshDailyAssignments(memberRef){
     var availP=getPolls().filter(function(p){return p.active&&!(m.answeredPolls||[]).includes(p.id);});
     m.dailyOfferedPolls=availP.slice(0,pollLim).map(function(p){return p.id;});
     changed=true;
+  } else {
+    // Top-up: add any newly active polls not yet offered or answered today
+    var pollLim=Math.max(0,(TIER_POLLS[m.tier]||0)+(m.extraPolls||0));
+    var currentOfferedPolls=m.dailyOfferedPolls;
+    var answeredNow=m.answeredPolls||[];
+    var pollSlotsLeft=Math.max(0,pollLim-currentOfferedPolls.length);
+    if(pollSlotsLeft>0){
+      var newPolls=getPolls().filter(function(p){
+        return p.active&&!currentOfferedPolls.includes(p.id)&&!answeredNow.includes(p.id);
+      }).slice(0,pollSlotsLeft);
+      if(newPolls.length){
+        m.dailyOfferedPolls=currentOfferedPolls.concat(newPolls.map(function(p){return p.id;}));
+        changed=true;
+      }
+    }
   }
 
   // ── ADS ──
@@ -4257,6 +4303,27 @@ function refreshDailyAssignments(memberRef){
     });
     m.dailyOfferedAds=availA.slice(0,adLim).map(function(a){return a.id;});
     changed=true;
+  } else {
+    // Top-up: add any newly active ads not yet offered, skipped, or viewed today
+    var adLim=TIER_ADS[m.tier]||5;
+    var currentOfferedAds=m.dailyOfferedAds;
+    var adSlotsLeft=Math.max(0,adLim-currentOfferedAds.length);
+    if(adSlotsLeft>0){
+      var nowDate=new Date().toISOString().slice(0,10);
+      var newAds=getAds().filter(function(ad){
+        if(!ad.active) return false;
+        if(currentOfferedAds.includes(ad.id)) return false;
+        if((m.skippedAds||[]).includes(ad.id)) return false;
+        if((m.viewedAdsToday||[]).includes(ad.id)) return false;
+        if(ad.start&&nowDate<ad.start) return false;
+        if(ad.end&&nowDate>ad.end) return false;
+        return true;
+      }).slice(0,adSlotsLeft);
+      if(newAds.length){
+        m.dailyOfferedAds=currentOfferedAds.concat(newAds.map(function(a){return a.id;}));
+        changed=true;
+      }
+    }
   }
 
   if(changed){members[idx]=m;saveMembers(members);currentUser=m;}
@@ -4380,7 +4447,7 @@ function renderNotifications(member){
     }
     html+='</div>';
   }
-  if(ann) html+='<div class="notif-item gold">&#x1F4E2; <strong>Admin:</strong> '+ann+'</div>';
+  if(ann) html+='<div class="notif-item gold">&#x1F4E2; <strong>Goppay:</strong> '+ann+'</div>';
   if(member.notifications&&member.notifications.length){
     // Migrate any legacy plain-string notifications to {text,ts} objects so they show a date
     var needsSave=false;
@@ -7269,39 +7336,171 @@ var GHANA_POLLS=[
   {title:'How often do you use the internet in Ghana?',options:['Multiple times daily','Once daily','Few times a week','Rarely','Never'],earn:1.00},
   {title:'Which region of Ghana has the best culture?',options:['Ashanti','Greater Accra','Volta','Northern','Western'],earn:1.00}
 ];
+// ── AI BULK GENERATION TOAST ──────────────────────────
+function showGenToast(msg, done){
+  var toast=el('aiGenToast');
+  if(!toast){
+    toast=document.createElement('div');
+    toast.id='aiGenToast';
+    toast.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:99999;background:#0d4a22;color:#fff;padding:13px 22px;border-radius:12px;font-size:14px;font-weight:600;box-shadow:0 4px 18px rgba(0,0,0,.25);display:flex;align-items:center;gap:10px;min-width:260px;max-width:90vw;transition:opacity .3s';
+    document.body.appendChild(toast);
+  }
+  toast.style.opacity='1';
+  toast.style.display='flex';
+  toast.innerHTML=(done
+    ? '<span style="font-size:18px">&#x2705;</span><span>'+msg+'</span>'
+    : '<span style="display:inline-block;width:18px;height:18px;border:2.5px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin 0.8s linear infinite;flex-shrink:0"></span><span>'+msg+'</span>');
+  if(done){
+    setTimeout(function(){if(toast){toast.style.opacity='0';setTimeout(function(){toast.style.display='none';},300);}},3000);
+  }
+}
+
 function generateGhanaContent(type){
+  // Read the count input
+  var countInput=el(type==='survey'?'genSurveyCount':'genPollCount');
+  var count=countInput?Math.max(1,Math.min(10,parseInt(countInput.value)||1)):1;
+
+  // Collect existing titles so AI doesn't repeat them
+  var existingTitles=type==='survey'
+    ?getSurveys().map(function(s){return s.title;})
+    :getPolls().map(function(p){return p.title;});
+
+  // Lock button during generation
+  var btnId=type==='survey'?'genSurveyBtn':'genPollBtn';
+  var btn=el(btnId);
+  var origTxt=btn?btn.innerHTML:'';
+  if(btn){btn.disabled=true;btn.innerHTML='&#x23F3; Generating...';}
+  if(countInput) countInput.disabled=true;
+
+  function restoreBtn(){
+    if(btn){btn.disabled=false;btn.innerHTML=origTxt;}
+    if(countInput) countInput.disabled=false;
+  }
+
+  // ── SINGLE (count=1): open form for review ──────────
+  if(count===1){
+    if(type==='survey'){expandContentCard('surveyCardBody');openAddContent('survey');}
+    else{expandContentCard('pollCardBody');openAddContent('poll');}
+
+    fetch(AI_API_URL+'/generate-content',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({type:type,existingTitles:existingTitles,count:1})
+    })
+    .then(function(r){return r.json();})
+    .then(function(data){
+      restoreBtn();
+      if(data.error){adminAlert('AI generation failed: '+data.error);return;}
+      var item=data.result;
+      if(!item||!item.title){adminAlert('AI returned an unexpected response. Please try again.');return;}
+      if(type==='survey'){
+        _pendingGenSurveyItem=item;
+        setTimeout(function(){
+          var t=el('acTitle');if(t)t.value=item.title||'';
+          var d=el('acDesc');if(d)d.value=item.desc||'';
+          var q=el('acQs');if(q)q.value=item.customQuestions?item.customQuestions.length:(item.questions||6);
+          var tm=el('acTime');if(tm)tm.value=item.timeMin||6;
+          var e=el('acEarn');if(e)e.value=parseFloat(item.earn||3).toFixed(2);
+        },80);
+      } else {
+        setTimeout(function(){
+          var t=el('acTitle');if(t)t.value=item.title||'';
+          var o=el('acOptions');if(o)o.value=(item.options||[]).join(', ');
+          var e=el('acEarn');if(e)e.value=parseFloat(item.earn||1).toFixed(2);
+        },80);
+      }
+    })
+    .catch(function(err){
+      restoreBtn();
+      _fallbackGenerate(type, existingTitles, 1, null);
+    });
+    return;
+  }
+
+  // ── BULK (count>1): auto-save all, show progress ────
+  showGenToast('Generating '+count+' '+type+'s… this may take a moment', false);
+
+  fetch(AI_API_URL+'/generate-content',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({type:type,existingTitles:existingTitles,count:count})
+  })
+  .then(function(r){return r.json();})
+  .then(function(data){
+    restoreBtn();
+    var items=data.results||[];
+    if(!items.length){
+      showGenToast('AI generation failed. '+(data.errors?(data.errors[0]||''):''), true);
+      return;
+    }
+    // Auto-save all generated items
+    if(type==='survey'){
+      var surveys=getSurveys();
+      items.forEach(function(item){
+        if(!item||!item.title) return;
+        var ns={id:'S'+Date.now()+Math.floor(Math.random()*9999),title:item.title,desc:item.desc||item.title,questions:item.customQuestions?item.customQuestions.length:(item.questions||6),timeMin:item.timeMin||6,earn:parseFloat(item.earn||3),type:'standard',active:true};
+        if(item.customQuestions&&item.customQuestions.length){ns.customQuestions=item.customQuestions;ns.questions=item.customQuestions.length;}
+        surveys.push(ns);
+      });
+      saveSurveys(surveys); syncSurveysToFirebase();
+      expandContentCard('surveyCardBody');
+      renderAdminSurveys();
+    } else {
+      var polls=getPolls();
+      items.forEach(function(item){
+        if(!item||!item.title) return;
+        var opts=(item.options||[]).filter(function(o){return o&&o.trim();});
+        if(opts.length<2) return;
+        polls.push({id:'P'+Date.now()+Math.floor(Math.random()*9999),title:item.title,options:opts,earn:parseFloat(item.earn||1),active:true});
+      });
+      savePolls(polls); syncPollsToFirebase();
+      expandContentCard('pollCardBody');
+      renderAdminPolls();
+    }
+    var saved=items.length;
+    var msg=saved+' '+type+(saved!==1?'s':'')+' generated and saved!'+(data.errors&&data.errors.length?' ('+(count-saved)+' failed)':'');
+    showGenToast(msg, true);
+  })
+  .catch(function(){
+    restoreBtn();
+    showGenToast('AI API unreachable. Please check your connection.', true);
+  });
+}
+
+// Fallback to static pool when AI API is unreachable (single-item only)
+function _fallbackGenerate(type, existingTitles, count, onItem){
   if(type==='survey'){
-    var used=[];
-    try{used=JSON.parse(localStorage.getItem('_genSurveyUsed')||'[]');}catch(e){}
-    var pool=GHANA_SURVEYS.filter(function(s){return !used.includes(s.title);});
-    if(!pool.length){used=[];pool=GHANA_SURVEYS.slice();}
-    var item=pool[Math.floor(Math.random()*pool.length)];
-    used.push(item.title);
-    try{localStorage.setItem('_genSurveyUsed',JSON.stringify(used.slice(-GHANA_SURVEYS.length)));}catch(e){}
+    var savedTitles=existingTitles.map(function(t){return t.trim().toLowerCase();});
+    var pool=GHANA_SURVEYS.filter(function(s){return !savedTitles.includes(s.title.trim().toLowerCase());});
+    if(!pool.length){adminAlert('AI generation is unavailable and all built-in survey topics have already been used.');return;}
+    var used=[];try{used=JSON.parse(localStorage.getItem('_genSurveyUsed')||'[]');}catch(e){}
+    var unused=pool.filter(function(s){return !used.includes(s.title);});
+    if(!unused.length)unused=pool.slice();
+    var item=unused[Math.floor(Math.random()*unused.length)];
+    used.push(item.title);try{localStorage.setItem('_genSurveyUsed',JSON.stringify(used.slice(-GHANA_SURVEYS.length)));}catch(e){}
+    if(onItem){onItem(item);return;}
     _pendingGenSurveyItem=item;
-    expandContentCard('surveyCardBody');
-    openAddContent('survey');
     setTimeout(function(){
-      var t=el('acTitle'); if(t) t.value=item.title;
-      var d=el('acDesc'); if(d) d.value=item.desc;
-      var q=el('acQs'); if(q) q.value=item.customQuestions?item.customQuestions.length:item.questions;
-      var tm=el('acTime'); if(tm) tm.value=item.timeMin;
-      var e=el('acEarn'); if(e) e.value=item.earn.toFixed(2);
+      var t=el('acTitle');if(t)t.value=item.title;
+      var d=el('acDesc');if(d)d.value=item.desc;
+      var q=el('acQs');if(q)q.value=item.customQuestions?item.customQuestions.length:item.questions;
+      var tm=el('acTime');if(tm)tm.value=item.timeMin;
+      var e=el('acEarn');if(e)e.value=item.earn.toFixed(2);
     },80);
-  } else if(type==='poll'){
-    var used2=[];
-    try{used2=JSON.parse(localStorage.getItem('_genPollUsed')||'[]');}catch(e){}
-    var pool2=GHANA_POLLS.filter(function(p){return !used2.includes(p.title);});
-    if(!pool2.length){used2=[];pool2=GHANA_POLLS;}
-    var item2=pool2[Math.floor(Math.random()*pool2.length)];
-    used2.push(item2.title);
-    try{localStorage.setItem('_genPollUsed',JSON.stringify(used2.slice(-GHANA_POLLS.length)));}catch(e){}
-    expandContentCard('pollCardBody');
-    openAddContent('poll');
+  } else {
+    var savedPollTitles=existingTitles.map(function(t){return t.trim().toLowerCase();});
+    var pool2=GHANA_POLLS.filter(function(p){return !savedPollTitles.includes(p.title.trim().toLowerCase());});
+    if(!pool2.length){adminAlert('AI generation is unavailable and all built-in poll topics have already been used.');return;}
+    var used2=[];try{used2=JSON.parse(localStorage.getItem('_genPollUsed')||'[]');}catch(e){}
+    var unused2=pool2.filter(function(p){return !used2.includes(p.title);});
+    if(!unused2.length)unused2=pool2.slice();
+    var item2=unused2[Math.floor(Math.random()*unused2.length)];
+    used2.push(item2.title);try{localStorage.setItem('_genPollUsed',JSON.stringify(used2.slice(-GHANA_POLLS.length)));}catch(e){}
+    if(onItem){onItem(item2);return;}
     setTimeout(function(){
-      var t=el('acTitle'); if(t) t.value=item2.title;
-      var o=el('acOptions'); if(o) o.value=item2.options.join(', ');
-      var e=el('acEarn'); if(e) e.value=item2.earn.toFixed(2);
+      var t=el('acTitle');if(t)t.value=item2.title;
+      var o=el('acOptions');if(o)o.value=item2.options.join(', ');
+      var e=el('acEarn');if(e)e.value=item2.earn.toFixed(2);
     },80);
   }
 }
