@@ -2085,6 +2085,54 @@ iframe[src*="badge"]{
         <div id="adEarnStatus" style="margin-top:9px;font-size:13px;color:var(--green)"></div>
       </div>
       <div class="a-card">
+        <div class="a-card-title">&#x1F4CB; Survey Earning Rates Per Tier <span style="font-size:12px;font-weight:400;color:#9ca3af">(Super Admin only)</span></div>
+        <p style="font-size:13px;color:#6b7280;margin-bottom:14px;line-height:1.6">Set how much members earn per completed survey (excluding the Ghana Affairs Survey which has a fixed rate). Changes apply on next page load.</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+          <div class="fg" style="margin:0"><label>&#x1F193; Free Tier (GHS)</label><input type="number" id="surveyEarnFree" min="0.10" step="0.10" placeholder="0.50"/></div>
+          <div class="fg" style="margin:0"><label>&#x1F949; Bronze Tier (GHS)</label><input type="number" id="surveyEarnBronze" min="0.10" step="0.10" placeholder="1.00"/></div>
+          <div class="fg" style="margin:0"><label>&#x1F948; Silver Tier (GHS)</label><input type="number" id="surveyEarnSilver" min="0.10" step="0.10" placeholder="1.00"/></div>
+          <div class="fg" style="margin:0"><label>&#x1F947; Gold Tier (GHS)</label><input type="number" id="surveyEarnGold" min="0.10" step="0.10" placeholder="1.00"/></div>
+        </div>
+        <button class="add-btn" id="saveSurveyEarnBtn">&#x1F4BE; Save Survey Rates</button>
+        <div id="surveyEarnStatus" style="margin-top:9px;font-size:13px;color:var(--green)"></div>
+      </div>
+      <div class="a-card">
+        <div class="a-card-title">&#x26A1; Poll Earning Rates Per Tier <span style="font-size:12px;font-weight:400;color:#9ca3af">(Super Admin only)</span></div>
+        <p style="font-size:13px;color:#6b7280;margin-bottom:14px;line-height:1.6">Set how much members earn per poll answered. Changes apply on next page load.</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+          <div class="fg" style="margin:0"><label>&#x1F193; Free Tier (GHS)</label><input type="number" id="pollEarnFree" min="0.10" step="0.10" placeholder="0.50"/></div>
+          <div class="fg" style="margin:0"><label>&#x1F949; Bronze Tier (GHS)</label><input type="number" id="pollEarnBronze" min="0.10" step="0.10" placeholder="1.00"/></div>
+          <div class="fg" style="margin:0"><label>&#x1F948; Silver Tier (GHS)</label><input type="number" id="pollEarnSilver" min="0.10" step="0.10" placeholder="1.00"/></div>
+          <div class="fg" style="margin:0"><label>&#x1F947; Gold Tier (GHS)</label><input type="number" id="pollEarnGold" min="0.10" step="0.10" placeholder="1.00"/></div>
+        </div>
+        <button class="add-btn" id="savePollEarnBtn">&#x1F4BE; Save Poll Rates</button>
+        <div id="pollEarnStatus" style="margin-top:9px;font-size:13px;color:var(--green)"></div>
+      </div>
+      <div class="a-card">
+        <div class="a-card-title">&#x25B6; Video Earning Rates Per Tier <span style="font-size:12px;font-weight:400;color:#9ca3af">(Super Admin only)</span></div>
+        <p style="font-size:13px;color:#6b7280;margin-bottom:14px;line-height:1.6">Set how much members earn per sponsored video watched. Changes apply on next page load.</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+          <div class="fg" style="margin:0"><label>&#x1F193; Free Tier (GHS)</label><input type="number" id="videoEarnFree" min="0.10" step="0.10" placeholder="0.50"/></div>
+          <div class="fg" style="margin:0"><label>&#x1F949; Bronze Tier (GHS)</label><input type="number" id="videoEarnBronze" min="0.10" step="0.10" placeholder="1.00"/></div>
+          <div class="fg" style="margin:0"><label>&#x1F948; Silver Tier (GHS)</label><input type="number" id="videoEarnSilver" min="0.10" step="0.10" placeholder="1.00"/></div>
+          <div class="fg" style="margin:0"><label>&#x1F947; Gold Tier (GHS)</label><input type="number" id="videoEarnGold" min="0.10" step="0.10" placeholder="1.00"/></div>
+        </div>
+        <button class="add-btn" id="saveVideoEarnBtn">&#x1F4BE; Save Video Rates</button>
+        <div id="videoEarnStatus" style="margin-top:9px;font-size:13px;color:var(--green)"></div>
+      </div>
+      <div class="a-card">
+        <div class="a-card-title">&#x1F4F1; Page Earning Rates Per Tier <span style="font-size:12px;font-weight:400;color:#9ca3af">(Super Admin only)</span></div>
+        <p style="font-size:13px;color:#6b7280;margin-bottom:14px;line-height:1.6">Set how much members earn per page followed or joined. Changes apply on next page load.</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+          <div class="fg" style="margin:0"><label>&#x1F193; Free Tier (GHS)</label><input type="number" id="pageEarnFree" min="0.10" step="0.10" placeholder="0.20"/></div>
+          <div class="fg" style="margin:0"><label>&#x1F949; Bronze Tier (GHS)</label><input type="number" id="pageEarnBronze" min="0.10" step="0.10" placeholder="0.50"/></div>
+          <div class="fg" style="margin:0"><label>&#x1F948; Silver Tier (GHS)</label><input type="number" id="pageEarnSilver" min="0.10" step="0.10" placeholder="0.75"/></div>
+          <div class="fg" style="margin:0"><label>&#x1F947; Gold Tier (GHS)</label><input type="number" id="pageEarnGold" min="0.10" step="0.10" placeholder="1.00"/></div>
+        </div>
+        <button class="add-btn" id="savePageEarnBtn">&#x1F4BE; Save Page Rates</button>
+        <div id="pageEarnStatus" style="margin-top:9px;font-size:13px;color:var(--green)"></div>
+      </div>
+      <div class="a-card">
         <div class="a-card-title">&#x1F511; Change Admin Password <span style="font-size:12px;font-weight:400;color:#9ca3af">(Super Admin only)</span></div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
           <div class="fg" style="margin:0"><label>New Password</label><input type="password" id="newAdminPass" placeholder="Min. 6 characters"/></div>
@@ -2745,6 +2793,26 @@ function getAdEarn(tier){
   if(override&&override>=0.10) return override;
   return TIER_AD_EARN[tier]||0.30;
 }
+function getSurveyEarn(tier){
+  var v=parseFloat(localStorage.getItem('gop_survey_earn_'+(tier||'Free').toLowerCase()));
+  if(v&&v>=0.10) return v;
+  return TIER_EARN[tier]||1.00;
+}
+function getPollEarn(tier){
+  var v=parseFloat(localStorage.getItem('gop_poll_earn_'+(tier||'Free').toLowerCase()));
+  if(v&&v>=0.10) return v;
+  return TIER_EARN[tier]||1.00;
+}
+function getVideoEarn(tier){
+  var v=parseFloat(localStorage.getItem('gop_video_earn_'+(tier||'Free').toLowerCase()));
+  if(v&&v>=0.10) return v;
+  return TIER_EARN[tier]||1.00;
+}
+function getPageEarn(tier){
+  var v=parseFloat(localStorage.getItem('gop_page_earn_'+(tier||'Free').toLowerCase()));
+  if(v&&v>=0.10) return v;
+  return TIER_PAGE_EARN[tier]||0.50;
+}
 
 // Load admin-configured ad earn rates from Firebase and cache in localStorage
 function loadAdPricesFromFirebase(){
@@ -2760,6 +2828,25 @@ function loadAdPricesFromFirebase(){
       }
     }).catch(function(){});
   }catch(e){}
+}
+
+// Load admin-configured survey/poll/video/page earn rates from Firebase
+function loadContentRatesFromFirebase(){
+  var types=['survey','poll','video','page'];
+  types.forEach(function(type){
+    try{
+      fetch(FB_URL+'/settings/'+type+'Earns.json')
+      .then(function(r){return r.ok?r.json():null;})
+      .then(function(data){
+        if(data&&typeof data==='object'){
+          ['Free','Bronze','Silver','Gold'].forEach(function(t){
+            var v=parseFloat(data[t]);
+            if(v&&v>=0.10) localStorage.setItem('gop_'+type+'_earn_'+t.toLowerCase(),v);
+          });
+        }
+      }).catch(function(){});
+    }catch(e){}
+  });
 }
 
 // ── STATE ─────────────────────────────────────────────
@@ -2980,6 +3067,7 @@ function restoreSession(){
 document.addEventListener('DOMContentLoaded', function(){
   // Load admin-set ad prices from Firebase into localStorage on every page load
   loadAdPricesFromFirebase();
+  loadContentRatesFromFirebase();
   // Hamburger
   var hb=el('hamburgerBtn');
   if(hb) hb.addEventListener('click',function(){
@@ -3178,6 +3266,27 @@ document.addEventListener('DOMContentLoaded', function(){
     setVal('maxSubAdminsInput','');
     var cc=el('currentSubAdminCount'); if(cc) cc.textContent=getSubAdmins().length;
   });
+  function saveContentEarnRates(type, fbKey, labelPrefix){
+    if(!isSuperAdmin()) return;
+    var tiers=['Free','Bronze','Silver','Gold'];
+    var rates={};
+    var valid=true;
+    tiers.forEach(function(t){
+      var v=parseFloat(val(type+'Earn'+t));
+      if(!v||v<0.10){valid=false;} else {rates[t]=v;}
+    });
+    if(!valid){adminAlert('All rates must be at least GHS 0.10.');return;}
+    tiers.forEach(function(t){ localStorage.setItem('gop_'+type+'_earn_'+t.toLowerCase(), rates[t]); });
+    try{
+      fetch(FB_URL+'/settings/'+fbKey+'.json',{
+        method:'PUT', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(rates)
+      }).catch(function(){});
+    }catch(e){}
+    var s=el(type+'EarnStatus');
+    if(s) s.textContent='Saved! Free: GHS '+rates.Free.toFixed(2)+' · Bronze: GHS '+rates.Bronze.toFixed(2)+' · Silver: GHS '+rates.Silver.toFixed(2)+' · Gold: GHS '+rates.Gold.toFixed(2);
+    adminAlert(labelPrefix+' earning rates updated successfully.');
+  }
   bindClick('saveAdEarnBtn', function(){
     if(!isSuperAdmin()) return;
     var tiers=['Free','Bronze','Silver','Gold'];
@@ -3201,6 +3310,10 @@ document.addEventListener('DOMContentLoaded', function(){
     if(s) s.textContent='Saved! Free: GHS '+rates.Free.toFixed(2)+' · Bronze: GHS '+rates.Bronze.toFixed(2)+' · Silver: GHS '+rates.Silver.toFixed(2)+' · Gold: GHS '+rates.Gold.toFixed(2);
     adminAlert('Ad earning rates updated successfully.');
   });
+  bindClick('saveSurveyEarnBtn', function(){ saveContentEarnRates('survey','surveyEarns','Survey'); });
+  bindClick('savePollEarnBtn',   function(){ saveContentEarnRates('poll','pollEarns','Poll'); });
+  bindClick('saveVideoEarnBtn',  function(){ saveContentEarnRates('video','videoEarns','Video'); });
+  bindClick('savePageEarnBtn',   function(){ saveContentEarnRates('page','pageEarns','Page'); });
   // Share buttons
   bindClick('shareWhatsappBtn', function(){shareReferral('whatsapp');});
   bindClick('shareTextBtn',    function(){shareReferral('sms');});
@@ -4209,10 +4322,10 @@ function openMemberDashboard(member){
     checkDailyStreakBonus(m);
     // Update video tab title with tier earn rate
     var vtt=el('videoTabTitle');
-    if(vtt) vtt.innerHTML='&#x25B6; Sponsored Videos &mdash; GHS '+(TIER_EARN[m.tier]||1.00).toFixed(2)+' each';
+    if(vtt) vtt.innerHTML='&#x25B6; Sponsored Videos &mdash; GHS '+getVideoEarn(m.tier).toFixed(2)+' each';
     // Update pages earn info with tier earn rate
     var pei=el('pagesEarnInfo');
-    if(pei) pei.innerHTML='&#x1F4B0; Earn <strong>GHS '+(TIER_PAGE_EARN[m.tier]||0.50).toFixed(2)+'</strong> for every page you follow or join. <small style="color:var(--green)">(Free: GHS 0.20 &middot; Bronze: GHS 0.50 &middot; Silver: GHS 0.75 &middot; Gold: GHS 1.00)</small>';
+    if(pei) pei.innerHTML='&#x1F4B0; Earn <strong>GHS '+getPageEarn(m.tier).toFixed(2)+'</strong> for every page you follow or join. <small style="color:var(--green)">(Free: GHS '+getPageEarn('Free').toFixed(2)+' &middot; Bronze: GHS '+getPageEarn('Bronze').toFixed(2)+' &middot; Silver: GHS '+getPageEarn('Silver').toFixed(2)+' &middot; Gold: GHS '+getPageEarn('Gold').toFixed(2)+')</small>';
   }
 
   // First pass — render from localStorage immediately (fast, no flicker)
@@ -4269,12 +4382,22 @@ function renderNotifications(member){
   }
   if(ann) html+='<div class="notif-item gold">&#x1F4E2; <strong>Admin:</strong> '+ann+'</div>';
   if(member.notifications&&member.notifications.length){
+    // Migrate any legacy plain-string notifications to {text,ts} objects so they show a date
+    var needsSave=false;
+    member.notifications=member.notifications.map(function(n){
+      if(typeof n==='string'){needsSave=true;return {text:n,ts:null};}
+      return n;
+    });
+    if(needsSave){
+      var _mm=getMembers();var _mi2=_mm.findIndex(function(m){return m.id===member.id;});
+      if(_mi2>=0){_mm[_mi2].notifications=member.notifications;saveMembers(_mm);}
+    }
     member.notifications.slice().reverse().forEach(function(n,i){
       var realIdx=member.notifications.length-1-i;
-      var notifText=typeof n==='object'&&n!==null?n.text:n;
-      var notifTs=typeof n==='object'&&n!==null&&n.ts?new Date(n.ts).toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:true}):'';
+      var notifText=n.text||'';
+      var notifTs=n.ts?new Date(n.ts).toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:true}):'Date unknown';
       html+='<div class="notif-item" style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">';
-      html+='<span style="flex:1;line-height:1.5">'+notifText+(notifTs?'<br><span style="font-size:10.5px;color:#9ca3af;font-weight:400">'+notifTs+'</span>':'')+'</span>';
+      html+='<span style="flex:1;line-height:1.5">'+notifText+'<br><span style="font-size:10.5px;color:#9ca3af;font-weight:400">'+notifTs+'</span></span>';
       html+='<button class="notif-del-btn" data-nidx="'+realIdx+'" title="Delete notification" style="background:none;border:none;cursor:pointer;color:#bbb;font-size:15px;flex-shrink:0;padding:0 2px;line-height:1;margin-top:1px">&#x2715;</button>';
       html+='</div>';
     });
@@ -4304,6 +4427,7 @@ function deleteNotification(idx){
   members[mi].notifications=notifs;
   saveMembers(members);
   currentUser=members[mi];
+  syncMemberToBackend(currentUser);
   renderNotifications(currentUser);
 }
 
@@ -4314,6 +4438,7 @@ function clearAllNotifications(){
   members[mi].notifications=[];
   saveMembers(members);
   currentUser=members[mi];
+  syncMemberToBackend(currentUser);
   renderNotifications(currentUser);
 }
 
@@ -4396,7 +4521,7 @@ function renderSurveyList(member){
     var overLim=done>=lim&&s.type!=='gh-affairs';
     var btnTxt=overLim?'Limit reached':'Start';
     html+='<div class="c-item"><div class="c-info"><h4>'+s.title+(s.type==='gh-affairs'?' 🇬🇭':'')+'</h4><p>'+s.questions+' questions · '+s.timeMin+' min</p></div>';
-    var surveyEarnDisplay=s.type==='gh-affairs'?s.earn:(TIER_EARN[member?member.tier:'Free']||s.earn);
+    var surveyEarnDisplay=s.type==='gh-affairs'?s.earn:(getSurveyEarn(member?member.tier:'Free')||s.earn);
     html+='<div style="display:flex;align-items:center;gap:10px"><span class="c-earn">GHS '+surveyEarnDisplay.toFixed(2)+'</span>';
     html+='<button class="c-btn"'+(overLim?' disabled':'')+' data-sid="'+s.id+'">'+btnTxt+'</button></div></div>';
   });
@@ -4421,7 +4546,7 @@ function startSurvey(sid){
   activeSurvey=s; surveyQIdx=0;
   setText('surveyTitle', s.title);
   setText('surveyMeta', s.questions+' questions · ~'+s.timeMin+' min');
-  var displayEarn=s.type==='gh-affairs'?s.earn:(TIER_EARN[currentUser?currentUser.tier:'Free']||s.earn);
+  var displayEarn=s.type==='gh-affairs'?s.earn:(getSurveyEarn(currentUser?currentUser.tier:'Free')||s.earn);
   setText('surveyEarnLbl','GHS '+displayEarn.toFixed(2));
   setText('surveyEarnedAmt','GHS '+displayEarn.toFixed(2));
   el('surveyContent').style.display='block';
@@ -4466,7 +4591,7 @@ function completeSurvey(){
   var members=getMembers();
   var idx=members.findIndex(function(m){return m.id===currentUser.id;});
   if(idx>=0){
-    var tierEarn=TIER_EARN[members[idx].tier]||s.earn;
+    var tierEarn=getSurveyEarn(members[idx].tier)||s.earn;
     var earnAmt=s.type==='gh-affairs'?s.earn:tierEarn;
     members[idx].balance=(members[idx].balance||0)+earnAmt;
     members[idx].monthEarned=(members[idx].monthEarned||0)+earnAmt;
@@ -4482,7 +4607,7 @@ function completeSurvey(){
     saveMembers(members); currentUser=members[idx];
     syncMemberToBackend(currentUser);
   }
-  var finalEarnAmt=s.type==='gh-affairs'?s.earn:(TIER_EARN[currentUser.tier]||s.earn);
+  var finalEarnAmt=s.type==='gh-affairs'?s.earn:(getSurveyEarn(currentUser.tier)||s.earn);
   setText('surveyEarnedAmt','GHS '+finalEarnAmt.toFixed(2));
   setText('dmBal','GHS '+(currentUser.balance||0).toFixed(2));
   setText('dmMonth','GHS '+(currentUser.monthEarned||0).toFixed(2));
@@ -4509,7 +4634,7 @@ function renderPollList(member){
     var overLim=pollDone>=pollLim;
     html+='<div class="c-item" style="flex-direction:column;align-items:flex-start;gap:10px">';
     html+='<div style="display:flex;align-items:center;justify-content:space-between;width:100%;gap:10px">';
-    var pollEarnDisplay=TIER_EARN[currentUser?currentUser.tier:'Free']||p.earn;
+    var pollEarnDisplay=getPollEarn(currentUser?currentUser.tier:'Free')||p.earn;
     html+='<div class="c-info"><h4>'+p.title+'</h4><p>Pick one option &middot; Earns GHS '+pollEarnDisplay.toFixed(2)+'</p></div>';
     html+='<span class="c-earn">GHS '+pollEarnDisplay.toFixed(2)+'</span></div>';
     html+='<div style="display:flex;flex-wrap:wrap;gap:7px;width:100%" id="popts_'+p.id+'">';
@@ -4534,7 +4659,7 @@ function answerPoll(pid, optIdx, btn){
   if(pollDone>=pollLim){showWithdrawMsg('error','You have reached your daily poll limit ('+pollLim+' for '+currentUser.tier+' tier). Come back tomorrow!'); return;}
   var pollArr=getPolls();
   var poll=pollArr.find(function(p){return p.id===pid;});
-  var earn=TIER_EARN[currentUser?currentUser.tier:'Free']||1.00;
+  var earn=getPollEarn(currentUser?currentUser.tier:'Free')||1.00;
   // Style selected button
   var container=el('popts_'+pid);
   if(container){
@@ -4590,7 +4715,7 @@ function renderVideoList(member){
     html+='<div style="display:flex;align-items:center;gap:12px">';
     html+='<div style="width:52px;height:36px;background:var(--red-pale);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0">&#x25B6;</div>';
     html+='<div class="c-info"><h4>'+v.title+'</h4><p>'+v.brand+' · '+v.durSec+'s'+(hasAnyLink?' · <span style="color:var(--green);font-weight:600">Video available</span>':' · <span style="color:var(--text-muted)">No link yet</span>')+'</p></div></div>';
-    var vidEarnDisplay=TIER_EARN[member?member.tier:'Free']||v.earn;
+    var vidEarnDisplay=getVideoEarn(member?member.tier:'Free')||v.earn;
     html+='<div style="display:flex;align-items:center;gap:8px"><span class="c-earn">GHS '+vidEarnDisplay.toFixed(2)+'</span>';
     if(watched){
       html+='<button class="c-btn" disabled style="background:#d4edda;color:var(--green)">&#x2714; Done</button>';
@@ -4682,7 +4807,7 @@ function claimVideoEarnAuto(vid){
   if(successDiv) successDiv.style.display='block';
   var videos=getVideos();
   var v=videos.find(function(x){return x.id===vid;});
-  var earn=TIER_EARN[currentUser?currentUser.tier:'Free']||(v?v.earn:1.00);
+  var earn=getVideoEarn(currentUser?currentUser.tier:'Free')||(v?v.earn:1.00);
   var members=getMembers();
   var idx=members.findIndex(function(m){return m.id===currentUser.id;});
   if(idx>=0){
@@ -4705,7 +4830,7 @@ function claimVideoEarnAuto(vid){
 function claimVideoEarn(vid){
   var videos=getVideos();
   var v=videos.find(function(x){return x.id===vid;});
-  var earn=TIER_EARN[currentUser?currentUser.tier:'Free']||(v?v.earn:1.00);
+  var earn=getVideoEarn(currentUser?currentUser.tier:'Free')||(v?v.earn:1.00);
   var members=getMembers();
   var idx=members.findIndex(function(m){return m.id===currentUser.id;});
   if(idx>=0){
@@ -5306,28 +5431,27 @@ function renderTransactionsList(member){
   var el2=el('transactionsListWrap');
   if(!el2) return;
   var allSurveys=getSurveys(), allPolls=getPolls(), allVideos=getVideos(), allPages=getPages();
-  var tierEarn=TIER_EARN[member.tier]||1.00;
   var rows=[];
   // Completed surveys
   (member.completedSurveys||[]).forEach(function(sid){
     var s=allSurveys.find(function(x){return x.id===sid;});
-    var amt=s?(s.type==='gh-affairs'?s.earn:tierEarn):tierEarn;
+    var amt=s?(s.type==='gh-affairs'?s.earn:getSurveyEarn(member.tier)):getSurveyEarn(member.tier);
     rows.push({icon:'&#x1F4CB;',type:'Survey',typeBg:'#f0fdf4',typeTxt:'#16a34a',desc:s?s.title:sid,amt:amt,sign:'+',date:'—',status:'Earned',stBg:'#f0fdf4',stTxt:'#16a34a'});
   });
   // Answered polls
   (member.answeredPolls||[]).forEach(function(pid){
     var p=allPolls.find(function(x){return x.id===pid;});
-    rows.push({icon:'&#x26A1;',type:'Poll',typeBg:'#eff6ff',typeTxt:'#2563eb',desc:p?p.title:pid,amt:tierEarn,sign:'+',date:'—',status:'Earned',stBg:'#f0fdf4',stTxt:'#16a34a'});
+    rows.push({icon:'&#x26A1;',type:'Poll',typeBg:'#eff6ff',typeTxt:'#2563eb',desc:p?p.title:pid,amt:getPollEarn(member.tier),sign:'+',date:'—',status:'Earned',stBg:'#f0fdf4',stTxt:'#16a34a'});
   });
   // Watched videos
   (member.completedVideos||[]).forEach(function(vid){
     var v=allVideos.find(function(x){return x.id===vid;});
-    rows.push({icon:'&#x25B6;',type:'Video',typeBg:'#fef3c7',typeTxt:'#d97706',desc:v?v.title:vid,amt:tierEarn,sign:'+',date:'—',status:'Earned',stBg:'#f0fdf4',stTxt:'#16a34a'});
+    rows.push({icon:'&#x25B6;',type:'Video',typeBg:'#fef3c7',typeTxt:'#d97706',desc:v?v.title:vid,amt:getVideoEarn(member.tier),sign:'+',date:'—',status:'Earned',stBg:'#f0fdf4',stTxt:'#16a34a'});
   });
   // Followed pages
   (member.completedPages||[]).forEach(function(pgid){
     var pg=allPages.find(function(x){return x.id===pgid;});
-    rows.push({icon:'&#x1F4F1;',type:'Page',typeBg:'#f5f3ff',typeTxt:'#7c3aed',desc:pg?pg.title:pgid,amt:tierEarn,sign:'+',date:'—',status:'Earned',stBg:'#f0fdf4',stTxt:'#16a34a'});
+    rows.push({icon:'&#x1F4F1;',type:'Page',typeBg:'#f5f3ff',typeTxt:'#7c3aed',desc:pg?pg.title:pgid,amt:getPageEarn(member.tier),sign:'+',date:'—',status:'Earned',stBg:'#f0fdf4',stTxt:'#16a34a'});
   });
   // Withdrawals
   var phaseColor={'Complete':'#22c55e','Processing':'#3b82f6','Pending':'#f59e0b','Reversed':'#ef4444'};
@@ -5660,11 +5784,14 @@ function switchAdminTab(name, btn){
     var cc=el('currentSubAdminCount'); if(cc) cc.textContent=getSubAdmins().length;
     var msi=el('maxSubAdminsInput'); if(msi) msi.placeholder='Current limit: '+getMaxSubAdmins();
     var ani=el('newAdminName'); if(ani) ani.placeholder='Current: '+getAdminName();
-    // Pre-fill current ad earn rates
+    // Pre-fill current earn rates for all content types
     var tiers=['Free','Bronze','Silver','Gold'];
     tiers.forEach(function(t){
-      var inp=el('adEarn'+t);
-      if(inp) inp.value=getAdEarn(t).toFixed(2);
+      var inp=el('adEarn'+t);     if(inp) inp.value=getAdEarn(t).toFixed(2);
+      var si=el('surveyEarn'+t); if(si)  si.value=getSurveyEarn(t).toFixed(2);
+      var pi=el('pollEarn'+t);   if(pi)  pi.value=getPollEarn(t).toFixed(2);
+      var vi=el('videoEarn'+t);  if(vi)  vi.value=getVideoEarn(t).toFixed(2);
+      var pgi=el('pageEarn'+t);  if(pgi) pgi.value=getPageEarn(t).toFixed(2);
     });
   }
   if(name==='profiles') renderProfilesTab();
@@ -8732,7 +8859,7 @@ function renderMemberPages(member){
     html+='<div style="font-size:12px;color:#6b7280;margin-top:2px">'+p.platform+(p.desc?' &middot; '+p.desc:'')+'</div>';
     html+='</div>';
     html+='<div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">';
-    var tierPageEarn=TIER_PAGE_EARN[member?member.tier:'Free']||p.earn;
+    var tierPageEarn=getPageEarn(member?member.tier:'Free')||p.earn;
     html+='<span style="font-size:18px;font-weight:700;color:var(--green)">GHS '+tierPageEarn.toFixed(2)+'</span>';
     html+='<div id="pactions_'+p.id+'" style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">';
     if(done){
@@ -8775,7 +8902,7 @@ function claimPageReward(pageId){
   if(idx<0) return;
   members[idx].completedPages=members[idx].completedPages||[];
   if(members[idx].completedPages.indexOf(pageId)>=0) return; // already claimed
-  var pageEarnTier=TIER_PAGE_EARN[currentUser?currentUser.tier:'Free']||page.earn;
+  var pageEarnTier=getPageEarn(currentUser?currentUser.tier:'Free')||page.earn;
   members[idx].completedPages.push(pageId);
   members[idx].balance=parseFloat(((members[idx].balance||0)+pageEarnTier).toFixed(2));
   members[idx].monthEarned=parseFloat(((members[idx].monthEarned||0)+pageEarnTier).toFixed(2));
@@ -10470,8 +10597,8 @@ function createMemberAccount(reg, tier, ref){
     viewedAdsToday:[], answeredPolls:[], completedSurveys:[], completedVideos:[], completedPages:[],
     dailyOfferedSurveys:[],dailyOfferedPolls:[],dailyOfferedAds:[],skippedAds:[],
     notifications:[
-      '&#x2705; Payment of GHS '+tier.fee+' received via Paystack (Ref: '+ref+'). Your account is now <strong>instantly active</strong>!',
-      '&#x1F381; Welcome bonus of <strong>GHS '+welcomeBonus.toFixed(2)+'</strong> has been added to your balance. Complete the Ghana Affairs Survey for another GHS 1.00!'
+      mkNotif('&#x2705; Payment of GHS '+tier.fee+' received via Paystack (Ref: '+ref+'). Your account is now <strong>instantly active</strong>!'),
+      mkNotif('&#x1F381; Welcome bonus of <strong>GHS '+welcomeBonus.toFixed(2)+'</strong> has been added to your balance. Complete the Ghana Affairs Survey for another GHS 1.00!')
     ]
   };
   members.push(m);
