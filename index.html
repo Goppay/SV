@@ -3474,7 +3474,7 @@ function closeRegisterModal(){
   document.body.style.overflow='';
 }
 function closeDeleteModal(){el('deleteModal').classList.remove('open');}
-function closeAddContentModal(){el('addContentModal').classList.remove('open');}
+function closeAddContentModal(){el('addContentModal').classList.remove('open');_pendingGenSurveyItem=null;}
 function closeSurveyModal(){
   el('surveyModal').classList.remove('open');
   document.body.style.overflow='auto';
@@ -4109,20 +4109,21 @@ function switchDashTab(name, btn){
 
 // ── SURVEYS ───────────────────────────────────────────
 function renderSurveyList(member){
-  var surveys=getSurveys().filter(function(s){return s.active;});
+  var completedIds=member.completedSurveys||[];
+  var surveys=getSurveys().filter(function(s){return s.active&&!completedIds.includes(s.id);});
   var done=member.dailySurveyDate===today()?member.dailySurveyCount||0:0;
   var lim=TIER_DAILY[member.tier]||5;
+  setText('quotaText',done+' / '+lim);
+  if(el('quotaFill')) el('quotaFill').style.width=Math.min(100,Math.round(done/lim*100))+'%';
   var html='';
-  if(!surveys.length) html='<p style="color:var(--text-muted);font-size:13.5px;text-align:center;padding:18px">No surveys available right now.</p>';
+  if(!surveys.length) html='<p style="color:var(--text-muted);font-size:13.5px;text-align:center;padding:18px">No surveys available right now. Check back tomorrow!</p>';
   surveys.forEach(function(s){
-    var completed=(member.completedSurveys||[]).includes(s.id);
-    var overLim=!completed&&done>=lim&&s.type!=='gh-affairs';
-    var dis=completed||overLim;
-    var btnTxt=completed?'Done ✓':overLim?'Limit reached':'Start';
+    var overLim=done>=lim&&s.type!=='gh-affairs';
+    var btnTxt=overLim?'Limit reached':'Start';
     html+='<div class="c-item"><div class="c-info"><h4>'+s.title+(s.type==='gh-affairs'?' 🇬🇭':'')+'</h4><p>'+s.questions+' questions · '+s.timeMin+' min</p></div>';
     var surveyEarnDisplay=s.type==='gh-affairs'?s.earn:(TIER_EARN[member?member.tier:'Free']||s.earn);
     html+='<div style="display:flex;align-items:center;gap:10px"><span class="c-earn">GHS '+surveyEarnDisplay.toFixed(2)+'</span>';
-    html+='<button class="c-btn"'+(dis?' disabled':'')+' data-sid="'+s.id+'">'+btnTxt+'</button></div></div>';
+    html+='<button class="c-btn"'+(overLim?' disabled':'')+' data-sid="'+s.id+'">'+btnTxt+'</button></div></div>';
   });
   setHTML('surveyListWrap', html);
   // bind clicks
@@ -4218,16 +4219,16 @@ function completeSurvey(){
 
 // ── POLLS ─────────────────────────────────────────────
 function renderPollList(member){
-  var polls=getPolls().filter(function(p){return p.active;});
+  var answeredIds=member.answeredPolls||[];
+  var polls=getPolls().filter(function(p){return p.active&&!answeredIds.includes(p.id);});
   var pollDone=member.dailyPollDate===today()?member.dailyPollCount||0:0;
   var pollLim=Math.max(0,(TIER_POLLS[member.tier]||1)+(member.extraPolls||0));
   setText('pollLimitBadge','Daily limit: '+pollLim+' poll'+(pollLim>1?'s':'')+' ('+member.tier+')');
   setText('pollQuotaText', pollDone+' / '+pollLim);
   el('pollQuotaFill').style.width=Math.min(100,Math.round(pollDone/pollLim*100))+'%';
   var html='';
-  if(!polls.length){html='<p style="color:var(--text-muted);font-size:13.5px;text-align:center;padding:18px">No polls available right now.</p>';setHTML('pollListWrap',html);return;}
+  if(!polls.length){html='<p style="color:var(--text-muted);font-size:13.5px;text-align:center;padding:18px">No polls available right now. Check back tomorrow!</p>';setHTML('pollListWrap',html);return;}
   polls.forEach(function(p){
-    var answered=(member.answeredPolls||[]).includes(p.id);
     var overLim=pollDone>=pollLim;
     html+='<div class="c-item" style="flex-direction:column;align-items:flex-start;gap:10px">';
     html+='<div style="display:flex;align-items:center;justify-content:space-between;width:100%;gap:10px">';
@@ -4236,12 +4237,10 @@ function renderPollList(member){
     html+='<span class="c-earn">GHS '+pollEarnDisplay.toFixed(2)+'</span></div>';
     html+='<div style="display:flex;flex-wrap:wrap;gap:7px;width:100%" id="popts_'+p.id+'">';
     p.options.forEach(function(opt,oi){
-      var dis=answered||overLim;
       html+='<button class="c-btn" style="background:var(--warm-gray);color:var(--text-mid);border:1.5px solid var(--border);font-size:12px;padding:6px 14px"'
-        +(dis?' disabled':'')
+        +(overLim?' disabled':'')
         +' data-pid="'+p.id+'" data-oi="'+oi+'">'+opt+'</button>';
     });
-    if(answered) html+='<span style="font-size:12px;color:var(--green);font-weight:600;align-self:center">&#x2714; Voted</span>';
     html+='</div></div>';
   });
   setHTML('pollListWrap', html);
@@ -5029,27 +5028,51 @@ function reverseWithdrawal(wId){
 function renderTransactionsList(member){
   var el2=el('transactionsListWrap');
   if(!el2) return;
+  var allSurveys=getSurveys(), allPolls=getPolls(), allVideos=getVideos(), allPages=getPages();
+  var tierEarn=TIER_EARN[member.tier]||1.00;
+  var rows=[];
+  // Completed surveys
+  (member.completedSurveys||[]).forEach(function(sid){
+    var s=allSurveys.find(function(x){return x.id===sid;});
+    var amt=s?(s.type==='gh-affairs'?s.earn:tierEarn):tierEarn;
+    rows.push({icon:'&#x1F4CB;',type:'Survey',typeBg:'#f0fdf4',typeTxt:'#16a34a',desc:s?s.title:sid,amt:amt,sign:'+',date:'—',status:'Earned',stBg:'#f0fdf4',stTxt:'#16a34a'});
+  });
+  // Answered polls
+  (member.answeredPolls||[]).forEach(function(pid){
+    var p=allPolls.find(function(x){return x.id===pid;});
+    rows.push({icon:'&#x26A1;',type:'Poll',typeBg:'#eff6ff',typeTxt:'#2563eb',desc:p?p.title:pid,amt:tierEarn,sign:'+',date:'—',status:'Earned',stBg:'#f0fdf4',stTxt:'#16a34a'});
+  });
+  // Watched videos
+  (member.completedVideos||[]).forEach(function(vid){
+    var v=allVideos.find(function(x){return x.id===vid;});
+    rows.push({icon:'&#x25B6;',type:'Video',typeBg:'#fef3c7',typeTxt:'#d97706',desc:v?v.title:vid,amt:tierEarn,sign:'+',date:'—',status:'Earned',stBg:'#f0fdf4',stTxt:'#16a34a'});
+  });
+  // Followed pages
+  (member.completedPages||[]).forEach(function(pgid){
+    var pg=allPages.find(function(x){return x.id===pgid;});
+    rows.push({icon:'&#x1F4F1;',type:'Page',typeBg:'#f5f3ff',typeTxt:'#7c3aed',desc:pg?pg.title:pgid,amt:tierEarn,sign:'+',date:'—',status:'Earned',stBg:'#f0fdf4',stTxt:'#16a34a'});
+  });
+  // Withdrawals
+  var phaseColor={'Complete':'#22c55e','Processing':'#3b82f6','Pending':'#f59e0b','Reversed':'#ef4444'};
   var withdrawals=getWithdrawals().filter(function(w){return w.memberId===member.id;}).slice().reverse();
-  if(!withdrawals.length){
-    el2.innerHTML='<p style="font-size:13.5px;color:var(--text-muted);text-align:center;padding:24px">No transactions yet. Complete activities to start earning and withdrawing!</p>';
+  withdrawals.forEach(function(w){
+    var col=phaseColor[w.phase]||'#9ca3af';
+    var received=w.amountAfterFee!=null?w.amountAfterFee:parseFloat(w.amount);
+    rows.unshift({icon:'&#x1F4B8;',type:'Withdrawal',typeBg:'#fef2f2',typeTxt:'#dc2626',desc:(w.method||'')+(w.account?' → '+w.account:''),amt:received,sign:'-',date:w.date||'—',status:w.phase,stBg:col+'22',stTxt:col});
+  });
+  if(!rows.length){
+    el2.innerHTML='<p style="font-size:13.5px;color:var(--text-muted);text-align:center;padding:24px">No activity yet. Complete surveys, polls and videos to start earning!</p>';
     return;
   }
-  var phaseColor={'Complete':'#22c55e','Processing':'#3b82f6','Pending':'#f59e0b','Reversed':'#ef4444'};
-  var html='<div style="overflow-x:auto"><table class="atable"><thead><tr><th>#</th><th>Date</th><th>Type</th><th>Amount</th><th>Fee</th><th>You Received</th><th>Method</th><th>Status</th></tr></thead><tbody>';
-  withdrawals.forEach(function(w,i){
-    var col=phaseColor[w.phase]||'#9ca3af';
-    var fee=w.fee||0;
-    var received=w.amountAfterFee!=null?w.amountAfterFee:parseFloat(w.amount);
-    var feeCell=w.isFree?'<span style="color:var(--green);font-size:12px">FREE</span>':'GHS '+fee.toFixed(2);
+  var html='<div style="overflow-x:auto"><table class="atable"><thead><tr><th>#</th><th>Type</th><th>Description</th><th>Amount</th><th>Date</th><th>Status</th></tr></thead><tbody>';
+  rows.forEach(function(r,i){
     html+='<tr>';
     html+='<td style="color:#9ca3af;font-size:12px">'+(i+1)+'</td>';
-    html+='<td>'+w.date+'</td>';
-    html+='<td><span style="font-size:11.5px;background:#f0f9ff;color:#0369a1;padding:2px 8px;border-radius:6px;font-weight:600">Withdrawal</span></td>';
-    html+='<td style="font-weight:600">GHS '+parseFloat(w.amount).toFixed(2)+'</td>';
-    html+='<td>'+feeCell+'</td>';
-    html+='<td style="font-weight:700;color:var(--green)">GHS '+received.toFixed(2)+'</td>';
-    html+='<td>'+w.method+'</td>';
-    html+='<td><span style="font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:20px;background:'+col+'22;color:'+col+'">'+w.phase+'</span></td>';
+    html+='<td><span style="font-size:11.5px;background:'+r.typeBg+';color:'+r.typeTxt+';padding:2px 8px;border-radius:6px;font-weight:600">'+r.icon+' '+r.type+'</span></td>';
+    html+='<td style="font-size:12.5px;max-width:200px;word-break:break-word">'+r.desc+'</td>';
+    html+='<td style="font-weight:700;color:'+(r.sign==='+' ? 'var(--green)' : '#dc2626')+'">'+(r.sign==='+'?'+':'-')+'GHS '+parseFloat(r.amt).toFixed(2)+'</td>';
+    html+='<td style="font-size:12px;color:#6b7280">'+r.date+'</td>';
+    html+='<td><span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;background:'+r.stBg+';color:'+r.stTxt+'">'+r.status+'</span></td>';
     html+='</tr>';
   });
   html+='</tbody></table></div>';
@@ -6720,27 +6743,107 @@ function openAddContent(type){
 }
 
 // ── GHANA CONTENT GENERATOR ──────────────────────────────────
+var _pendingGenSurveyItem=null;
 var GHANA_SURVEYS=[
   {title:'Ghana Independence & History Quiz',desc:'Test your knowledge of Ghanaian history and heritage',questions:8,timeMin:8,earn:3.00,
-   note:'Covers independence, first president, founding events'},
+   customQuestions:[
+    {q:'Who was Ghana\'s first president after independence?',opts:['Kwame Nkrumah','Kofi Busia','J.J. Rawlings','K.A. Busia'],ans:0},
+    {q:'In what year did Ghana gain independence?',opts:['1960','1957','1963','1956'],ans:1},
+    {q:'Ghana\'s independence day is celebrated on which date?',opts:['1st January','6th March','24th September','4th August'],ans:1},
+    {q:'From which country did Ghana gain independence?',opts:['France','Portugal','United States','Britain'],ans:3},
+    {q:'What was Ghana called before independence?',opts:['The Gold Coast','The Ivory Coast','The Slave Coast','West Africa Colony'],ans:0},
+    {q:'Ghana was the first country in sub-Saharan Africa to do what?',opts:['Host the Olympics','Gain independence from a European power','Discover oil','Use mobile money'],ans:1},
+    {q:'Who is regarded as the father of the nation of Ghana?',opts:['J.B. Danquah','J.J. Rawlings','Kwame Nkrumah','Edward Akufo-Addo'],ans:2},
+    {q:'In which city was Ghana\'s independence declared?',opts:['Kumasi','Cape Coast','Accra','Tamale'],ans:2}
+   ]},
   {title:'Ghanaian Food & Culture Survey',desc:'Share your views on Ghana\'s rich food culture and traditions',questions:6,timeMin:6,earn:2.50,
-   note:'Kente, waakye, jollof, fufu, and more'},
+   customQuestions:[
+    {q:'Which dish is often called Ghana\'s unofficial national food?',opts:['Jollof Rice','Fufu','Banku','Waakye'],ans:0},
+    {q:'What is Kente?',opts:['A Ghanaian dish','A type of dance','Traditional woven cloth','A musical instrument'],ans:2},
+    {q:'Which language is most widely spoken in Ghana?',opts:['Ga','Twi','Ewe','Dagbani'],ans:1},
+    {q:'What is Shito?',opts:['A Ghanaian dance','A spicy pepper sauce','A type of drum','A festival'],ans:1},
+    {q:'Fufu is typically made from which ingredients?',opts:['Rice and beans','Cassava and plantain','Corn and yam','Millet and sorghum'],ans:1},
+    {q:'Which Ghanaian festival is celebrated by the Ga people with eating new food?',opts:['Odwira','Homowo','Aboakyer','Panafest'],ans:1}
+   ]},
   {title:'Mobile Money Usage in Ghana',desc:'Help us understand how Ghanaians use mobile money services',questions:7,timeMin:7,earn:3.50,
-   note:'MoMo, banking habits, digital payments'},
+   customQuestions:[
+    {q:'Which mobile money service is most popular in Ghana?',opts:['Vodafone Cash','AirtelTigo Money','MTN MoMo','Zeepay'],ans:2},
+    {q:'How often do you use mobile money in a week?',opts:['Every day','3-5 times','1-2 times','Rarely'],ans:0},
+    {q:'What do you mostly use mobile money for?',opts:['Sending money','Paying bills','Buying airtime','Shopping online'],ans:0},
+    {q:'Have you ever had a failed MoMo transaction?',opts:['Yes, often','Yes, sometimes','Yes, rarely','No, never'],ans:1},
+    {q:'Do you trust mobile money for large transactions?',opts:['Yes, fully','Yes, mostly','Not sure','Not really'],ans:1},
+    {q:'Do you have a bank account in addition to mobile money?',opts:['Yes','No','I only use bank','I am setting one up'],ans:0},
+    {q:'What is your biggest concern about mobile money?',opts:['Security / fraud','Transaction charges','Network downtime','Sending limits'],ans:0}
+   ]},
   {title:'Ghana Education System Survey',desc:'Your opinions on the state of education in Ghana',questions:8,timeMin:9,earn:4.00,
-   note:'Free SHS, WASSCE, universities'},
+   customQuestions:[
+    {q:'Do you think Free SHS has improved access to education in Ghana?',opts:['Yes, greatly','Somewhat','Not much','No, it has caused more problems'],ans:0},
+    {q:'Which level of education is most important to invest in?',opts:['Basic/Primary','Junior High School','Senior High School','University'],ans:0},
+    {q:'How would you rate the quality of teachers in Ghana?',opts:['Excellent','Good','Average','Poor'],ans:2},
+    {q:'Do you think WASSCE results accurately reflect students\' abilities?',opts:['Yes, fully','Mostly yes','Not always','No, it\'s flawed'],ans:2},
+    {q:'What is the biggest challenge facing Ghana\'s education system?',opts:['Lack of infrastructure','Poor teacher motivation','Overcrowded classrooms','Poor curriculum'],ans:2},
+    {q:'Should technical and vocational education be promoted more?',opts:['Yes, strongly','Yes, somewhat','Neutral','No'],ans:0},
+    {q:'Do you think university fees in Ghana are affordable?',opts:['Yes, very affordable','Somewhat affordable','Expensive','Very expensive'],ans:2},
+    {q:'How important is mother-tongue instruction in early education?',opts:['Very important','Somewhat important','Not important','Not sure'],ans:0}
+   ]},
   {title:'Ghanaian Sports & Black Stars Survey',desc:'Football, local sports, and your favourite teams',questions:6,timeMin:5,earn:2.50,
-   note:'Black Stars, CAF, AFCON, GPL'},
+   customQuestions:[
+    {q:'Who is Ghana\'s greatest footballer of all time?',opts:['Abedi Pelé','Michael Essien','Asamoah Gyan','André Ayew'],ans:0},
+    {q:'How often do you watch Ghana Premier League matches?',opts:['Every matchday','Weekly','Occasionally','Rarely or never'],ans:1},
+    {q:'Which AFCON year was Ghana\'s best performance?',opts:['1963','1978','1982','2010'],ans:0},
+    {q:'Do you think Ghana can win the FIFA World Cup in the next 20 years?',opts:['Yes, definitely','Possibly','Unlikely','No'],ans:1},
+    {q:'Which sport besides football is most popular in Ghana?',opts:['Boxing','Athletics','Basketball','Volleyball'],ans:0},
+    {q:'Do you attend local football matches in your community?',opts:['Yes, regularly','Sometimes','Rarely','Never'],ans:1}
+   ]},
   {title:'Ghana Tourism & Attractions Survey',desc:'Rate Ghana\'s tourist destinations and hospitality',questions:7,timeMin:7,earn:3.00,
-   note:'Kakum, Cape Coast, Mole, Labadi'},
+   customQuestions:[
+    {q:'Which Ghanaian tourist site is most famous internationally?',opts:['Kakum National Park','Cape Coast Castle','Labadi Beach','Mole National Park'],ans:1},
+    {q:'Have you ever visited a tourist site in Ghana?',opts:['Yes, many times','Yes, a few times','Once','Never'],ans:1},
+    {q:'Which region of Ghana has the best tourism potential?',opts:['Greater Accra','Western Region','Central Region','Northern Region'],ans:2},
+    {q:'How would you rate Ghana\'s hospitality to visitors?',opts:['Excellent','Good','Average','Poor'],ans:0},
+    {q:'What is the biggest barrier to tourism growth in Ghana?',opts:['Poor roads','High hotel costs','Lack of marketing','Visa difficulties'],ans:2},
+    {q:'Would you recommend Ghana as a tourist destination to a foreigner?',opts:['Definitely yes','Probably yes','Not sure','Probably not'],ans:0},
+    {q:'Which Ghanaian festival would attract the most tourists?',opts:['Homowo','Chale Wote','Panafest','Aboakyer'],ans:1}
+   ]},
   {title:'Ghanaian Music & Entertainment Survey',desc:'Afrobeats, hiplife, highlife and Ghanaian entertainment',questions:6,timeMin:6,earn:2.50,
-   note:'Sarkodie, Stonebwoy, Shatta Wale, highlife'},
+   customQuestions:[
+    {q:'Which Ghanaian musician has the most international recognition?',opts:['Sarkodie','Stonebwoy','Shatta Wale','Burna Boy (honorary)'],ans:0},
+    {q:'Which music genre do you listen to most?',opts:['Afrobeats','Highlife','Hiplife','Gospel'],ans:0},
+    {q:'How often do you stream Ghanaian music online?',opts:['Every day','Several times a week','Occasionally','Rarely'],ans:0},
+    {q:'Which Ghanaian TV station do you watch most often?',opts:['TV3','UTV','Joy Prime','Adom TV'],ans:0},
+    {q:'Do you think Ghana\'s movie industry (Ghallywood) is growing?',opts:['Yes, rapidly','Somewhat','Slowly','No, it is declining'],ans:0},
+    {q:'What type of Ghanaian content do you watch most online?',opts:['Music videos','Comedy skits','News','Movies'],ans:0}
+   ]},
   {title:'Entrepreneurship in Ghana Survey',desc:'Views on doing business, SMEs and the economy in Ghana',questions:8,timeMin:8,earn:4.00,
-   note:'Startups, trading, agriculture, fintech'},
+   customQuestions:[
+    {q:'Have you ever started or tried to start a business in Ghana?',opts:['Yes, currently running','Yes, but it closed','Planning to','No'],ans:0},
+    {q:'What is the biggest challenge for entrepreneurs in Ghana?',opts:['Access to funding','High taxes','Competition','Poor infrastructure'],ans:0},
+    {q:'Which sector has the most business opportunities in Ghana?',opts:['Agriculture','Technology','Fashion & Clothing','Food & Catering'],ans:0},
+    {q:'Do you think Ghana\'s business environment is improving?',opts:['Yes, greatly','Somewhat','No change','Getting worse'],ans:1},
+    {q:'Would you consider taking a bank loan to start a business?',opts:['Yes, definitely','Maybe','Unlikely due to interest rates','No'],ans:1},
+    {q:'How important is financial literacy for Ghanaian entrepreneurs?',opts:['Extremely important','Very important','Somewhat important','Not important'],ans:0},
+    {q:'Do you think the government does enough to support small businesses?',opts:['Yes, doing well','Could do more','Not enough','No support at all'],ans:1},
+    {q:'Which business model interests you most?',opts:['Physical shop','Online / e-commerce','Service provider','Farming / agric'],ans:1}
+   ]},
   {title:'Healthcare in Ghana Survey',desc:'Your experience with healthcare services in Ghana',questions:7,timeMin:8,earn:3.50,
-   note:'NHIS, hospitals, community clinics'},
+   customQuestions:[
+    {q:'Are you currently registered on the National Health Insurance Scheme (NHIS)?',opts:['Yes, active','Yes, but expired','No, never registered','I don\'t know'],ans:0},
+    {q:'How would you rate the quality of healthcare at government hospitals?',opts:['Excellent','Good','Average','Poor'],ans:2},
+    {q:'How long do you typically wait to see a doctor at a public hospital?',opts:['Under 1 hour','1-3 hours','3-6 hours','More than 6 hours'],ans:2},
+    {q:'Do you prefer private or public healthcare facilities?',opts:['Private','Public (government)','Both equally','No preference'],ans:0},
+    {q:'What is the biggest problem in Ghana\'s health system?',opts:['Shortage of doctors','Poor facilities','High cost of drugs','Long waiting times'],ans:0},
+    {q:'Have you used telemedicine (online doctor consultation) in Ghana?',opts:['Yes, regularly','Yes, once or twice','No, but I would try','No, not interested'],ans:2},
+    {q:'Do you think mental health services are adequate in Ghana?',opts:['Yes, adequate','Improving but needs work','Not adequate at all','I\'m not sure'],ans:2}
+   ]},
   {title:'Ghanaian Language & Culture Survey',desc:'Your use of Twi, Ga, Ewe, Hausa and other Ghanaian languages',questions:6,timeMin:5,earn:2.50,
-   note:'Mother tongue, multilingualism, preservation'}
+   customQuestions:[
+    {q:'What is your mother tongue (first language)?',opts:['Twi (Akan)','Ga','Ewe','Hausa / Dagbani'],ans:0},
+    {q:'How well do you speak your mother tongue?',opts:['Fluently','Conversationally','Basics only','Barely at all'],ans:0},
+    {q:'Do you think Ghanaian languages should be taught in schools?',opts:['Yes, compulsory','Yes, as an option','Not necessary','No'],ans:0},
+    {q:'How often do you speak a Ghanaian language at home?',opts:['Always','Most of the time','Sometimes','Rarely or never'],ans:0},
+    {q:'Do you feel Ghanaian languages are under threat from English?',opts:['Yes, greatly','Somewhat','Not really','No'],ans:1},
+    {q:'Which effort would best preserve Ghanaian languages?',opts:['Teaching in schools','Ghanaian-language media','Language apps','Community events'],ans:0}
+   ]}
 ];
 var GHANA_POLLS=[
   {title:'What is your favourite Ghanaian dish?',options:['Waakye','Jollof Rice','Fufu & Light Soup','Banku & Tilapia','Kelewele'],earn:1.00},
@@ -6761,16 +6864,17 @@ function generateGhanaContent(type){
     var used=[];
     try{used=JSON.parse(localStorage.getItem('_genSurveyUsed')||'[]');}catch(e){}
     var pool=GHANA_SURVEYS.filter(function(s){return !used.includes(s.title);});
-    if(!pool.length){used=[];pool=GHANA_SURVEYS;}
+    if(!pool.length){used=[];pool=GHANA_SURVEYS.slice();}
     var item=pool[Math.floor(Math.random()*pool.length)];
     used.push(item.title);
     try{localStorage.setItem('_genSurveyUsed',JSON.stringify(used.slice(-GHANA_SURVEYS.length)));}catch(e){}
+    _pendingGenSurveyItem=item;
     expandContentCard('surveyCardBody');
     openAddContent('survey');
     setTimeout(function(){
       var t=el('acTitle'); if(t) t.value=item.title;
       var d=el('acDesc'); if(d) d.value=item.desc;
-      var q=el('acQs'); if(q) q.value=item.questions;
+      var q=el('acQs'); if(q) q.value=item.customQuestions?item.customQuestions.length:item.questions;
       var tm=el('acTime'); if(tm) tm.value=item.timeMin;
       var e=el('acEarn'); if(e) e.value=item.earn.toFixed(2);
     },80);
@@ -6802,7 +6906,13 @@ function saveNewContent(){
     var qs=parseInt(val('acQs'))||5, time=parseInt(val('acTime'))||5;
     var desc=(val('acDesc')||'').trim();
     var surveys=getSurveys();
-    surveys.push({id:'S'+Date.now(),title:title,desc:desc||title,questions:qs,timeMin:time,earn:earn,type:'standard',active:true});
+    var newSurvey={id:'S'+Date.now(),title:title,desc:desc||title,questions:qs,timeMin:time,earn:earn,type:'standard',active:true};
+    if(_pendingGenSurveyItem&&_pendingGenSurveyItem.customQuestions&&_pendingGenSurveyItem.customQuestions.length){
+      newSurvey.customQuestions=_pendingGenSurveyItem.customQuestions;
+      newSurvey.questions=_pendingGenSurveyItem.customQuestions.length;
+    }
+    _pendingGenSurveyItem=null;
+    surveys.push(newSurvey);
     saveSurveys(surveys); syncSurveysToFirebase(); renderAdminSurveys();
   } else if(type==='poll'){
     var opts=((val('acOptions')||'')).split(',').map(function(o){return o.trim();}).filter(function(o){return o;});
