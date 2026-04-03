@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>GhanaOpinionPay — Earn GHS for Your Opinion</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 <style>
 :root{
   --green:#0d4a22;--green-mid:#1a5c2e;--green-light:#2e7d47;--green-pale:#d4edda;
@@ -2318,11 +2320,11 @@ var MAKE_WEBHOOK_URL = 'https://goppay-backend.onrender.com';
 //   4. Paste it into FB_URL below and redeploy this file — done.
 var FB_URL = 'https://goppay-6c8b0-default-rtdb.asia-southeast1.firebasedatabase.app';
 // Always point to the Replit API server regardless of where this file is hosted.
-var GOP_API = 'https://4a7c4b42-ee8a-41f1-bfb3-c17ac1ac5937-00-ov6asphr13nt.riker.replit.dev/api';
+var GOP_API = 'https://a5099f8c-8aaf-4121-b156-0927e2c4c01c-00-1036z6gvbbwqh.worf.replit.dev/api';
 // Paystack payment verification endpoint (server-side — secret key never exposed to client)
 var VERIFY_URL = GOP_API + '/verify-upgrade';
 // AI content generation endpoint (OpenAI-powered survey/poll generator)
-var AI_API_URL = 'https://03cea8de-0042-48e3-a514-f782361d2abc-00-3dykvnounflo5.picard.replit.dev/api';
+var AI_API_URL = GOP_API;
 
 // Write a member record to Firebase (keyed by sanitised member id)
 function syncMemberToBackend(member){
@@ -2865,6 +2867,7 @@ var pendingDeleteId   = null;
 var addingContentType = null;
 var surveyQIdx        = 0;
 var activeSurvey      = null;
+var surveyUserAnswers = [];
 var waitInterval      = null;
 var activeTierFilter  = 'all';
 
@@ -4610,7 +4613,7 @@ var ghQs=[
 function startSurvey(sid){
   var s=getSurveys().find(function(x){return x.id===sid;});
   if(!s) return;
-  activeSurvey=s; surveyQIdx=0;
+  activeSurvey=s; surveyQIdx=0; surveyUserAnswers=[];
   setText('surveyTitle', s.title);
   setText('surveyMeta', s.questions+' questions · ~'+s.timeMin+' min');
   var displayEarn=s.type==='gh-affairs'?s.earn:(getSurveyEarn(currentUser?currentUser.tier:'Free')||s.earn);
@@ -4646,8 +4649,18 @@ function renderSurveyQ(){
 function nextSurveyQ(){
   var sel=document.querySelector('input[name="sqr"]:checked');
   if(!sel){alert('Please select an answer.'); return;}
-  surveyQIdx++;
   var qsSource2=activeSurvey.customQuestions||(activeSurvey.type==='gh-affairs'?ghQs:null);
+  var answerIdx=parseInt(sel.value);
+  var qText='Question '+(surveyQIdx+1);
+  var aText='Option '+(answerIdx+1);
+  if(qsSource2&&surveyQIdx<qsSource2.length){
+    qText=qsSource2[surveyQIdx].q||qText;
+    aText=(qsSource2[surveyQIdx].opts||[])[answerIdx]||aText;
+  } else {
+    aText=['Excellent','Good','Average','Poor','Very Poor'][answerIdx]||aText;
+  }
+  surveyUserAnswers.push({q:qText,a:aText});
+  surveyQIdx++;
   var totalQ=qsSource2?qsSource2.length:activeSurvey.questions;
   if(surveyQIdx<totalQ){renderSurveyQ();}
   else{completeSurvey();}
@@ -4665,6 +4678,11 @@ function completeSurvey(){
     var cs=members[idx].completedSurveys||[];
     if(!cs.includes(s.id)) cs.push(s.id);
     members[idx].completedSurveys=cs;
+    if(surveyUserAnswers.length){
+      var sr=members[idx].surveyResponses||{};
+      sr[s.id]={title:s.title,date:new Date().toISOString(),answers:surveyUserAnswers.slice()};
+      members[idx].surveyResponses=sr;
+    }
     if(s.type==='gh-affairs'){
       members[idx].ghSurveyDone=true;
     } else {
@@ -4742,6 +4760,9 @@ function answerPoll(pid, optIdx, btn){
     members[idx].dailyPollCount=(members[idx].dailyPollCount||0)+1;
     var ap=members[idx].answeredPolls||[];
     if(!ap.includes(pid)){ap.push(pid);members[idx].answeredPolls=ap;}
+    var pr=members[idx].pollResponses||{};
+    pr[pid]={title:poll?poll.title:'',optIdx:optIdx,opt:poll?(poll.options[optIdx]||'Option '+(optIdx+1)):'',date:new Date().toISOString()};
+    members[idx].pollResponses=pr;
     saveMembers(members); currentUser=members[idx];
     syncMemberToBackend(currentUser);
   }
@@ -6697,6 +6718,7 @@ function renderAdminSurveys(){
     html+='<span class="c-tag" style="background:'+(s.active?'#d1fae5':'#fee2e2')+';color:'+(s.active?'#065f46':'#991b1b')+'">'+(s.active?'Active':'Inactive')+'</span>';
     html+='<button class="abtn" data-stoggle="'+i+'">'+(s.active?'Deactivate':'Activate')+'</button>';
     if(!isGH) html+='<button class="abtn danger" data-sremove="'+i+'">&#x1F5D1; Remove</button>';
+    html+='<button class="abtn" data-sdownload="'+s.id+'" style="border-color:#1565c0;color:#1565c0;white-space:nowrap">&#x1F4E5; Responses PDF</button>';
     html+='</div></div>';
     // ── Edit: title + description (not for gh-affairs)
     if(!isGH){
@@ -6905,6 +6927,10 @@ function renderAdminSurveys(){
       renderAdminSurveys();
     });
   });
+  // Download responses PDF
+  listEl.querySelectorAll('[data-sdownload]').forEach(function(b){
+    b.addEventListener('click',function(){ downloadResponsesPDF('survey',b.dataset.sdownload); });
+  });
 }
 
 function renderAdminPolls(){
@@ -6919,6 +6945,7 @@ function renderAdminPolls(){
     html+='<span class="c-tag" style="background:'+(p.active?'#d1fae5':'#fee2e2')+';color:'+(p.active?'#065f46':'#991b1b')+'">'+(p.active?'Active':'Inactive')+'</span>';
     html+='<button class="abtn" data-ptoggle="'+i+'">'+(p.active?'Deactivate':'Activate')+'</button>';
     html+='<button class="abtn danger" data-premove="'+i+'">&#x1F5D1; Remove</button>';
+    html+='<button class="abtn" data-pdownload="'+p.id+'" style="border-color:#1565c0;color:#1565c0;white-space:nowrap">&#x1F4E5; Responses PDF</button>';
     html+='</div></div>';
     // Edit question title
     html+='<div style="margin-top:8px">';
@@ -7006,6 +7033,98 @@ function renderAdminPolls(){
       adminAlert('Poll updated successfully.');
     });
   });
+  // Download responses PDF
+  listEl.querySelectorAll('[data-pdownload]').forEach(function(b){
+    b.addEventListener('click',function(){ downloadResponsesPDF('poll',b.dataset.pdownload); });
+  });
+}
+
+function downloadResponsesPDF(type, id){
+  var jsPDFClass=window.jspdf&&window.jspdf.jsPDF;
+  if(!jsPDFClass){adminAlert('PDF library not loaded. Please refresh the page and try again.');return;}
+  var members=getMembers();
+  var dateStr=new Date().toLocaleDateString('en-GB');
+  if(type==='survey'){
+    var survey=getSurveys().find(function(s){return s.id===id;});
+    if(!survey){adminAlert('Survey not found.');return;}
+    var respondents=members.filter(function(m){return m.surveyResponses&&m.surveyResponses[id];});
+    var doc=new jsPDFClass({orientation:'landscape',unit:'mm',format:'a4'});
+    doc.setFillColor(13,74,34); doc.rect(0,0,297,22,'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(14); doc.setFont(undefined,'bold');
+    doc.text('GhanaOpinionPay — Survey Responses Report',14,14);
+    doc.setTextColor(40,40,40); doc.setFont(undefined,'normal');
+    doc.setFontSize(11); doc.text('Survey: '+survey.title,14,32);
+    doc.setFontSize(10); doc.text('Generated: '+dateStr+'   Total Responses: '+respondents.length,14,40);
+    if(!respondents.length){
+      doc.setFontSize(11); doc.setTextColor(120,120,120);
+      doc.text('No responses recorded yet.',14,54);
+      doc.text('Responses are captured when members complete this survey in the member dashboard.',14,62);
+      doc.save('Survey_Responses_'+survey.title.replace(/[^a-z0-9]/gi,'_')+'.pdf');
+      return;
+    }
+    var qs=survey.customQuestions||[];
+    var headers=['#','Member Name','Phone','Region'];
+    qs.forEach(function(q,qi){headers.push('Q'+(qi+1)+': '+(q.q||'').substring(0,35)+(q.q&&q.q.length>35?'…':''));});
+    var rows=respondents.map(function(m,ri){
+      var resp=m.surveyResponses[id];
+      var row=[ri+1,m.name||'—',m.phone||'—',m.region||'—'];
+      qs.forEach(function(q,qi){row.push(resp.answers&&resp.answers[qi]?resp.answers[qi].a:'—');});
+      return row;
+    });
+    doc.autoTable({head:[headers],body:rows,startY:48,
+      styles:{fontSize:8,cellPadding:2.5,overflow:'linebreak'},
+      headStyles:{fillColor:[13,74,34],textColor:255,fontStyle:'bold'},
+      alternateRowStyles:{fillColor:[240,248,240]},
+      margin:{left:14,right:14}});
+    doc.save('Survey_Responses_'+survey.title.replace(/[^a-z0-9]/gi,'_')+'_'+dateStr.replace(/\//g,'-')+'.pdf');
+  } else {
+    var poll=getPolls().find(function(p){return p.id===id;});
+    if(!poll){adminAlert('Poll not found.');return;}
+    var respondents=members.filter(function(m){return m.pollResponses&&m.pollResponses[id];});
+    var doc=new jsPDFClass({orientation:'portrait',unit:'mm',format:'a4'});
+    doc.setFillColor(13,74,34); doc.rect(0,0,210,22,'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(14); doc.setFont(undefined,'bold');
+    doc.text('GhanaOpinionPay — Poll Responses Report',14,14);
+    doc.setTextColor(40,40,40); doc.setFont(undefined,'normal');
+    doc.setFontSize(11); doc.text('Poll: '+poll.title,14,32);
+    doc.setFontSize(10); doc.text('Generated: '+dateStr+'   Total Votes: '+respondents.length,14,40);
+    if(!respondents.length){
+      doc.setFontSize(11); doc.setTextColor(120,120,120);
+      doc.text('No responses recorded yet.',14,54);
+      doc.text('Responses are captured when members answer this poll in the member dashboard.',14,62);
+      doc.save('Poll_Responses_'+poll.title.replace(/[^a-z0-9]/gi,'_')+'.pdf');
+      return;
+    }
+    var tally=poll.options.map(function(){return 0;});
+    respondents.forEach(function(m){var pr=m.pollResponses[id];if(pr&&typeof pr.optIdx==='number'&&tally[pr.optIdx]!==undefined)tally[pr.optIdx]++;});
+    var total=respondents.length;
+    doc.setFontSize(12); doc.setFont(undefined,'bold'); doc.text('Results Summary',14,52);
+    doc.autoTable({
+      head:[['Option','Votes','Percentage']],
+      body:poll.options.map(function(opt,oi){return [opt,tally[oi],total>0?Math.round(tally[oi]/total*100)+'%':'0%'];}),
+      startY:58,
+      styles:{fontSize:10,cellPadding:3},
+      headStyles:{fillColor:[13,74,34],textColor:255,fontStyle:'bold'},
+      alternateRowStyles:{fillColor:[240,248,240]},
+      columnStyles:{1:{halign:'center'},2:{halign:'center'}},
+      margin:{left:14,right:14}
+    });
+    var y2=doc.lastAutoTable.finalY+12;
+    doc.setFontSize(12); doc.setFont(undefined,'bold'); doc.text('Individual Responses',14,y2);
+    var indivRows=respondents.map(function(m,ri){
+      var pr=m.pollResponses[id];
+      return [ri+1,m.name||'—',m.phone||'—',m.region||'—',pr?pr.opt:'—',pr?new Date(pr.date).toLocaleDateString('en-GB'):'—'];
+    });
+    doc.autoTable({
+      head:[['#','Name','Phone','Region','Selected Option','Date']],
+      body:indivRows,startY:y2+6,
+      styles:{fontSize:9,cellPadding:2.5},
+      headStyles:{fillColor:[13,74,34],textColor:255,fontStyle:'bold'},
+      alternateRowStyles:{fillColor:[240,248,240]},
+      margin:{left:14,right:14}
+    });
+    doc.save('Poll_Responses_'+poll.title.replace(/[^a-z0-9]/gi,'_')+'_'+dateStr.replace(/\//g,'-')+'.pdf');
+  }
 }
 
 function renderAdminVideos(){
