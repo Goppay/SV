@@ -2337,16 +2337,6 @@ function jbPut(store, data){
     body:JSON.stringify(data)
   }).catch(function(){});
 }
-// Record a member login attempt to the server (success or failure)
-function logMemberLoginEvent(payload){
-  try{
-    fetch(GOP_API+'/member-logins', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify(payload||{})
-    }).catch(function(){});
-  }catch(e){}
-}
 
 // ── One-time localStorage → JSONBin migration ────────────────────────────
 // On first load, pushes all existing localStorage data to JSONBin so nothing is lost.
@@ -3860,10 +3850,7 @@ function doLogin(){
     jbGet('members', function(data){
       var remote=Array.isArray(data)?data.filter(Boolean):[];
       var fm=remote.find(function(x){return x&&x.phone===phone&&x.password===pass;});
-      if(!fm){
-        try{logMemberLoginEvent({phone:phone,success:false,reason:'invalid_credentials'});}catch(e){}
-        showErr('loginError','Incorrect phone number or password.'); return;
-      }
+      if(!fm){showErr('loginError','Incorrect phone number or password.'); return;}
       var local=getMembers();
       if(!local.find(function(x){return x.id===fm.id;})){
         local.push(fm);
@@ -3926,17 +3913,6 @@ function doLoginWithMember(m, phone){
   // Firebase was integrated and are missing from the admin members section.
   syncMemberToBackend(m);
   ensureMemberInFirebase(m);
-  // Push a dedicated login event so admin sees a full cross-device login history
-  try{
-    var _di=getRegDeviceInfo();
-    logMemberLoginEvent({
-      memberId:m.id, phone:m.phone,
-      name:((m.firstName||'')+' '+(m.lastName||'')).trim(),
-      device:_di.device, deviceName:_di.deviceName, deviceModel:_di.deviceModel,
-      browser:_di.browser, os:_di.os, screen:_di.screen,
-      success:true
-    });
-  }catch(e){}
   currentUser=m; saveSession();
   // Immediately push the pending visit to Firebase so admin sees it live (don't wait for pagehide)
   try{
