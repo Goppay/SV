@@ -2339,43 +2339,48 @@ function jbPut(store, data){
 }
 
 // ── JSONBin → localStorage hydration (centralized DB is source of truth) ──
-// On every page load, pull all stores from JSONBin into localStorage BEFORE
-// the rest of the app reads from localStorage. Member records in JSONBin are
-// keyed by id; the local app expects an array, so we normalize.
 var GOP_HYDRATE_STORES = ['members','withdrawals','surveys','polls','videos','ads','ann','subadmins','upgrades','issues','schedule','pages','tombstones','deleted','pools','pool_entries','sms_log','sms_settings','visits'];
 function _normalizeStoreData(store, data){
   if(data == null) return null;
-  // Stores that should be arrays in localStorage
   var arrayStores = {members:1,withdrawals:1,surveys:1,polls:1,videos:1,ads:1,subadmins:1,upgrades:1,issues:1,pages:1,tombstones:1,deleted:1,pools:1,pool_entries:1,sms_log:1,visits:1};
   if(arrayStores[store]){
-    if(Array.isArray(data)) return data;
+    if(Array.isArray(data)) return data.filter(Boolean);
     if(typeof data === 'object') return Object.values(data).filter(Boolean);
     return [];
   }
   return data;
 }
 function hydrateFromJsonBin(){
+  console.log('[GOP] hydrating from bins...');
   return Promise.all(GOP_HYDRATE_STORES.map(function(store){
-    return fetch(GOP_API+'/db/'+store, {method:'GET'})
+    return fetch(GOP_API+'/db/'+store, {method:'GET',cache:'no-store'})
       .then(function(r){return r.ok?r.json():null;})
       .then(function(j){
-        if(!j || !j.ok) return;
+        if(!j || j.ok===false) return;
         var data = _normalizeStoreData(store, j.data);
         if(data == null) return;
-        try{
-          if(typeof data === 'string') localStorage.setItem('gop_'+store, JSON.stringify(data));
-          else localStorage.setItem('gop_'+store, JSON.stringify(data));
-        }catch(e){}
+        try{ localStorage.setItem('gop_'+store, JSON.stringify(data)); }catch(e){}
       })
-      .catch(function(){});
-  }));
+      .catch(function(err){console.warn('[GOP] hydrate '+store+' failed', err);});
+  })).then(function(){console.log('[GOP] hydration done');});
 }
-// Block initial render until hydration completes (or 8s timeout)
-var GOP_HYDRATION_PROMISE = (function(){
-  var to = new Promise(function(res){setTimeout(res, 8000);});
-  return Promise.race([hydrateFromJsonBin(), to]);
-})();
-// No-op: previously this pushed local cache to bins; bins are now the source of truth.
+// Track whether localStorage already had member data BEFORE hydration.
+var _gopHadLocalMembers = false;
+try{
+  var _raw = localStorage.getItem('gop_members');
+  _gopHadLocalMembers = !!(_raw && _raw !== '[]' && _raw !== '{}');
+}catch(e){}
+// Begin hydration immediately. If localStorage was empty (fresh visitor), reload
+// once after hydration completes so the app re-renders with fresh data.
+var GOP_HYDRATION_PROMISE = hydrateFromJsonBin().then(function(){
+  try{
+    if(!_gopHadLocalMembers && !sessionStorage.getItem('gop_hydrated_reload')){
+      sessionStorage.setItem('gop_hydrated_reload','1');
+      location.reload();
+    }
+  }catch(e){}
+});
+// Disabled: bins are the source of truth; we never push local cache snapshots.
 function migrateLocalStorageToJsonBin(){}
 
 // Legacy FB_URL — kept so any remaining direct fetch(FB_URL...) calls fail gracefully
@@ -3056,18 +3061,9 @@ function restoreSession(){
 }
 
 document.addEventListener('DOMContentLoaded', function(){
-  // Wait for JSONBin hydration before rendering so the UI sees real data.
-  if(window.GOP_HYDRATION_PROMISE && !window.__gopHydrated){
-    window.__gopHydrated = true;
-    GOP_HYDRATION_PROMISE.then(function(){
-      // Re-dispatch DOMContentLoaded so this handler runs again with seeded data.
-      document.dispatchEvent(new Event('DOMContentLoaded'));
-    });
-    return;
-  }
-  // Load admin-set ad prices from Firebase into localStorage on every page load
-  loadAdPricesFromFirebase();
-  loadContentRatesFromFirebase();
+  // Load admin-set ad/content earn rates from JSONBin (best-effort)
+  try{ loadAdPricesFromFirebase(); }catch(e){}
+  try{ loadContentRatesFromFirebase(); }catch(e){}
   // Hamburger
   var hb=el('hamburgerBtn');
   if(hb) hb.addEventListener('click',function(){
