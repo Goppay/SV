@@ -2338,35 +2338,45 @@ function jbPut(store, data){
   }).catch(function(){});
 }
 
-// ── One-time localStorage → JSONBin migration ────────────────────────────
-// On first load, pushes all existing localStorage data to JSONBin so nothing is lost.
-var _jbMigrated = false;
-function migrateLocalStorageToJsonBin(){
-  if(_jbMigrated) return;
-  _jbMigrated = true;
-  try{
-    // Migrate each known store if it has local data
-    var stores = ['members','withdrawals','surveys','polls','videos','ads','ann','subadmins','upgrades','issues','schedule','pages','tombstones','deleted','pools','pool_entries','sms_log','sms_settings','visits'];
-    stores.forEach(function(store){
-      var key = 'gop_'+store;
-      var raw = localStorage.getItem(key);
-      if(!raw) return;
-      try{
-        var parsed = JSON.parse(raw);
-        // Only migrate if there is real data
-        if(parsed && (Array.isArray(parsed)?parsed.length>0:Object.keys(parsed).length>0 || typeof parsed === 'string')){
-          jbPut(store, parsed);
-        }
-      }catch(e){}
-    });
-    // Migrate individual member records if stored under gop_members
-    var members = [];
-    try{members = JSON.parse(localStorage.getItem('gop_members')||'[]');}catch(e){}
-    if(members.length) jbPut('members', members);
-  }catch(e){}
+// ── JSONBin → localStorage hydration (centralized DB is source of truth) ──
+// On every page load, pull all stores from JSONBin into localStorage BEFORE
+// the rest of the app reads from localStorage. Member records in JSONBin are
+// keyed by id; the local app expects an array, so we normalize.
+var GOP_HYDRATE_STORES = ['members','withdrawals','surveys','polls','videos','ads','ann','subadmins','upgrades','issues','schedule','pages','tombstones','deleted','pools','pool_entries','sms_log','sms_settings','visits'];
+function _normalizeStoreData(store, data){
+  if(data == null) return null;
+  // Stores that should be arrays in localStorage
+  var arrayStores = {members:1,withdrawals:1,surveys:1,polls:1,videos:1,ads:1,subadmins:1,upgrades:1,issues:1,pages:1,tombstones:1,deleted:1,pools:1,pool_entries:1,sms_log:1,visits:1};
+  if(arrayStores[store]){
+    if(Array.isArray(data)) return data;
+    if(typeof data === 'object') return Object.values(data).filter(Boolean);
+    return [];
+  }
+  return data;
 }
-// Run migration after page load
-window.addEventListener('load', function(){setTimeout(migrateLocalStorageToJsonBin, 1500);});
+function hydrateFromJsonBin(){
+  return Promise.all(GOP_HYDRATE_STORES.map(function(store){
+    return fetch(GOP_API+'/db/'+store, {method:'GET'})
+      .then(function(r){return r.ok?r.json():null;})
+      .then(function(j){
+        if(!j || !j.ok) return;
+        var data = _normalizeStoreData(store, j.data);
+        if(data == null) return;
+        try{
+          if(typeof data === 'string') localStorage.setItem('gop_'+store, JSON.stringify(data));
+          else localStorage.setItem('gop_'+store, JSON.stringify(data));
+        }catch(e){}
+      })
+      .catch(function(){});
+  }));
+}
+// Block initial render until hydration completes (or 8s timeout)
+var GOP_HYDRATION_PROMISE = (function(){
+  var to = new Promise(function(res){setTimeout(res, 8000);});
+  return Promise.race([hydrateFromJsonBin(), to]);
+})();
+// No-op: previously this pushed local cache to bins; bins are now the source of truth.
+function migrateLocalStorageToJsonBin(){}
 
 // Legacy FB_URL — kept so any remaining direct fetch(FB_URL...) calls fail gracefully
 // We replace all sync functions below, so FB_URL is never reached for real data.
@@ -3046,6 +3056,15 @@ function restoreSession(){
 }
 
 document.addEventListener('DOMContentLoaded', function(){
+  // Wait for JSONBin hydration before rendering so the UI sees real data.
+  if(window.GOP_HYDRATION_PROMISE && !window.__gopHydrated){
+    window.__gopHydrated = true;
+    GOP_HYDRATION_PROMISE.then(function(){
+      // Re-dispatch DOMContentLoaded so this handler runs again with seeded data.
+      document.dispatchEvent(new Event('DOMContentLoaded'));
+    });
+    return;
+  }
   // Load admin-set ad prices from Firebase into localStorage on every page load
   loadAdPricesFromFirebase();
   loadContentRatesFromFirebase();
