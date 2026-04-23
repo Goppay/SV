@@ -4452,6 +4452,26 @@ function openMemberDashboard(member){
       }
     }, 1200);
   }
+
+  // Background auto-refresh: pull latest admin content (announcements, surveys,
+  // polls, videos, ads, pages) every 30s so users see new items without a reload.
+  if(window._userSyncInterval){clearInterval(window._userSyncInterval);window._userSyncInterval=null;}
+  window._userSyncInterval=setInterval(function(){
+    if(!currentUser || currentUser==='admin'){
+      clearInterval(window._userSyncInterval); window._userSyncInterval=null; return;
+    }
+    try{
+      syncAnnFromFirebase(function(){ try{ renderNotifications(currentUser); }catch(e){} });
+      var rerender=function(){ try{ renderMemberContent(currentUser); }catch(e){} };
+      var pend=4;
+      var done=function(){ if(--pend<=0) rerender(); };
+      syncSurveysFromFirebase(done);
+      syncPollsFromFirebase(done);
+      syncVideosFromFirebase(done);
+      syncAdsFromFirebase(done);
+      syncPagesFromFirebase(function(){ try{ renderDashPages(currentUser); renderMemberPages(currentUser); }catch(e){} });
+    }catch(e){}
+  }, 30000);
 }
 
 function renderNotifications(member){
@@ -4596,9 +4616,9 @@ function switchDashTab(name, btn){
 // ── SURVEYS ───────────────────────────────────────────
 function renderSurveyList(member){
   var completedIds=member.completedSurveys||[];
-  var offeredToday=member.dailyOfferedSurveys||[];
-  // Only show surveys that are (a) assigned for today, (b) active, and (c) not already completed
-  var surveys=getSurveys().filter(function(s){return s.active&&!completedIds.includes(s.id)&&offeredToday.includes(s.id);});
+  // Show every active admin survey the member hasn't completed.
+  // Daily limit is still enforced below via the per-survey "Limit reached" button.
+  var surveys=getSurveys().filter(function(s){return s.active&&!completedIds.includes(s.id);});
   var done=member.dailySurveyDate===today()?member.dailySurveyCount||0:0;
   var lim=TIER_DAILY[member.tier]||5;
   setText('quotaText',done+' / '+lim);
@@ -4723,9 +4743,9 @@ function completeSurvey(){
 // ── POLLS ─────────────────────────────────────────────
 function renderPollList(member){
   var answeredIds=member.answeredPolls||[];
-  var offeredPollsToday=member.dailyOfferedPolls||[];
-  // Only show polls assigned for today that haven't been answered yet
-  var polls=getPolls().filter(function(p){return p.active&&!answeredIds.includes(p.id)&&offeredPollsToday.includes(p.id);});
+  // Show every active admin poll the member hasn't answered.
+  // Daily limit is still enforced below via the per-poll "Limit reached" state.
+  var polls=getPolls().filter(function(p){return p.active&&!answeredIds.includes(p.id);});
   var pollDone=member.dailyPollDate===today()?member.dailyPollCount||0:0;
   var pollLim=Math.max(0,(TIER_POLLS[member.tier]||1)+(member.extraPolls||0));
   setText('pollLimitBadge','Daily limit: '+pollLim+' poll'+(pollLim>1?'s':'')+' ('+member.tier+')');
