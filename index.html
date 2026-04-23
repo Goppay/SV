@@ -2955,12 +2955,12 @@ var activeTierFilter  = 'all';
 function ld(k,d){try{var v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}}
 function sv(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
 function getMembers(){return ld('gop_members',[]);}
-function saveMembers(m){sv('gop_members',m);}
+function saveMembers(m){sv('gop_members',m); try{jbPut('members',m);}catch(e){}}
 function getWithdrawals(){return ld('gop_withdrawals',[]);}
-function saveWithdrawals(w){sv('gop_withdrawals',w);}
+function saveWithdrawals(w){sv('gop_withdrawals',w); try{jbPut('withdrawals',w);}catch(e){}}
 // ── ACTIVITY FEED ─────────────────────────────────────
 function getActivity(){return ld('gop_activity',[]);}
-function saveActivity(a){sv('gop_activity',a);}
+function saveActivity(a){sv('gop_activity',a); try{jbPut('activity',a);}catch(e){}}
 function logActivity(type, actor, message, meta){
   try{
     var arr=getActivity();
@@ -2995,9 +2995,10 @@ function getAnn(){
 }
 function getAnnRaw(){var a=ld('gop_ann',''); return (a&&typeof a==='object')?a:(a?{text:a,expiresAt:0}:null);}
 function saveAnn(a){
-  if(a==null||a===''){ sv('gop_ann',''); return; }
+  if(a==null||a===''){ sv('gop_ann',''); try{jbPut('ann','');}catch(e){} return; }
   if(typeof a==='string') a={text:a, expiresAt:0};
   sv('gop_ann',a);
+  try{jbPut('ann',a);}catch(e){}
 }
 function getAds(){return ld('gop_ads',[]);}
 function saveAds(a){sv('gop_ads',a); syncAdsToFirebase();}
@@ -3905,7 +3906,7 @@ function closeSurveyModal(){
 
 // ── LOGIN ─────────────────────────────────────────────
 function getTombstones(){try{return JSON.parse(localStorage.getItem('gop_tombstones')||'[]');}catch(e){return [];}}
-function saveTombstones(t){try{localStorage.setItem('gop_tombstones',JSON.stringify(t));}catch(e){}}
+function saveTombstones(t){try{localStorage.setItem('gop_tombstones',JSON.stringify(t));}catch(e){} try{jbPut('tombstones',t);}catch(e){}}
 function syncTombstonesToFirebase(){
   try{
     jbPut('tombstones', getTombstones());
@@ -10124,7 +10125,7 @@ function getSiteVisitStats(){
 
 // ── PAGES ─────────────────────────────────────────────
 function getPages(){return ld('gop_pages',[]);}
-function savePages(v){sv('gop_pages',v);}
+function savePages(v){sv('gop_pages',v); try{jbPut('pages',v);}catch(e){}}
 
 function renderAdminPages(){
   var pages=getPages();
@@ -10531,7 +10532,7 @@ function renderAdminUpgradesFull(){
 
 // ── SITE VISITS TRACKING ─────────────────────────────
 function getVisits(){try{return JSON.parse(localStorage.getItem('gop_visits')||'[]');}catch(e){return [];}}
-function saveVisits(v){try{localStorage.setItem('gop_visits',JSON.stringify(v));}catch(e){}}
+function saveVisits(v){try{localStorage.setItem('gop_visits',JSON.stringify(v));}catch(e){} try{jbPut('visits',v);}catch(e){}}
 
 function isAdminUrl(){
   // Returns true when accessed via /admin path OR via #admin hash OR ?admin=1 query param
@@ -10786,7 +10787,7 @@ function confirmDenyUpgrade(){
 
 // ── SCHEDULE ──────────────────────────────────────────
 function getSchedule(){try{return JSON.parse(localStorage.getItem('gop_schedule')||'{}');}catch(e){return {};}}
-function saveSchedule(v){try{localStorage.setItem('gop_schedule',JSON.stringify(v));}catch(e){}}
+function saveSchedule(v){try{localStorage.setItem('gop_schedule',JSON.stringify(v));}catch(e){} try{jbPut('schedule',v);}catch(e){}}
 
 var DAYS=[
   {key:'Mon',label:'Monday'},
@@ -10992,7 +10993,7 @@ function adminAlert(msg){
 
 // ── ISSUES (REPORT) ──────────────────────────────────
 function getIssues(){return ld('gop_issues',[]);}
-function saveIssues(v){sv('gop_issues',v);}
+function saveIssues(v){sv('gop_issues',v); try{jbPut('issues',v);}catch(e){}}
 
 // System notice → admin Issues feed when the local Ghana library is exhausted.
 // De-duplicated within 24 hours so we don't spam the admin.
@@ -11022,9 +11023,9 @@ function notifyAdminLibraryExhausted(type){
   }catch(e){}
 }
 function getSubAdmins(){return ld('gop_subadmins',[]);}
-function saveSubAdmins(v){sv('gop_subadmins',v);}
+function saveSubAdmins(v){sv('gop_subadmins',v); try{jbPut('subadmins',v);}catch(e){}}
 function getUpgradeReqs(){return ld('gop_upgrades',[]);}
-function saveUpgradeReqs(v){sv('gop_upgrades',v);}
+function saveUpgradeReqs(v){sv('gop_upgrades',v); try{jbPut('upgrades',v);}catch(e){}}
 
 function submitIssue(){
   if(!currentUser||currentUser==='admin'||currentUser.role==='superadmin'||currentUser.role==='subadmin') return;
@@ -12205,6 +12206,7 @@ function showManualActivation(ref){
 // ── SMS MODULE ────────────────────────────────────────
 
 function getSmsSettings(){try{return JSON.parse(localStorage.getItem('gop_sms_settings')||'{}');}catch(e){return {};}}
+function _saveSmsSettingsCloud(v){try{jbPut('sms_settings',v);}catch(e){}}
 function saveSmsSettings(v){
   try{localStorage.setItem('gop_sms_settings',JSON.stringify(v));}catch(e){}
   try{ jbPut('sms_settings', v); }catch(e){}
@@ -12222,7 +12224,7 @@ function syncSmsSettingsFromFirebase(callback){
   }catch(e){if(callback)callback();}
 }
 function getSmsLog(){try{return JSON.parse(localStorage.getItem('gop_sms_log')||'[]');}catch(e){return [];}}
-function saveSmsLog(v){try{localStorage.setItem('gop_sms_log',JSON.stringify(v));}catch(e){}}
+function saveSmsLog(v){try{localStorage.setItem('gop_sms_log',JSON.stringify(v));}catch(e){} try{jbPut('sms_log',v);}catch(e){}}
 
 function getSmsApiLocked(){
   try{return localStorage.getItem('gop_sms_api_locked')==='1';}catch(e){return false;}
