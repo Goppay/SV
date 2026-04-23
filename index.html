@@ -2402,31 +2402,61 @@ function getMaxSubAdmins(){ return parseInt(localStorage.getItem('gop_max_subadm
 // ── RENDER BACKEND URL ───────────────────────────────────
 var MAKE_WEBHOOK_URL = 'https://goppay-backend.onrender.com';
 
-// ── CROSS-DEVICE SYNC (JSONBin.io via API proxy) ──────────────────────────
-// API key is kept server-side. All sync goes through GOP_API/db/:store
-// localStorage remains the primary cache; JSONBin is the persistent backend.
-// Always point to the Replit API server regardless of where this file is hosted.
-var GOP_API = (function(){
-  // The API server always mounts /api at the origin root.
-  // Strip any preview sub-path prefix (e.g. /api-server) so we never double-prefix.
-  return window.location.origin + '/api';
-})();
+// ── CROSS-DEVICE SYNC (direct JSONBin.io) ──────────────────────────
+// Talks directly to a single JSONBin master bin that holds every store as a
+// key (e.g. {members:[...], surveys:[...], polls:[...]}). No backend proxy
+// required, so the app keeps working even if the Replit project is offline.
+var JSONBIN_BIN = '69e9396a856a68218960dcc9';
+var JSONBIN_KEY = '$2a$10$abzCnXvlbCpyGOeT6KHoqO3dw2TvFeNtzDsos5rmvmGx6eH4maYBi';
+var JSONBIN_URL = 'https://api.jsonbin.io/v3/b/' + JSONBIN_BIN;
+var GOP_API = JSONBIN_URL; // legacy alias used elsewhere in the file
 
-// ── JSONBin helpers ──────────────────────────────────────────────────────
-// Reads a data store from JSONBin (via server proxy)
-function jbGet(store, callback){
-  fetch(GOP_API+'/db/'+store, {method:'GET', headers:{'Content-Type':'application/json'}})
-  .then(function(r){return r.ok?r.json():{ok:false,data:null};})
-  .then(function(j){if(callback) callback(j.data);})
-  .catch(function(){if(callback) callback(null);});
+// In-memory mirror of the master bin so we don't fetch the whole blob for
+// every per-store call. Refreshed on hydrate and on every successful PUT.
+var _gopMaster = null;
+var _gopMasterPromise = null;
+function _gopFetchMaster(force){
+  if(!force && _gopMaster) return Promise.resolve(_gopMaster);
+  if(_gopMasterPromise) return _gopMasterPromise;
+  _gopMasterPromise = fetch(JSONBIN_URL+'/latest', {
+    method:'GET',
+    headers:{'X-Master-Key':JSONBIN_KEY,'X-Bin-Meta':'false'}
+  })
+  .then(function(r){return r.ok?r.json():{};})
+  .then(function(j){
+    _gopMaster = (j && typeof j==='object') ? (j.record || j) : {};
+    if(!_gopMaster || typeof _gopMaster!=='object') _gopMaster = {};
+    _gopMasterPromise = null;
+    return _gopMaster;
+  })
+  .catch(function(){_gopMasterPromise=null; _gopMaster={}; return _gopMaster;});
+  return _gopMasterPromise;
 }
-// Writes (overwrites) a data store to JSONBin (via server proxy)
+function _gopWriteMaster(){
+  // Debounced full-blob PUT so rapid successive writes coalesce.
+  if(_gopWriteMaster._t) clearTimeout(_gopWriteMaster._t);
+  _gopWriteMaster._t = setTimeout(function(){
+    fetch(JSONBIN_URL, {
+      method:'PUT',
+      headers:{'Content-Type':'application/json','X-Master-Key':JSONBIN_KEY,'X-Bin-Versioning':'false'},
+      body:JSON.stringify(_gopMaster||{})
+    }).catch(function(){});
+  }, 250);
+}
+
+// Reads a single store key from the master bin
+function jbGet(store, callback){
+  _gopFetchMaster(false).then(function(m){
+    if(callback) callback(m && Object.prototype.hasOwnProperty.call(m,store) ? m[store] : null);
+  });
+}
+// Writes a single store key into the master bin (debounced full-blob PUT)
 function jbPut(store, data){
-  fetch(GOP_API+'/db/'+store, {
-    method:'PUT',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify(data)
-  }).catch(function(){});
+  _gopFetchMaster(false).then(function(m){
+    m[store] = data;
+    _gopMaster = m;
+    _gopWriteMaster();
+  });
 }
 
 // ── JSONBin → localStorage hydration (centralized DB is source of truth) ──
@@ -2444,16 +2474,19 @@ function _normalizeStoreData(store, data){
 function hydrateFromJsonBin(){
   console.log('[GOP] hydrating from bins...');
   return Promise.all(GOP_HYDRATE_STORES.map(function(store){
-    return fetch(GOP_API+'/db/'+store, {method:'GET',cache:'no-store'})
-      .then(function(r){return r.ok?r.json():null;})
-      .then(function(j){
-        if(!j || j.ok===false) return;
-        var data = _normalizeStoreData(store, j.data);
+    return Promise.resolve();
+  })).then(function(){
+    // Single round-trip: pull the master bin once and write every store from it.
+    return _gopFetchMaster(true).then(function(master){
+      GOP_HYDRATE_STORES.forEach(function(store){
+        if(!Object.prototype.hasOwnProperty.call(master,store)) return;
+        var data = _normalizeStoreData(store, master[store]);
         if(data == null) return;
         try{ localStorage.setItem('gop_'+store, JSON.stringify(data)); }catch(e){}
-      })
-      .catch(function(err){console.warn('[GOP] hydrate '+store+' failed', err);});
-  })).then(function(){console.log('[GOP] hydration done');});
+      });
+      console.log('[GOP] hydration done');
+    });
+  });
 }
 // Track whether localStorage already had member data BEFORE hydration.
 var _gopHadLocalMembers = false;
