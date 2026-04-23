@@ -3102,7 +3102,7 @@ function setHTML(id,h){var e=el(id);if(e)e.innerHTML=h||'';}
 function showErr(id,msg){var e=el(id);if(e){e.textContent=msg;e.style.display='block';}}
 function hideErr(id){var e=el(id);if(e)e.style.display='none';}
 function today(){return new Date().toLocaleDateString('en-GB');}
-function mkNotif(text){return {text:text,ts:new Date().toISOString()};}
+function mkNotif(text){return {id:'N'+Date.now()+Math.floor(Math.random()*1e6),text:text,ts:new Date().toISOString()};}
 
 // ── NAV & SCROLL ──────────────────────────────────────
 window.addEventListener('scroll',function(){
@@ -4312,7 +4312,7 @@ function refreshDailyAssignments(memberRef){
   // fresh batch of up to 15 auto-generated from the local Ghana library.
   var AUTOFILL_BATCH=15;
   if(!(m.dailyOfferedSurveys&&m.dailyOfferedSurveys.length)){
-    var availS=getSurveys().filter(function(s){return s.active&&!(m.completedSurveys||[]).includes(s.id);});
+    var availS=getSurveys().filter(function(s){return s&&s.active!==false&&!(m.completedSurveys||[]).includes(s.id);});
     m.dailyOfferedSurveys=availS.map(function(s){return s.id;});
     changed=true;
   } else {
@@ -4320,7 +4320,7 @@ function refreshDailyAssignments(memberRef){
     var completedNow0=m.completedSurveys||[];
     var currentOfferedS=m.dailyOfferedSurveys;
     var newAdminS=getSurveys().filter(function(s){
-      return s.active && !currentOfferedS.includes(s.id) && !completedNow0.includes(s.id);
+      return s&&s.active!==false && !currentOfferedS.includes(s.id) && !completedNow0.includes(s.id);
     });
     if(newAdminS.length){
       m.dailyOfferedSurveys=currentOfferedS.concat(newAdminS.map(function(s){return s.id;}));
@@ -4531,6 +4531,19 @@ function openMemberDashboard(member){
   // First pass — render from localStorage immediately (fast, no flicker)
   renderMemberContent(member);
 
+  // Full cloud pull on login: every imported store (announcements, surveys,
+  // polls, videos, ads, pages, schedule, etc.) is hydrated, then we re-render
+  // so the user sees everything the admin just imported the moment they log in.
+  try{
+    if(typeof hydrateFromJsonBin==='function'){
+      hydrateFromJsonBin().then(function(){
+        var fresh=getMembers().find(function(x){return x.id===member.id;})||member;
+        currentUser=fresh;
+        renderMemberContent(fresh);
+      }).catch(function(){});
+    }
+  }catch(e){}
+
   // Second pass — pull latest content from Firebase then re-render (gets admin updates)
   var pending=4;
   function contentDone(){
@@ -4592,7 +4605,30 @@ function renderNotifications(member){
   var html='';
   var annObj=getAnn();
   if(annObj && !annAppliesTo(annObj, member)) annObj=null;
+  // Suppress an admin announcement the user has already deleted
+  var annDeleted=(member.deletedNotifIds||[]).indexOf('ANN:'+(annObj?(annObj.text||''):''))>=0;
+  if(annDeleted) annObj=null;
   var ann=annObj?annObj.text:'';
+  // Migrate legacy strings to objects, ensure every notification has a stable id,
+  // and filter out any notifications the user has previously deleted.
+  var needsSave=false;
+  if(member.notifications&&member.notifications.length){
+    member.notifications=member.notifications.map(function(n){
+      if(typeof n==='string'){needsSave=true;return {id:'N'+Date.now()+Math.floor(Math.random()*1e6),text:n,ts:null};}
+      if(!n.id){needsSave=true;n.id='N'+Date.now()+Math.floor(Math.random()*1e6);}
+      return n;
+    });
+    var delIds=member.deletedNotifIds||[];
+    if(delIds.length){
+      var beforeLen=member.notifications.length;
+      member.notifications=member.notifications.filter(function(n){return delIds.indexOf(n.id)<0;});
+      if(member.notifications.length!==beforeLen) needsSave=true;
+    }
+    if(needsSave){
+      var _mm=getMembers();var _mi2=_mm.findIndex(function(m){return m.id===member.id;});
+      if(_mi2>=0){_mm[_mi2].notifications=member.notifications;saveMembers(_mm);}
+    }
+  }
   var hasAny=ann||(member.notifications&&member.notifications.length);
   if(hasAny){
     html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">';
@@ -4602,18 +4638,13 @@ function renderNotifications(member){
     }
     html+='</div>';
   }
-  if(ann) html+='<div class="notif-item gold">&#x1F4E2; <strong>Goppay:</strong> '+ann+'</div>';
+  if(ann){
+    html+='<div class="notif-item gold" style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">';
+    html+='<span style="flex:1">&#x1F4E2; <strong>Goppay:</strong> '+ann+'</span>';
+    html+='<button class="notif-del-btn" data-anndel="1" title="Delete notification" style="background:none;border:none;cursor:pointer;color:#bbb;font-size:15px;flex-shrink:0;padding:0 2px;line-height:1;margin-top:1px">&#x2715;</button>';
+    html+='</div>';
+  }
   if(member.notifications&&member.notifications.length){
-    // Migrate any legacy plain-string notifications to {text,ts} objects so they show a date
-    var needsSave=false;
-    member.notifications=member.notifications.map(function(n){
-      if(typeof n==='string'){needsSave=true;return {text:n,ts:null};}
-      return n;
-    });
-    if(needsSave){
-      var _mm=getMembers();var _mi2=_mm.findIndex(function(m){return m.id===member.id;});
-      if(_mi2>=0){_mm[_mi2].notifications=member.notifications;saveMembers(_mm);}
-    }
     member.notifications.slice().reverse().forEach(function(n,i){
       var realIdx=member.notifications.length-1-i;
       var notifText=n.text||'';
@@ -4633,7 +4664,11 @@ function renderNotifications(member){
   if(!notifList) return;
   notifList.querySelectorAll('.notif-del-btn').forEach(function(btn){
     btn.addEventListener('click',function(){
-      deleteNotification(parseInt(btn.dataset.nidx));
+      if(btn.dataset.anndel){
+        deleteAnnouncementNotif();
+      } else {
+        deleteNotification(parseInt(btn.dataset.nidx));
+      }
     });
   });
   var clearBtn=el('clearAllNotifsBtn');
@@ -4645,8 +4680,29 @@ function deleteNotification(idx){
   var mi=members.findIndex(function(m){return m.id===currentUser.id;});
   if(mi<0) return;
   var notifs=members[mi].notifications||[];
+  var removed=notifs[idx];
   notifs.splice(idx,1);
   members[mi].notifications=notifs;
+  // Record the deleted ID so re-syncing from cloud can't bring it back
+  var del=members[mi].deletedNotifIds||[];
+  if(removed&&removed.id&&del.indexOf(removed.id)<0) del.push(removed.id);
+  members[mi].deletedNotifIds=del;
+  saveMembers(members);
+  currentUser=members[mi];
+  syncMemberToBackend(currentUser);
+  renderNotifications(currentUser);
+}
+
+function deleteAnnouncementNotif(){
+  var members=getMembers();
+  var mi=members.findIndex(function(m){return m.id===currentUser.id;});
+  if(mi<0) return;
+  var annObj=getAnn();
+  var annText=annObj?(annObj.text||''):'';
+  var del=members[mi].deletedNotifIds||[];
+  var key='ANN:'+annText;
+  if(del.indexOf(key)<0) del.push(key);
+  members[mi].deletedNotifIds=del;
   saveMembers(members);
   currentUser=members[mi];
   syncMemberToBackend(currentUser);
@@ -4657,6 +4713,13 @@ function clearAllNotifications(){
   var members=getMembers();
   var mi=members.findIndex(function(m){return m.id===currentUser.id;});
   if(mi<0) return;
+  // Capture every current notification id in the deleted blacklist so cloud
+  // re-sync cannot resurrect them.
+  var del=members[mi].deletedNotifIds||[];
+  (members[mi].notifications||[]).forEach(function(n){
+    if(n&&n.id&&del.indexOf(n.id)<0) del.push(n.id);
+  });
+  members[mi].deletedNotifIds=del;
   members[mi].notifications=[];
   saveMembers(members);
   currentUser=members[mi];
@@ -4731,8 +4794,9 @@ function switchDashTab(name, btn){
 function renderSurveyList(member){
   var completedIds=member.completedSurveys||[];
   // Show every active admin survey the member hasn't completed.
+  // Treat missing active flag as active=true so imported/legacy surveys still render.
   // Daily limit is still enforced below via the per-survey "Limit reached" button.
-  var surveys=getSurveys().filter(function(s){return s.active&&!completedIds.includes(s.id);});
+  var surveys=getSurveys().filter(function(s){return s&&s.active!==false&&!completedIds.includes(s.id);});
   var done=member.dailySurveyDate===today()?member.dailySurveyCount||0:0;
   var lim=TIER_DAILY[member.tier]||5;
   setText('quotaText',done+' / '+lim);
@@ -4859,8 +4923,9 @@ function completeSurvey(){
 function renderPollList(member){
   var answeredIds=member.answeredPolls||[];
   // Show every active admin poll the member hasn't answered.
+  // Treat missing active flag as active=true so imported/legacy polls still render.
   // Daily limit is still enforced below via the per-poll "Limit reached" state.
-  var polls=getPolls().filter(function(p){return p.active&&!answeredIds.includes(p.id);});
+  var polls=getPolls().filter(function(p){return p&&p.active!==false&&!answeredIds.includes(p.id);});
   var pollDone=member.dailyPollDate===today()?member.dailyPollCount||0:0;
   var pollLim=Math.max(0,(TIER_POLLS[member.tier]||1)+(member.extraPolls||0));
   setText('pollLimitBadge','Daily limit: '+pollLim+' poll'+(pollLim>1?'s':'')+' ('+member.tier+')');
