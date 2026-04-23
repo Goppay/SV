@@ -2126,7 +2126,41 @@ iframe[src*="badge"]{
       <div class="a-card">
         <div class="a-card-title">&#x1F4E2; Broadcast Announcement</div>
         <div class="fg"><label>Message to all members</label><textarea id="annText" rows="3" placeholder="e.g. New surveys available this week!"></textarea></div>
-        <button class="add-btn" id="broadcastBtn">Send to All Members &#x2192;</button>
+        <div class="fg" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div><label>Display duration</label>
+            <select id="annDurationVal" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:8px;font-size:14px">
+              <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+              <option value="6">6</option><option value="12">12</option><option value="24" selected>24</option>
+              <option value="48">48</option><option value="72">72</option><option value="168">168</option>
+              <option value="0">Until removed</option>
+            </select>
+          </div>
+          <div><label>Unit</label>
+            <select id="annDurationUnit" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:8px;font-size:14px">
+              <option value="hours" selected>Hours</option>
+              <option value="days">Days</option>
+            </select>
+          </div>
+        </div>
+        <p style="font-size:12px;color:#6b7280;margin:-4px 0 10px">The announcement will automatically disappear from member dashboards after this period. Choose "Until removed" to keep it visible until you clear it.</p>
+        <div class="fg" style="margin-bottom:10px">
+          <label>Target tiers <span style="font-size:11px;color:#9ca3af">(leave all unchecked = everyone)</span></label>
+          <div id="annTierBox" style="display:flex;flex-wrap:wrap;gap:10px;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:#fafafa">
+            <label style="font-size:13px;display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" class="ann-tier" value="Free"> Free</label>
+            <label style="font-size:13px;display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" class="ann-tier" value="Bronze"> Bronze</label>
+            <label style="font-size:13px;display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" class="ann-tier" value="Silver"> Silver</label>
+            <label style="font-size:13px;display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" class="ann-tier" value="Gold"> Gold</label>
+          </div>
+        </div>
+        <div class="fg" style="margin-bottom:10px">
+          <label>Target regions <span style="font-size:11px;color:#9ca3af">(leave all unchecked = everyone)</span></label>
+          <div id="annRegionBox" style="display:flex;flex-wrap:wrap;gap:8px 12px;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:#fafafa;max-height:130px;overflow-y:auto"></div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="add-btn" id="broadcastBtn" style="flex:1;min-width:200px">Send to All Members &#x2192;</button>
+          <button class="add-btn" id="clearAnnBtn" style="background:#dc2626;flex:0 0 auto">Clear Announcement</button>
+        </div>
+        <div id="annCurrent" style="margin-top:10px;font-size:12.5px;color:var(--text-muted)"></div>
         <div id="annStatus" style="margin-top:9px;font-size:13px;color:var(--green)"></div>
       </div>
       <div class="a-card">
@@ -2638,7 +2672,11 @@ function syncAdsFromFirebase(cb){ fbPull('ads', getAds, saveAds, false, cb); }
 function syncAnnToFirebase(){ jbPut('ann', getAnn()); }
 function syncAnnFromFirebase(cb){
   jbGet('ann', function(data){
-    if(data!==null&&data!==undefined&&typeof data==='string') saveAnn(data);
+    if(data!==null&&data!==undefined){
+      if(typeof data==='string') saveAnn(data);
+      else if(typeof data==='object' && data.text) saveAnn(data);
+      else if(data===''||data===null) saveAnn('');
+    }
     if(cb) cb();
   });
 }
@@ -2829,8 +2867,26 @@ function getMembers(){return ld('gop_members',[]);}
 function saveMembers(m){sv('gop_members',m);}
 function getWithdrawals(){return ld('gop_withdrawals',[]);}
 function saveWithdrawals(w){sv('gop_withdrawals',w);}
-function getAnn(){return ld('gop_ann','');}
-function saveAnn(a){sv('gop_ann',a);}
+function getAnn(){
+  var a=ld('gop_ann','');
+  if(!a) return null;
+  // Legacy: plain string -> treat as no expiry
+  if(typeof a==='string'){
+    if(!a.trim()) return null;
+    return {text:a, expiresAt:0};
+  }
+  if(typeof a==='object' && a.text){
+    if(a.expiresAt && Date.now()>a.expiresAt) return null;
+    return a;
+  }
+  return null;
+}
+function getAnnRaw(){var a=ld('gop_ann',''); return (a&&typeof a==='object')?a:(a?{text:a,expiresAt:0}:null);}
+function saveAnn(a){
+  if(a==null||a===''){ sv('gop_ann',''); return; }
+  if(typeof a==='string') a={text:a, expiresAt:0};
+  sv('gop_ann',a);
+}
 function getAds(){return ld('gop_ads',[]);}
 function saveAds(a){sv('gop_ads',a); syncAdsToFirebase();}
 function getSurveys(){
@@ -3389,6 +3445,8 @@ document.addEventListener('DOMContentLoaded', function(){
     });
   });
   bindClick('broadcastBtn', broadcastAnn);
+  bindClick('clearAnnBtn', clearBroadcastAnn);
+  try{ renderAnnCurrent(); }catch(e){}
   bindClick('addAdBtn', addAd);
   // Live preview for ad image
   var adImgInput=el('adImgUrl');
@@ -4144,6 +4202,16 @@ function refreshDailyAssignments(memberRef){
     m.dailyOfferedSurveys=availS.map(function(s){return s.id;});
     changed=true;
   } else {
+    // Top-up: include any newly-added active admin surveys not yet offered or completed
+    var completedNow0=m.completedSurveys||[];
+    var currentOfferedS=m.dailyOfferedSurveys;
+    var newAdminS=getSurveys().filter(function(s){
+      return s.active && !currentOfferedS.includes(s.id) && !completedNow0.includes(s.id);
+    });
+    if(newAdminS.length){
+      m.dailyOfferedSurveys=currentOfferedS.concat(newAdminS.map(function(s){return s.id;}));
+      changed=true;
+    }
     // Auto-refill ONLY when every offered survey has been completed.
     var completedNow=m.completedSurveys||[];
     var uncompleted=m.dailyOfferedSurveys.filter(function(sid){return !completedNow.includes(sid);});
@@ -4191,6 +4259,16 @@ function refreshDailyAssignments(memberRef){
     m.dailyOfferedPolls=availP.map(function(p){return p.id;});
     changed=true;
   } else {
+    // Top-up: include any newly-added active admin polls not yet offered or answered
+    var answeredNow0=m.answeredPolls||[];
+    var currentOfferedP=m.dailyOfferedPolls;
+    var newAdminP=getPolls().filter(function(p){
+      return p.active && !currentOfferedP.includes(p.id) && !answeredNow0.includes(p.id);
+    });
+    if(newAdminP.length){
+      m.dailyOfferedPolls=currentOfferedP.concat(newAdminP.map(function(p){return p.id;}));
+      changed=true;
+    }
     var answeredNow=m.answeredPolls||[];
     var uncompletedPolls=m.dailyOfferedPolls.filter(function(pid){return !answeredNow.includes(pid);});
     if(uncompletedPolls.length===0 && typeof GHANA_POLLS!=='undefined' && GHANA_POLLS.length){
@@ -4378,7 +4456,9 @@ function openMemberDashboard(member){
 
 function renderNotifications(member){
   var html='';
-  var ann=getAnn();
+  var annObj=getAnn();
+  if(annObj && !annAppliesTo(annObj, member)) annObj=null;
+  var ann=annObj?annObj.text:'';
   var hasAny=ann||(member.notifications&&member.notifications.length);
   if(hasAny){
     html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">';
@@ -10554,12 +10634,72 @@ function saveScheduleSettings(){
   adminAlert('Schedule saved for '+tier+' tier!');
 }
 
+var GOP_REGIONS=['Greater Accra','Ashanti','Northern','Western','Eastern','Central','Volta','Upper East','Upper West','Brong-Ahafo','Oti','Bono East','Ahafo','North East','Savannah','Western North'];
+function populateAnnRegionBox(){
+  var box=document.getElementById('annRegionBox'); if(!box||box.dataset.populated) return;
+  box.innerHTML=GOP_REGIONS.map(function(r){
+    return '<label style="font-size:13px;display:flex;align-items:center;gap:5px;cursor:pointer;min-width:130px"><input type="checkbox" class="ann-region" value="'+r+'"> '+r+'</label>';
+  }).join('');
+  box.dataset.populated='1';
+}
+function getCheckedValues(sel){
+  var arr=[]; document.querySelectorAll(sel).forEach(function(cb){if(cb.checked)arr.push(cb.value);}); return arr;
+}
 function broadcastAnn(){
   var text=(val('annText')||'').trim();
   if(!text){alert('Please enter an announcement.'); return;}
-  saveAnn(text); syncAnnToFirebase();
-  setText('annStatus','\u2705 Announcement saved! All members will see it on their dashboard.');
+  var durVal=parseFloat(val('annDurationVal')||'24');
+  var unit=val('annDurationUnit')||'hours';
+  var ms=0;
+  if(durVal>0){
+    var hours=unit==='days'?durVal*24:durVal;
+    ms=Math.round(hours*60*60*1000);
+  }
+  var expiresAt=ms>0?(Date.now()+ms):0;
+  var tiers=getCheckedValues('.ann-tier');
+  var regions=getCheckedValues('.ann-region');
+  saveAnn({text:text, expiresAt:expiresAt, targetTiers:tiers, targetRegions:regions}); syncAnnToFirebase();
+  var until=expiresAt?(' until '+new Date(expiresAt).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:true})):' (no expiry — until you remove it)';
+  var aud=[];
+  if(tiers.length) aud.push('tiers: '+tiers.join(', ')); else aud.push('all tiers');
+  if(regions.length) aud.push('regions: '+regions.join(', ')); else aud.push('all regions');
+  setText('annStatus','\u2705 Announcement live'+until+' — audience: '+aud.join(' · '));
+  renderAnnCurrent();
+  setTimeout(function(){setText('annStatus','');},6000);
+}
+function clearBroadcastAnn(){
+  if(!confirm('Remove the current announcement from all member dashboards?')) return;
+  saveAnn(''); syncAnnToFirebase();
+  setText('annStatus','\u2705 Announcement removed.');
+  renderAnnCurrent();
   setTimeout(function(){setText('annStatus','');},3500);
+}
+function renderAnnCurrent(){
+  populateAnnRegionBox();
+  var box=document.getElementById('annCurrent'); if(!box) return;
+  var raw=getAnnRaw();
+  if(!raw||!raw.text){ box.innerHTML='<em>No active announcement.</em>'; return; }
+  var expired=raw.expiresAt && Date.now()>raw.expiresAt;
+  var msg='<strong>Current:</strong> '+raw.text.replace(/</g,'&lt;');
+  if(raw.expiresAt){
+    msg+=expired?' <span style="color:#dc2626">(expired)</span>':' <span style="color:var(--green)">(expires '+new Date(raw.expiresAt).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:true})+')</span>';
+  } else {
+    msg+=' <span style="color:var(--text-muted)">(no expiry)</span>';
+  }
+  var tiers=(raw.targetTiers&&raw.targetTiers.length)?raw.targetTiers.join(', '):'All tiers';
+  var regs=(raw.targetRegions&&raw.targetRegions.length)?raw.targetRegions.join(', '):'All regions';
+  msg+='<br><span style="font-size:11.5px;color:#6b7280">Audience — Tiers: '+tiers+' · Regions: '+regs+'</span>';
+  box.innerHTML=msg;
+  // Re-check the boxes to match the saved targets so admin can edit
+  document.querySelectorAll('.ann-tier').forEach(function(cb){cb.checked=(raw.targetTiers||[]).indexOf(cb.value)>-1;});
+  document.querySelectorAll('.ann-region').forEach(function(cb){cb.checked=(raw.targetRegions||[]).indexOf(cb.value)>-1;});
+}
+function annAppliesTo(annObj, member){
+  if(!annObj||!annObj.text) return false;
+  var t=annObj.targetTiers||[], r=annObj.targetRegions||[];
+  if(t.length && t.indexOf(member.tier)===-1) return false;
+  if(r.length && r.indexOf(member.region)===-1) return false;
+  return true;
 }
 
 function adminAlert(msg){
