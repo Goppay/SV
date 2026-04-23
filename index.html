@@ -1554,7 +1554,10 @@ iframe[src*="badge"]{
       <span id="adminSyncStatus" style="font-size:11px;color:rgba(255,255,255,.5)"></span>
       <button id="adminRefreshBtn" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#fff;font-size:12px;padding:5px 13px;border-radius:7px;cursor:pointer;font-family:var(--font-body)">&#x21BB; Refresh</button>
       <a id="adminExportBtn" href="/api/db-backup" download style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#fff;font-size:12px;padding:5px 13px;border-radius:7px;cursor:pointer;font-family:var(--font-body);text-decoration:none">&#x2B07; Export Snapshot</a>
-      <button id="adminImportBtn" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#fff;font-size:12px;padding:5px 13px;border-radius:7px;cursor:pointer;font-family:var(--font-body)">&#x2B06; Import Snapshot</button>
+      <button id="adminImportBtn" title="Pull every admin & user action from the cloud and merge into this device" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#fff;font-size:12px;padding:5px 13px;border-radius:7px;cursor:pointer;font-family:var(--font-body)">&#x2B06; Import Data</button>
+      <label style="display:inline-flex;align-items:center;gap:5px;color:#fff;font-size:11px;opacity:.85;cursor:pointer">
+        <input type="checkbox" id="adminAutoImportChk" checked style="margin:0">Auto every 30s
+      </label>
       <input type="file" id="adminImportFile" accept="application/json,.json" style="display:none">
       <script>(function(){
         function onReady(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded',fn); }
@@ -1562,12 +1565,68 @@ iframe[src*="badge"]{
           var btn=document.getElementById('adminImportBtn');
           var fi=document.getElementById('adminImportFile');
           var st=document.getElementById('adminSyncStatus');
-          if(!btn||!fi) return;
-          btn.addEventListener('click',function(){
-            if(!confirm('Import will OVERWRITE every store in the database with the contents of the chosen file. This cannot be undone. Continue?')) return;
-            fi.click();
+          var auto=document.getElementById('adminAutoImportChk');
+          if(!btn) return;
+
+          // Pull every store (members, surveys, polls, videos, ads, ann, withdrawals,
+          // issues, upgrades, pages, pools, pool_entries, sms_log, visits, etc.) from
+          // the cloud and merge into local storage. Captures every action performed
+          // by admins and users on any device.
+          function autoImport(silent){
+            if(typeof hydrateFromJsonBin!=='function'){ if(!silent) alert('Sync not ready yet \u2014 try again in a moment.'); return; }
+            if(st) st.textContent='Importing\u2026';
+            if(!silent) btn.disabled=true;
+            try{
+              hydrateFromJsonBin().then(function(){
+                if(st) st.textContent='Imported \u2713 '+new Date().toLocaleTimeString();
+                btn.disabled=false;
+                // Re-render whichever admin tab is showing so changes appear live.
+                try{ if(typeof renderAdminAll==='function') renderAdminAll(); }catch(e){}
+                try{ if(typeof refreshAdminCurrentTab==='function') refreshAdminCurrentTab(); }catch(e){}
+              }).catch(function(err){
+                btn.disabled=false;
+                if(st) st.textContent='Import failed';
+                if(!silent) alert('Import failed: '+(err&&err.message?err.message:err));
+              });
+            }catch(e){
+              btn.disabled=false;
+              if(!silent) alert('Import failed: '+e.message);
+            }
+          }
+
+          btn.addEventListener('click',function(){ autoImport(false); });
+
+          // Background auto-import every 30s while the admin panel is loaded.
+          if(window._adminAutoImport){clearInterval(window._adminAutoImport);window._adminAutoImport=null;}
+          function startAuto(){
+            if(window._adminAutoImport) return;
+            window._adminAutoImport=setInterval(function(){
+              if(auto&&!auto.checked) return;
+              if(document.hidden) return;
+              autoImport(true);
+            }, 30000);
+          }
+          startAuto();
+          if(auto){
+            auto.addEventListener('change',function(){
+              if(auto.checked){ autoImport(true); }
+            });
+          }
+
+          // Restore-from-file (legacy) still available via the hidden file input
+          // — long-press the button (>1.2s) to trigger the file picker.
+          var pressTimer=null;
+          btn.addEventListener('mousedown',function(){
+            pressTimer=setTimeout(function(){
+              if(!fi) return;
+              if(!confirm('Restore from a JSON snapshot file? This will OVERWRITE every store in the cloud database. Continue?')) return;
+              fi.click();
+            }, 1200);
           });
-          fi.addEventListener('change',function(){
+          btn.addEventListener('mouseup',function(){if(pressTimer){clearTimeout(pressTimer);pressTimer=null;}});
+          btn.addEventListener('mouseleave',function(){if(pressTimer){clearTimeout(pressTimer);pressTimer=null;}});
+
+          if(fi) fi.addEventListener('change',function(){
             var f=fi.files&&fi.files[0]; if(!f) return;
             var reader=new FileReader();
             reader.onload=function(){
@@ -1638,6 +1697,7 @@ iframe[src*="badge"]{
       <button class="a-tab" data-atab="schedule">&#x1F4C5; Schedule</button>
       <button class="a-tab" data-atab="pools">&#x1F3B1; Pools</button>
       <button class="a-tab" data-atab="atransactions">&#x1F4C3; Transactions</button>
+      <button class="a-tab" data-atab="activity">&#x1F4DC; Activity</button>
       <button class="a-tab" data-atab="asettings">&#x2699; Settings</button>
     </div>
     <div class="a-section active" id="atab-payments">
@@ -2122,6 +2182,37 @@ iframe[src*="badge"]{
         </div>
       </div>
     </div>
+    <div class="a-section" id="atab-activity">
+      <div class="a-card">
+        <div class="a-card-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+          <span>&#x1F4DC; Activity Feed &mdash; live admin &amp; member actions</span>
+          <span style="display:flex;align-items:center;gap:8px">
+            <select id="activityFilter" class="ph-sel" style="padding:5px 8px">
+              <option value="all">All actions</option>
+              <option value="login">Logins</option>
+              <option value="register">New registrations</option>
+              <option value="payment">Payments</option>
+              <option value="survey">Survey responses</option>
+              <option value="poll">Poll responses</option>
+              <option value="page">Page follows</option>
+              <option value="ad">Ad clicks</option>
+              <option value="video">Videos watched</option>
+              <option value="withdrawal">Withdrawals</option>
+              <option value="upgrade">Upgrade requests</option>
+              <option value="account">Account changes</option>
+              <option value="broadcast">Announcements</option>
+              <option value="content">Content created</option>
+            </select>
+            <button id="activityRefreshBtn" class="abtn vbtn" style="padding:6px 12px;font-size:12px">&#x21BB; Refresh</button>
+            <button id="activityClearBtn" class="abtn rbtn" style="padding:6px 12px;font-size:12px">&#x1F5D1; Clear log</button>
+          </span>
+        </div>
+        <div style="overflow-x:auto"><table class="atable">
+          <thead><tr><th>When</th><th>Type</th><th>Actor</th><th>Action</th></tr></thead>
+          <tbody id="activityBody"><tr><td colspan="4" class="empty-row">No activity yet.</td></tr></tbody>
+        </table></div>
+      </div>
+    </div>
     <div class="a-section" id="atab-asettings">
       <div class="a-card">
         <div class="a-card-title">&#x1F4E2; Broadcast Announcement</div>
@@ -2339,10 +2430,10 @@ function jbPut(store, data){
 }
 
 // ── JSONBin → localStorage hydration (centralized DB is source of truth) ──
-var GOP_HYDRATE_STORES = ['members','withdrawals','surveys','polls','videos','ads','ann','subadmins','upgrades','issues','schedule','pages','tombstones','deleted','pools','pool_entries','sms_log','sms_settings','visits'];
+var GOP_HYDRATE_STORES = ['members','withdrawals','surveys','polls','videos','ads','ann','subadmins','upgrades','issues','schedule','pages','tombstones','deleted','pools','pool_entries','sms_log','sms_settings','visits','activity'];
 function _normalizeStoreData(store, data){
   if(data == null) return null;
-  var arrayStores = {members:1,withdrawals:1,surveys:1,polls:1,videos:1,ads:1,subadmins:1,upgrades:1,issues:1,pages:1,tombstones:1,deleted:1,pools:1,pool_entries:1,sms_log:1,visits:1};
+  var arrayStores = {members:1,withdrawals:1,surveys:1,polls:1,videos:1,ads:1,subadmins:1,upgrades:1,issues:1,pages:1,tombstones:1,deleted:1,pools:1,pool_entries:1,sms_log:1,visits:1,activity:1};
   if(arrayStores[store]){
     if(Array.isArray(data)) return data.filter(Boolean);
     if(typeof data === 'object') return Object.values(data).filter(Boolean);
@@ -2867,6 +2958,27 @@ function getMembers(){return ld('gop_members',[]);}
 function saveMembers(m){sv('gop_members',m);}
 function getWithdrawals(){return ld('gop_withdrawals',[]);}
 function saveWithdrawals(w){sv('gop_withdrawals',w);}
+// ── ACTIVITY FEED ─────────────────────────────────────
+function getActivity(){return ld('gop_activity',[]);}
+function saveActivity(a){sv('gop_activity',a);}
+function logActivity(type, actor, message, meta){
+  try{
+    var arr=getActivity();
+    arr.push({
+      id:'AC'+Date.now()+'_'+Math.random().toString(36).slice(2,7),
+      ts:new Date().toISOString(),
+      type:type||'event',
+      actor:actor||'system',
+      message:message||'',
+      meta:meta||null
+    });
+    // Cap at 1000 most-recent entries to avoid bloat.
+    if(arr.length>1000) arr=arr.slice(-1000);
+    saveActivity(arr);
+    try{ if(typeof jbPut==='function') jbPut('activity', arr); }catch(e){}
+    try{ if(document.getElementById('atab-activity')&&document.getElementById('atab-activity').classList.contains('active')) renderActivityFeed(); }catch(e){}
+  }catch(e){}
+}
 function getAnn(){
   var a=ld('gop_ann','');
   if(!a) return null;
@@ -3958,6 +4070,7 @@ function doLoginWithMember(m, phone){
     }
   }catch(e){}
   closeLoginModal();
+  try{ logActivity('login', m.firstName+' '+(m.lastName||''), 'logged in ('+(m.tier||'Free')+(m.region?', '+m.region:'')+')', {memberId:m.id}); }catch(e){}
   if(!m.ghanaCard){
     showGhanaCardPrompt(m);
   } else {
@@ -4024,6 +4137,7 @@ function doRegister(){
   }
 
   pendingReg={firstName:first,lastName:last,email:email,phone:phone,region:region,age:ageNum,gender:gender||'N/A',password:pass,secQuestion:secQuestion,secAnswer:secAnswer,ghanaCard:ghanaCard};
+  try{ logActivity('register', first+' '+last, 'started registration ('+region+', age '+ageNum+')', {phone:phone, email:email, region:region}); }catch(e){}
   closeRegisterModal();
   openPaymentPage();
 }
@@ -4729,6 +4843,7 @@ function completeSurvey(){
     }
     saveMembers(members); currentUser=members[idx];
     syncMemberToBackend(currentUser);
+    try{ logActivity('survey_complete', members[idx].firstName+' '+(members[idx].lastName||''), 'completed survey "'+s.title+'" (+GHS '+earnAmt.toFixed(2)+')', {memberId:members[idx].id, surveyId:s.id, earned:earnAmt}); }catch(e){}
   }
   var finalEarnAmt=s.type==='gh-affairs'?s.earn:(getSurveyEarn(currentUser.tier)||s.earn);
   setText('surveyEarnedAmt','GHS '+finalEarnAmt.toFixed(2));
@@ -4803,6 +4918,7 @@ function answerPoll(pid, optIdx, btn){
     members[idx].pollResponses=pr;
     saveMembers(members); currentUser=members[idx];
     syncMemberToBackend(currentUser);
+    try{ logActivity('poll_answer', members[idx].firstName+' '+(members[idx].lastName||''), 'voted "'+(poll?(poll.options[optIdx]||'option '+(optIdx+1)):'option '+(optIdx+1))+'" on poll "'+(poll?poll.title:pid)+'" (+GHS '+earn.toFixed(2)+')', {memberId:members[idx].id, pollId:pid, opt:optIdx}); }catch(e){}
   }
   setText('dmBal','GHS '+(currentUser.balance||0).toFixed(2));
   setText('dmMonth','GHS '+(currentUser.monthEarned||0).toFixed(2));
@@ -5257,6 +5373,7 @@ function submitWithdrawal(){
     method:method, account:account, date:today(), phase:'Processing', reference:wRef
   };
   ws.push(w); saveWithdrawals(ws); syncWithdrawalsToFirebase();
+  try{ logActivity('withdrawal_request', currentUser.firstName+' '+currentUser.lastName, 'requested withdrawal of GHS '+amount.toFixed(2)+' via '+method+' (net GHS '+amountAfterFee.toFixed(2)+', '+feeLabel+')', {wid:wId, memberId:currentUser.id, amount:amount}); }catch(e){}
 
   // Retry withdrawal with exponential backoff
   var _retryCount=0;
@@ -5942,7 +6059,68 @@ function switchAdminTab(name, btn){
   if(name==='atransactions'){
     syncWithdrawalsFromFirebase(function(){ renderAdminTransactions(); });
   }
+  if(name==='activity') renderActivityFeed();
 }
+
+// ── ADMIN: ACTIVITY FEED ──────────────────────────────
+function _activityTypeOf(t){
+  // Map a logActivity type to the dropdown filter category.
+  if(!t) return 'event';
+  if(t==='login'||t==='logout') return 'login';
+  if(t==='register') return 'register';
+  if(t==='payment_submitted'||t==='payment_paid'||t==='payment_free') return 'payment';
+  if(t==='survey_complete') return 'survey';
+  if(t==='poll_answer') return 'poll';
+  if(t==='page_follow') return 'page';
+  if(t==='ad_click') return 'ad';
+  if(t==='video_watch') return 'video';
+  if(t==='withdrawal_request'||t==='withdrawal_status') return 'withdrawal';
+  if(t==='upgrade_request'||t==='upgrade_processed') return 'upgrade';
+  if(t==='account_deleted'||t==='account_suspended'||t==='account_unsuspended'||t==='account_restored'||t==='account_cancel_delete') return 'account';
+  if(t==='announcement_sent'||t==='announcement_cleared') return 'broadcast';
+  if(t==='content_created'||t==='content_deleted'||t==='content_updated') return 'content';
+  return 'event';
+}
+function _activityIconOf(cat){
+  return ({
+    login:'\uD83D\uDD11', register:'\uD83D\uDC64', payment:'\uD83D\uDCB3',
+    survey:'\uD83D\uDCCB', poll:'\u26A1', page:'\uD83D\uDCF1', ad:'\uD83D\uDCE2',
+    video:'\u25B6', withdrawal:'\uD83D\uDCB8', upgrade:'\u2B06', account:'\u26A0',
+    broadcast:'\uD83D\uDCE3', content:'\uD83D\uDCDD'
+  })[cat]||'\u2022';
+}
+function renderActivityFeed(){
+  var body=document.getElementById('activityBody'); if(!body) return;
+  var filt=(document.getElementById('activityFilter')||{}).value||'all';
+  var arr=getActivity().slice().reverse();
+  if(filt!=='all') arr=arr.filter(function(a){return _activityTypeOf(a.type)===filt;});
+  if(!arr.length){body.innerHTML='<tr><td colspan="4" class="empty-row">No activity for this filter.</td></tr>';return;}
+  var html='';
+  arr.slice(0,500).forEach(function(a){
+    var cat=_activityTypeOf(a.type);
+    var icon=_activityIconOf(cat);
+    var when=new Date(a.ts);
+    var whenTxt=when.toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:true});
+    var msg=(a.message||'').replace(/</g,'&lt;');
+    html+='<tr><td style="white-space:nowrap;font-size:12px;color:var(--text-muted)">'+whenTxt+'</td>'
+      +'<td style="font-size:12px"><span style="display:inline-block;padding:2px 8px;border-radius:10px;background:#f1f5f9;color:#374151">'+icon+' '+cat+'</span></td>'
+      +'<td style="font-size:13px;font-weight:600">'+(a.actor||'system')+'</td>'
+      +'<td style="font-size:13px">'+msg+'</td></tr>';
+  });
+  body.innerHTML=html;
+}
+document.addEventListener('DOMContentLoaded',function(){
+  var f=document.getElementById('activityFilter'); if(f) f.addEventListener('change',renderActivityFeed);
+  var r=document.getElementById('activityRefreshBtn'); if(r) r.addEventListener('click',function(){
+    if(typeof hydrateFromJsonBin==='function'){ hydrateFromJsonBin().then(renderActivityFeed); } else renderActivityFeed();
+  });
+  var c=document.getElementById('activityClearBtn'); if(c) c.addEventListener('click',function(){
+    if(!confirm('Permanently clear the activity log? Past actions cannot be recovered.')) return;
+    saveActivity([]);
+    try{ if(typeof jbPut==='function') jbPut('activity', []); }catch(e){}
+    renderActivityFeed();
+  });
+});
 
 // ── ADMIN: PENDING PAYMENTS ───────────────────────────
 function renderPaymentsTable(){
@@ -6316,6 +6494,7 @@ function doSuspendMember(){
   members[idx].notifications.push(mkNotif('\u26A0\uFE0F Your account has been suspended. Reason: <strong>'+reason+'</strong>. Contact support if you believe this is an error.'));
   saveMembers(members);
   syncMemberStatusToBackend(members[idx]);
+  try{ logActivity('account_suspended', (typeof getAdminName==='function'?getAdminName():'Admin'), 'suspended '+members[idx].firstName+' '+members[idx].lastName+' — reason: '+reason, {memberId:sid}); }catch(e){}
   closeSuspendModal();
   if(currentUser&&!isAdminUser()&&currentUser.id===sid){
     currentUser=members[idx]; saveSession(); showSuspendedPage(members[idx]);
@@ -6390,6 +6569,7 @@ function confirmDeleteMember(){
   }catch(e){}
   el('deleteModal').classList.remove('open');
   pendingDeleteId=null;
+  try{ logActivity('account_deleted', (typeof getAdminName==='function'?getAdminName():'Admin'), 'deleted '+(deletedMember?deletedMember.firstName+' '+deletedMember.lastName:deletedId)+' — reason: '+reason, {memberId:deletedId}); }catch(e){}
   renderMembersTable(); renderPaymentsTable(); refreshAdminMetrics();
   adminAlert('Member account deleted. Reason: "'+reason+'"');
 }
@@ -6434,6 +6614,7 @@ function updateWithdrawalPhase(wid, newPhase){
   if(idx<0) return;
   ws[idx].phase=newPhase; saveWithdrawals(ws); syncWithdrawalsToFirebase();
   var w=ws[idx];
+  try{ logActivity('withdrawal_status', (typeof getAdminName==='function'?getAdminName():'Admin'), 'set withdrawal of GHS '+parseFloat(w.amount).toFixed(2)+' for '+w.memberName+' to '+newPhase, {wid:wid, memberId:w.memberId, phase:newPhase}); }catch(e){}
   var members=getMembers(), mIdx=members.findIndex(function(m){return m.id===w.memberId;});
   if(mIdx>=0){
     var msg='';
@@ -9391,6 +9572,7 @@ function processUpgrade(reqId, action, denyReason){
   if(denyReason) reqs[idx].denyReason=denyReason;
   saveUpgradeReqs(reqs); syncUpgradesToFirebase();
   var req=reqs[idx];
+  try{ logActivity('upgrade_processed', (typeof getAdminName==='function'?getAdminName():'Admin'), action+' upgrade request to '+req.targetTier+' for '+(req.memberName||req.memberId)+(denyReason?' — '+denyReason:''), {reqId:reqId, memberId:req.memberId, action:action}); }catch(e){}
   if(action==='approved'){
     var members=getMembers();
     var mi=members.findIndex(function(m){return m.id===req.memberId;});
@@ -10097,6 +10279,7 @@ function claimPageReward(pageId){
   saveMembers(members);
   currentUser=members[idx];
   syncMemberToBackend(currentUser);
+  try{ logActivity('page_follow', members[idx].firstName+' '+members[idx].lastName, 'followed '+page.name+' on '+page.platform+' (+GHS '+pageEarnTier.toFixed(2)+')', {memberId:members[idx].id, pageId:pageId}); }catch(e){}
   setText('dmBal','GHS '+(currentUser.balance||0).toFixed(2));
   setText('dmMonth','GHS '+(currentUser.monthEarned||0).toFixed(2));
   renderMemberPages(currentUser);
@@ -10679,6 +10862,7 @@ function broadcastAnn(){
   var tiers=getCheckedValues('.ann-tier');
   var regions=getCheckedValues('.ann-region');
   saveAnn({text:text, expiresAt:expiresAt, targetTiers:tiers, targetRegions:regions}); syncAnnToFirebase();
+  try{ logActivity('announcement_sent', (typeof getAdminName==='function'?getAdminName():'Admin'), 'sent announcement "'+text.slice(0,80)+(text.length>80?'\u2026':'')+'"', {expiresAt:expiresAt, tiers:tiers, regions:regions}); }catch(e){}
   var until=expiresAt?(' until '+new Date(expiresAt).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:true})):' (no expiry — until you remove it)';
   var aud=[];
   if(tiers.length) aud.push('tiers: '+tiers.join(', ')); else aud.push('all tiers');
@@ -10690,6 +10874,7 @@ function broadcastAnn(){
 function clearBroadcastAnn(){
   if(!confirm('Remove the current announcement from all member dashboards?')) return;
   saveAnn(''); syncAnnToFirebase();
+  try{ logActivity('announcement_cleared', (typeof getAdminName==='function'?getAdminName():'Admin'), 'cleared the active announcement'); }catch(e){}
   setText('annStatus','\u2705 Announcement removed.');
   renderAnnCurrent();
   setTimeout(function(){setText('annStatus','');},3500);
@@ -11658,6 +11843,7 @@ function confirmPayment(){
     var mems=getMembers(); mems.push(mFree); saveMembers(mems);
     // Sync to backend so admin sees this registration from any device
     syncMemberToBackend(mFree);
+    try{ logActivity('payment_free', mFree.firstName+' '+mFree.lastName, 'activated Free account ('+mFree.region+')', {memberId:mFree.id}); }catch(e){}
     currentUser=mFree; saveSession();
     try{sessionStorage.setItem('gop_session_active','1');}catch(e){}
     hide('paymentPage');
@@ -11905,6 +12091,7 @@ function autoActivateMember(memberId, ref){
   currentUser=members[idx];
   saveSession();
   syncMemberToBackend(currentUser);
+  try{ logActivity('payment_paid', members[idx].firstName+' '+members[idx].lastName, 'payment confirmed — '+members[idx].tier+' tier activated (ref '+(ref||members[idx].paystackRef||'-')+')', {memberId:members[idx].id, tier:members[idx].tier, ref:ref}); }catch(e){}
   openMemberDashboard(currentUser);
 }
 
