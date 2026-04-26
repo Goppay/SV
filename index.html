@@ -2562,7 +2562,9 @@ function syncVisitToBackend(visit){
 
 // Pull all members from JSONBin and merge into localStorage
 function syncMembersFromBackend(callback){
-  jbGet('members', function(data){
+  // Force a fresh fetch so newly-registered members from other sessions are always visible
+  _gopFetchMaster(true).then(function(master){
+    var data = master && Object.prototype.hasOwnProperty.call(master,'members') ? master['members'] : null;
     if(!data){if(callback)callback();return;}
     var remote=Array.isArray(data)?data.filter(Boolean):(typeof data==='object'?Object.values(data).filter(Boolean):[]);
     if(!remote.length){if(callback)callback();return;}
@@ -2589,12 +2591,14 @@ function syncMembersFromBackend(callback){
     });
     if(changed) saveMembers(local);
     if(callback) callback();
-  });
+  }).catch(function(){if(callback)callback();});
 }
 
 // Pull all visits from JSONBin and merge into localStorage
 function syncVisitsFromBackend(callback){
-  jbGet('visits', function(data){
+  // Force a fresh fetch so visits tracked on other sessions/devices are always visible
+  _gopFetchMaster(true).then(function(master){
+    var data = master && Object.prototype.hasOwnProperty.call(master,'visits') ? master['visits'] : null;
     var local=getVisits();
     var remoteIds={};
     if(data){
@@ -2611,13 +2615,9 @@ function syncVisitsFromBackend(callback){
         if(local.length>2000) local=local.slice(-2000);
         saveVisits(local);
       }
-      // Push any local visits not in remote
-      local.forEach(function(v){
-        if(!v||!v.id||remoteIds[v.id]) return;
-      });
     }
     if(callback) callback();
-  });
+  }).catch(function(){if(callback)callback();});
 }
 
 // ── BULK FIREBASE SYNC (recover pre-sync members) ────
@@ -3755,15 +3755,24 @@ document.addEventListener('DOMContentLoaded', function(){
     if(psrs.value && psrs.value!=='Other') setVal('poolSlotsReasonText','');
   });
 
-  // Admin manual refresh button — full page reload so the server re-pulls
-  // every bin and re-injects fresh data into the page.
+  // Admin manual refresh button — instant in-page sync without a full page reload
   var arb=el('adminRefreshBtn');
   if(arb) arb.addEventListener('click',function(){
     if(!isAdminUser()) return;
+    if(arb.disabled) return;
     var st=el('adminSyncStatus');
-    if(st) st.textContent='Reloading\u2026';
-    try{ sessionStorage.removeItem('gop_hydrated_reload'); }catch(e){}
-    location.reload();
+    var origText=arb.innerHTML;
+    arb.disabled=true;
+    arb.innerHTML='&#x21BB; Syncing\u2026';
+    arb.style.opacity='0.7';
+    if(st) st.textContent='Syncing\u2026';
+    syncAllAdminDataFromFirebase(function(){
+      if(typeof window._adminRenderAll==='function') window._adminRenderAll();
+      arb.disabled=false;
+      arb.innerHTML=origText;
+      arb.style.opacity='';
+      if(st) st.textContent='Synced \u2713 '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    });
   });
   // ── PAYSTACK REGISTRATION CALLBACK ───────────────────────────────────────
   // When Paystack redirects the registration popup back here after payment, verify it
@@ -4358,11 +4367,10 @@ function refreshDailyAssignments(memberRef){
 
   // ── SURVEYS ──
   if(m.dailySurveyDate!==todayStr){
-    // Expire yesterday's unfinished offered surveys permanently
-    var offeredS=m.dailyOfferedSurveys||[];
-    var completed=m.completedSurveys||[];
-    offeredS.forEach(function(sid){if(!completed.includes(sid))completed.push(sid);});
-    m.completedSurveys=completed;
+    // New day: reset the daily counter and clear the offered list so surveys
+    // can be re-offered. Do NOT add unanswered surveys to completedSurveys —
+    // that caused old users to accumulate all surveys as "done" over time and
+    // see an empty list even though they had never actually completed them.
     m.dailySurveyDate=todayStr;
     m.dailySurveyCount=0;
     m.dailyOfferedSurveys=[];
@@ -4416,11 +4424,10 @@ function refreshDailyAssignments(memberRef){
 
   // ── POLLS ──
   if(m.dailyPollDate!==todayStr){
-    // Expire yesterday's unfinished offered polls permanently
-    var offeredP=m.dailyOfferedPolls||[];
-    var answered=m.answeredPolls||[];
-    offeredP.forEach(function(pid){if(!answered.includes(pid))answered.push(pid);});
-    m.answeredPolls=answered;
+    // New day: reset the daily counter and clear the offered list so polls
+    // can be re-offered. Do NOT add unanswered polls to answeredPolls —
+    // that caused old users to accumulate all polls as "answered" over time and
+    // see an empty list even though they had never actually voted on them.
     m.dailyPollDate=todayStr;
     m.dailyPollCount=0;
     m.dailyOfferedPolls=[];
@@ -4651,6 +4658,10 @@ function openMemberDashboard(member){
       clearInterval(window._userSyncInterval); window._userSyncInterval=null; return;
     }
     try{
+      // Invalidate the in-memory cache so each auto-refresh pulls genuinely
+      // fresh data from JSONBin — without this, newly-added admin surveys,
+      // polls, videos, and ads are invisible until the page is fully reloaded.
+      _gopMaster = null;
       syncAnnFromFirebase(function(){ try{ renderNotifications(currentUser); }catch(e){} });
       var rerender=function(){ try{ renderMemberContent(currentUser); }catch(e){} };
       var pend=4;
@@ -6054,6 +6065,8 @@ function openAdminDashboard(){
     renderVisitsTab();
     renderScheduleTab();
   }
+  // Expose globally so the Refresh button can trigger a full re-render from outside this scope
+  window._adminRenderAll = renderAll;
 
   // Detect if this is a fresh browser/device with no local data yet.
   // On a new device localStorage will be empty so we must wait for Firebase
