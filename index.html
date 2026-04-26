@@ -2450,12 +2450,16 @@ function _gopFetchMaster(force){
   return _gopMasterPromise;
 }
 function _gopWriteMaster(immediate){
-  // Debounced full-blob PUT so rapid successive writes coalesce.
-  // keepalive:true ensures the request still completes even if the user
-  // closes the tab right after registering or tracking a visit — this is the
-  // root-cause fix for new members/visits never reaching the cloud.
-  if(_gopWriteMaster._t) { clearTimeout(_gopWriteMaster._t); _gopWriteMaster._t=null; }
-  function doFetch(){
+  // Every write fires immediately with keepalive:true so it ALWAYS reaches
+  // JSONBin, even when the user closes the tab right after the call. The
+  // 'immediate' arg is kept for back-compat but is now ignored — there is no
+  // debounce window, which was the root cause of dropped writes.
+  // We coalesce within the same JS tick using a microtask so a burst of
+  // synchronous saves (e.g. saveMembers + saveActivity) results in one PUT.
+  if(_gopWriteMaster._scheduled) return;
+  _gopWriteMaster._scheduled = true;
+  Promise.resolve().then(function(){
+    _gopWriteMaster._scheduled = false;
     try{
       fetch(JSONBIN_URL, {
         method:'PUT',
@@ -2464,11 +2468,7 @@ function _gopWriteMaster(immediate){
         keepalive:true
       }).catch(function(){});
     }catch(e){}
-  }
-  if(immediate){ doFetch(); return; }
-  // Short coalescing window — long enough to batch a burst of writes,
-  // short enough that the user can't navigate away before it fires.
-  _gopWriteMaster._t = setTimeout(function(){ _gopWriteMaster._t=null; doFetch(); }, 60);
+  });
 }
 
 // Force any pending debounced PUT to fire immediately. Called on pagehide /
@@ -6158,17 +6158,21 @@ function openAdminDashboard(){
     });
   }
 
-  // Auto-refresh ALL data every 5 minutes while admin is on dashboard
+  // Auto-refresh ALL data every 20 seconds while admin is on dashboard.
+  // Critically, we invalidate the in-memory master cache before each pull so
+  // newly-registered members and brand-new visits actually appear — without
+  // this, the cached blob is reused and admin sees stale data forever.
   if(window._adminSyncInterval) clearInterval(window._adminSyncInterval);
   window._adminSyncInterval=setInterval(function(){
     if(!isAdminUser()||el('adminDashboard').style.display==='none') return;
     if(_fbSyncing) return; // skip if a sync is already running
+    try{ _gopMaster = null; _gopMasterPromise = null; }catch(e){}
     syncAllAdminDataFromFirebase(function(){
       renderAll();
       var st2=el('adminSyncStatus');
       if(st2) st2.textContent='Synced \u2713 '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
     });
-  },300000);
+  },20000);
 }
 
 function refreshAdminMetrics(){
