@@ -2449,16 +2449,36 @@ function _gopFetchMaster(force){
   .catch(function(){_gopMasterPromise=null; _gopMaster={}; return _gopMaster;});
   return _gopMasterPromise;
 }
-function _gopWriteMaster(){
+function _gopWriteMaster(immediate){
   // Debounced full-blob PUT so rapid successive writes coalesce.
-  if(_gopWriteMaster._t) clearTimeout(_gopWriteMaster._t);
-  _gopWriteMaster._t = setTimeout(function(){
-    fetch(JSONBIN_URL, {
-      method:'PUT',
-      headers:{'Content-Type':'application/json','X-Master-Key':JSONBIN_KEY,'X-Bin-Versioning':'false'},
-      body:JSON.stringify(_gopMaster||{})
-    }).catch(function(){});
-  }, 250);
+  // keepalive:true ensures the request still completes even if the user
+  // closes the tab right after registering or tracking a visit — this is the
+  // root-cause fix for new members/visits never reaching the cloud.
+  if(_gopWriteMaster._t) { clearTimeout(_gopWriteMaster._t); _gopWriteMaster._t=null; }
+  function doFetch(){
+    try{
+      fetch(JSONBIN_URL, {
+        method:'PUT',
+        headers:{'Content-Type':'application/json','X-Master-Key':JSONBIN_KEY,'X-Bin-Versioning':'false'},
+        body:JSON.stringify(_gopMaster||{}),
+        keepalive:true
+      }).catch(function(){});
+    }catch(e){}
+  }
+  if(immediate){ doFetch(); return; }
+  // Short coalescing window — long enough to batch a burst of writes,
+  // short enough that the user can't navigate away before it fires.
+  _gopWriteMaster._t = setTimeout(function(){ _gopWriteMaster._t=null; doFetch(); }, 60);
+}
+
+// Force any pending debounced PUT to fire immediately. Called on pagehide /
+// visibilitychange so we never lose the last write when the tab closes.
+function _gopFlushMaster(){
+  if(_gopWriteMaster._t){
+    clearTimeout(_gopWriteMaster._t);
+    _gopWriteMaster._t=null;
+    _gopWriteMaster(true);
+  }
 }
 
 // Reads a single store key from the master bin
@@ -2467,14 +2487,34 @@ function jbGet(store, callback){
     if(callback) callback(m && Object.prototype.hasOwnProperty.call(m,store) ? m[store] : null);
   });
 }
-// Writes a single store key into the master bin (debounced full-blob PUT)
-function jbPut(store, data){
+// Writes a single store key into the master bin (debounced full-blob PUT).
+// Pass immediate=true to bypass the debounce on critical writes (member
+// registration, visit tracking) so the data lands in the cloud right away.
+function jbPut(store, data, immediate){
+  // If master is already cached, mutate synchronously so a follow-up
+  // _gopFlushMaster (e.g. on pagehide) sees the latest data.
+  if(_gopMaster && typeof _gopMaster==='object'){
+    _gopMaster[store] = data;
+    _gopWriteMaster(!!immediate);
+    return;
+  }
   _gopFetchMaster(false).then(function(m){
     m[store] = data;
     _gopMaster = m;
-    _gopWriteMaster();
+    _gopWriteMaster(!!immediate);
   });
 }
+
+// Flush any pending writes whenever the page is being hidden or closed.
+// pagehide fires reliably across browsers (including iOS Safari, where
+// beforeunload is unreliable). visibilitychange catches mobile tab swaps.
+try{
+  window.addEventListener('pagehide', _gopFlushMaster);
+  window.addEventListener('beforeunload', _gopFlushMaster);
+  document.addEventListener('visibilitychange', function(){
+    if(document.visibilityState==='hidden') _gopFlushMaster();
+  });
+}catch(e){}
 
 // ── JSONBin → localStorage hydration (centralized DB is source of truth) ──
 var GOP_HYDRATE_STORES = ['members','withdrawals','surveys','polls','videos','ads','ann','subadmins','upgrades','issues','schedule','pages','tombstones','deleted','pools','pool_entries','sms_log','sms_settings','visits','activity'];
@@ -2535,13 +2575,15 @@ var VERIFY_URL = GOP_API + '/verify-upgrade';
 // AI content generation endpoint (Gemini-powered survey/poll generator)
 var AI_API_URL = GOP_API;
 
-// Write a member record to JSONBin (pushes full members array)
+// Write a member record to JSONBin (pushes full members array).
+// Uses immediate=true so a brand-new registration reaches the cloud even if
+// the user closes the tab seconds later — admin must always see every signup.
 function syncMemberToBackend(member){
   try{
     var members=getMembers();
     var idx=members.findIndex(function(m){return m.id===member.id;});
     if(idx>=0) members[idx]=member; else members.push(member);
-    jbPut('members', members);
+    jbPut('members', members, true);
   }catch(e){}
 }
 
@@ -2550,13 +2592,14 @@ function ensureMemberInFirebase(member){
   syncMemberToBackend(member);
 }
 
-// Write a visit record — accumulate locally and push full visits array
+// Write a visit record — accumulate locally and push full visits array.
+// Immediate flush so site visits aren't lost when a casual visitor leaves.
 function syncVisitToBackend(visit){
   try{
     var visits=getVisits();
     var idx=visits.findIndex(function(v){return v.id===visit.id;});
     if(idx>=0) visits[idx]=visit; else visits.push(visit);
-    jbPut('visits', visits);
+    jbPut('visits', visits, true);
   }catch(e){}
 }
 
@@ -10785,9 +10828,19 @@ window.addEventListener('pagehide', function(){
   if(!vid) return; // admin cancelled — do not sync
   try{ visitData=JSON.parse(sessionStorage.getItem('gop_visit_pending')||'null'); }catch(e){}
   if(!visitData) return;
+  // Synchronous write into the in-memory master + immediate keepalive PUT.
+  // Async callbacks (jbGet→jbPut) are unreliable inside a pagehide handler
+  // because the browser may suspend timers/promises before they resolve.
   try{
-    var key=vid.replace(/[^a-zA-Z0-9_-]/g,'_');
-    jbGet('visits',function(vArr){var va=Array.isArray(vArr)?vArr:[];var vi=va.findIndex(function(v){return v&&v.id===visitData.id;});if(vi>=0)va[vi]=visitData;else va.push(visitData);jbPut('visits',va);});
+    var m = (_gopMaster && typeof _gopMaster==='object') ? _gopMaster : {};
+    var va = Array.isArray(m.visits) ? m.visits : [];
+    var vi = va.findIndex(function(v){return v && v.id===visitData.id;});
+    if(vi>=0) va[vi]=visitData; else va.push(visitData);
+    m.visits = va;
+    _gopMaster = m;
+    // Bypass the debounce — write right now with keepalive so it survives
+    // the page being torn down.
+    _gopWriteMaster(true);
   }catch(e){}
 });
 
