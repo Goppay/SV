@@ -2566,6 +2566,46 @@ var GOP_HYDRATION_PROMISE = hydrateFromJsonBin().then(function(){
 // Disabled: bins are the source of truth; we never push local cache snapshots.
 function migrateLocalStorageToJsonBin(){}
 
+// ── ONE-TIME MIGRATION: freshen surveys & polls for ALL existing members ──
+// Old users had accumulated months of completed surveys / answered polls
+// (some auto-marked due to a previous bug), leaving them with no surveys or
+// polls left to take. This migration resets their completed/answered lists
+// so every active survey and poll becomes available again. Each member is
+// freshened exactly once across all devices via the per-member tag below.
+var GOP_FRESHEN_TAG = '2026-04-26-reset1';
+function freshenAllMembersSurveysPolls(){
+  try{
+    var members=getMembers();
+    if(!Array.isArray(members)||!members.length) return false;
+    var changed=false;
+    members.forEach(function(m){
+      if(!m||m._freshenedAt===GOP_FRESHEN_TAG) return;
+      m.completedSurveys=[];
+      m.answeredPolls=[];
+      m.dailyOfferedSurveys=[];
+      m.dailyOfferedPolls=[];
+      m.dailySurveyDate='';
+      m.dailySurveyCount=0;
+      m.dailyPollDate='';
+      m.dailyPollCount=0;
+      m._freshenedAt=GOP_FRESHEN_TAG;
+      changed=true;
+    });
+    if(changed){
+      try{ localStorage.setItem('gop_members', JSON.stringify(members)); }catch(e){}
+      try{ jbPut('members', members, true); }catch(e){}
+    }
+    return changed;
+  }catch(e){ return false; }
+}
+// Run the freshen migration once after hydration completes so every device
+// — including the admin dashboard — sees and pushes the reset state.
+try{
+  GOP_HYDRATION_PROMISE.then(function(){
+    try{ freshenAllMembersSurveysPolls(); }catch(e){}
+  });
+}catch(e){}
+
 // Legacy FB_URL — kept so any remaining direct fetch(FB_URL...) calls fail gracefully
 // We replace all sync functions below, so FB_URL is never reached for real data.
 var FB_URL = '';
@@ -2876,6 +2916,12 @@ function syncUpgradesFromFirebase(cb){ fbPull('upgrades', getUpgradeReqs, saveUp
 function syncIssuesToFirebase(){ jbPut('issues', getIssues()); }
 function syncIssuesFromFirebase(cb){ fbPull('issues', getIssues, saveIssues, true, cb); }
 
+// Pull the cross-device activity feed so admin sees survey completions, poll
+// votes, page follows, withdrawals, payments etc. that happened on ANY device,
+// not just the one where the admin is currently signed in. Merged by id so
+// duplicate entries from concurrent devices collapse correctly.
+function syncActivityFromFirebase(cb){ fbPull('activity', getActivity, saveActivity, true, cb); }
+
 function syncScheduleToFirebase(){ jbPut('schedule', getSchedule()); }
 function syncScheduleFromFirebase(cb){
   jbGet('schedule', function(data){
@@ -2887,10 +2933,14 @@ function syncScheduleFromFirebase(cb){
 // Pull ALL admin data from Firebase in parallel — called on admin dashboard open
 function syncAllAdminDataFromFirebase(callback){
   _fbSyncing=true; // block auto-pushes while pulling
-  var pending=17; // includes SMS log + SMS settings
+  var pending=18; // includes SMS log + SMS settings + cross-device activity feed
   function done(){
     if(--pending<=0){
       _fbSyncing=false; // re-enable pushes
+      // Run the one-time survey/poll freshen for any members pulled from
+      // the cloud that haven't been freshened yet — guarantees old users
+      // see all surveys & polls again on every device.
+      try{ freshenAllMembersSurveysPolls(); }catch(e){}
       if(callback) callback();
     }
   }
@@ -2911,6 +2961,7 @@ function syncAllAdminDataFromFirebase(callback){
   syncDeletedFromFirebase(done);     // ensure deleted-ID blacklist syncs across devices
   syncSmsLogFromFirebase(done);      // restore SMS history on any device/incognito
   syncSmsSettingsFromFirebase(done); // restore API key + Sender ID on any device/incognito
+  syncActivityFromFirebase(done);    // cross-device activity log so admin sees actions from every device
 }
 
 // Push ALL local content data to Firebase (used by Upload button for initial seed)
@@ -4167,6 +4218,17 @@ function doLoginWithMember(m, phone){
   // Firebase was integrated and are missing from the admin members section.
   syncMemberToBackend(m);
   ensureMemberInFirebase(m);
+  // One-time freshen of completed/answered surveys & polls for ALL old
+  // members so they immediately see surveys and polls again on this device.
+  try{ freshenAllMembersSurveysPolls(); }catch(e){}
+  // Reload the just-logged-in member from local storage in case the freshen
+  // migration cleared their completed lists, otherwise we'd render stale
+  // counts in their dashboard until next refresh.
+  try{
+    var _ms2=getMembers();
+    var _idx2=_ms2.findIndex(function(x){return x.id===m.id;});
+    if(_idx2>=0) m=_ms2[_idx2];
+  }catch(e){}
   currentUser=m; saveSession();
   // Immediately push the pending visit to Firebase so admin sees it live (don't wait for pagehide)
   try{
@@ -6136,29 +6198,26 @@ function openAdminDashboard(){
     ov.style.display=show?'flex':'none';
   }
 
+  // Always invalidate the in-memory master cache and pull a fresh blob from
+  // the cloud on dashboard open. Without this, brand-new registrations and
+  // visits made on other devices stay invisible to admin until the next
+  // auto-refresh tick. We still render whatever local data exists first so
+  // the UI feels instant, then re-render the moment the cloud blob arrives.
+  try{ _gopMaster = null; _gopMasterPromise = null; }catch(e){}
   if(hasLocalData){
-    // Same device — render immediately from local cache so the UI feels instant,
-    // then refresh silently from Firebase to pick up any cross-device changes.
     renderAll();
-    if(st) st.textContent='Syncing...';
-    syncAllAdminDataFromFirebase(function(){
-      renderAll();
-      if(st) st.textContent='Synced \u2713 '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
-    });
+    if(st) st.textContent='Syncing\u2026';
   } else {
-    // Fresh device / new browser — local storage is empty.
-    // Show a loading indicator and wait for Firebase before rendering,
-    // so the admin never sees incorrect zeros or empty tables.
     showAdminLoading(true);
     if(st) st.textContent='Loading from cloud\u2026';
-    syncAllAdminDataFromFirebase(function(){
-      showAdminLoading(false);
-      renderAll();
-      if(st) st.textContent='Synced \u2713 '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
-    });
   }
+  syncAllAdminDataFromFirebase(function(){
+    showAdminLoading(false);
+    renderAll();
+    if(st) st.textContent='Synced \u2713 '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  });
 
-  // Auto-refresh ALL data every 20 seconds while admin is on dashboard.
+  // Auto-refresh ALL data every 10 seconds while admin is on dashboard.
   // Critically, we invalidate the in-memory master cache before each pull so
   // newly-registered members and brand-new visits actually appear — without
   // this, the cached blob is reused and admin sees stale data forever.
@@ -6172,7 +6231,7 @@ function openAdminDashboard(){
       var st2=el('adminSyncStatus');
       if(st2) st2.textContent='Synced \u2713 '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
     });
-  },20000);
+  },10000);
 }
 
 function refreshAdminMetrics(){
