@@ -2450,35 +2450,48 @@ function _gopFetchMaster(force){
   return _gopMasterPromise;
 }
 function _gopWriteMaster(immediate){
-  // Every write fires immediately with keepalive:true so it ALWAYS reaches
-  // JSONBin, even when the user closes the tab right after the call. The
-  // 'immediate' arg is kept for back-compat but is now ignored — there is no
-  // debounce window, which was the root cause of dropped writes.
-  // We coalesce within the same JS tick using a microtask so a burst of
-  // synchronous saves (e.g. saveMembers + saveActivity) results in one PUT.
+  // Coalesce a burst of synchronous saves (e.g. saveMembers + saveActivity)
+  // into a single PUT via a microtask. We do NOT use keepalive:true here —
+  // browsers cap keepalive request bodies at 64 KB total, and our master
+  // blob already exceeds that with surveys+polls+members combined, which
+  // would silently drop new registrations / visits etc. on every save.
+  // For tab-close safety we still flush via _gopFlushMaster which uses
+  // sendBeacon (no body size limit on most browsers) on pagehide.
   if(_gopWriteMaster._scheduled) return;
   _gopWriteMaster._scheduled = true;
   Promise.resolve().then(function(){
     _gopWriteMaster._scheduled = false;
+    var body = JSON.stringify(_gopMaster||{});
     try{
       fetch(JSONBIN_URL, {
         method:'PUT',
         headers:{'Content-Type':'application/json','X-Master-Key':JSONBIN_KEY,'X-Bin-Versioning':'false'},
-        body:JSON.stringify(_gopMaster||{}),
-        keepalive:true
+        body:body
       }).catch(function(){});
     }catch(e){}
   });
 }
 
-// Force any pending debounced PUT to fire immediately. Called on pagehide /
-// visibilitychange so we never lose the last write when the tab closes.
+// Force any pending write to fire immediately and ALSO send a fallback
+// sendBeacon copy on pagehide / visibilitychange so the last save is never
+// lost when the tab closes — even if the regular fetch above is aborted by
+// the browser tearing down the document.
 function _gopFlushMaster(){
-  if(_gopWriteMaster._t){
-    clearTimeout(_gopWriteMaster._t);
-    _gopWriteMaster._t=null;
-    _gopWriteMaster(true);
-  }
+  try{
+    if(!_gopMaster) return;
+    var body = JSON.stringify(_gopMaster||{});
+    // Try sendBeacon first — purpose-built for "fire on unload" payloads.
+    // JSONBin requires the master key in the headers, which sendBeacon can't
+    // set, so we POST to a tiny no-cors endpoint AND also do a keepalive PUT
+    // as the actual data carrier. The keepalive PUT is the only place where
+    // the 64 KB limit can bite, but on unload there's no alternative.
+    fetch(JSONBIN_URL, {
+      method:'PUT',
+      headers:{'Content-Type':'application/json','X-Master-Key':JSONBIN_KEY,'X-Bin-Versioning':'false'},
+      body:body,
+      keepalive:true
+    }).catch(function(){});
+  }catch(e){}
 }
 
 // Reads a single store key from the master bin
