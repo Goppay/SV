@@ -447,6 +447,23 @@ iframe[src*="badge"]{
 </style>
 </head>
 <body>
+<!-- OFFLINE BANNER -->
+<div id="gopOfflineBanner" style="position:fixed;top:0;left:0;right:0;z-index:99999;background:#dc2626;color:#fff;padding:11px 16px;text-align:center;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;font-size:13.5px;font-weight:600;box-shadow:0 2px 12px rgba(0,0,0,.25);transform:translateY(-100%);transition:transform .3s ease;line-height:1.4">
+  &#x26A0; You're offline &mdash; your changes won't be saved. Please check your internet connection.
+</div>
+<script>
+(function(){
+  var banner=document.getElementById('gopOfflineBanner');
+  if(!banner) return;
+  function show(){banner.style.transform='translateY(0)'; document.body.style.paddingTop='44px';}
+  function hide(){banner.style.transform='translateY(-100%)'; document.body.style.paddingTop='';}
+  function check(){ if(navigator.onLine) hide(); else show(); }
+  window.addEventListener('online', hide);
+  window.addEventListener('offline', show);
+  // Initial state on page load
+  if(!navigator.onLine) show();
+})();
+</script>
 <!-- NAV -->
 <nav id="navbar">
   <a href="#" class="nav-logo"><div class="nav-flag"><div class="nf-r"></div><div class="nf-g"></div><div class="nf-b"></div></div><span class="nav-wordmark">GhanaOpinion<span>Pay</span></span></a>
@@ -4002,6 +4019,10 @@ function doLogin(){
   var phone = val('loginPhone').trim();
   var pass  = val('loginPassword');
   hideErr('loginError');
+  if(!navigator.onLine){
+    showErr('loginError','&#x26A0; No internet connection. Please check your internet connection and try again.');
+    return;
+  }
   if(phone===ADMIN_PHONE && pass===getAdminPass()){
     // Block admin login from the public-facing URL
     if(!isAdminUrl()){
@@ -4124,6 +4145,10 @@ function doRegister(){
   var secQuestion=val('regSecQuestion'), secAnswer=(val('regSecAnswer')||'').trim().toLowerCase();
   var ghanaCard=(val('regGhanaCard')||'').trim().toUpperCase();
   hideErr('regError');
+  if(!navigator.onLine){
+    showErr('regError','&#x26A0; No internet connection. Please check your internet connection and try again.');
+    return;
+  }
   if(!first||!last){showErr('regError','Please enter your full name.'); return;}
   if(!email){showErr('regError','Please enter your email address.'); return;}
   if(!phone||phone.length<10||!/^0[2345679]\d{8}$/.test(phone)){showErr('regError','Please enter a valid Ghanaian MoMo phone number.'); return;}
@@ -4717,6 +4742,7 @@ function renderNotifications(member){
 }
 
 function deleteNotification(idx){
+  if(!navigator.onLine){alert('\u26A0 No internet connection. Please check your internet connection and try again.'); return;}
   var members=getMembers();
   var mi=members.findIndex(function(m){return m.id===currentUser.id;});
   if(mi<0) return;
@@ -4735,6 +4761,7 @@ function deleteNotification(idx){
 }
 
 function deleteAnnouncementNotif(){
+  if(!navigator.onLine){alert('\u26A0 No internet connection. Please check your internet connection and try again.'); return;}
   var members=getMembers();
   var mi=members.findIndex(function(m){return m.id===currentUser.id;});
   if(mi<0) return;
@@ -4751,6 +4778,7 @@ function deleteAnnouncementNotif(){
 }
 
 function clearAllNotifications(){
+  if(!navigator.onLine){alert('\u26A0 No internet connection. Please check your internet connection and try again.'); return;}
   var members=getMembers();
   var mi=members.findIndex(function(m){return m.id===currentUser.id;});
   if(mi<0) return;
@@ -4924,6 +4952,7 @@ function nextSurveyQ(){
 }
 
 function completeSurvey(){
+  if(!navigator.onLine){alert('\u26A0 No internet connection. Please check your internet connection and try again.'); return;}
   var s=activeSurvey;
   var members=getMembers();
   var idx=members.findIndex(function(m){return m.id===currentUser.id;});
@@ -4998,6 +5027,7 @@ function renderPollList(member){
 }
 
 function answerPoll(pid, optIdx, btn){
+  if(!navigator.onLine){alert('\u26A0 No internet connection. Please check your internet connection and try again.'); return;}
   var pollDone=currentUser.dailyPollDate===today()?currentUser.dailyPollCount||0:0;
   var pollLim=Math.max(0,(TIER_POLLS[currentUser.tier]||1)+(currentUser.extraPolls||0));
   if(pollDone>=pollLim){showWithdrawMsg('error','You have reached your daily poll limit ('+pollLim+' for '+currentUser.tier+' tier). Come back tomorrow!'); return;}
@@ -5149,6 +5179,7 @@ function startVideoTimer(vid, url){
 }
 
 function claimVideoEarnAuto(vid){
+  if(!navigator.onLine){alert('\u26A0 No internet connection. Please check your internet connection and try again.'); return;}
   var countdownDiv=el('vcountdown_'+vid);
   var successDiv=el('vsuccess_'+vid);
   if(countdownDiv) countdownDiv.style.display='none';
@@ -5176,6 +5207,7 @@ function claimVideoEarnAuto(vid){
 }
 
 function claimVideoEarn(vid){
+  if(!navigator.onLine){alert('\u26A0 No internet connection. Please check your internet connection and try again.'); return;}
   var videos=getVideos();
   var v=videos.find(function(x){return x.id===vid;});
   var earn=getVideoEarn(currentUser?currentUser.tier:'Free')||(v?v.earn:1.00);
@@ -5226,6 +5258,11 @@ function populateWithdrawCard(member){
 
 function showWithdrawConfirm(){
   if(!currentUser||isAdminUser()) return;
+  hideWithdrawMsg();
+  if(!navigator.onLine){
+    showWithdrawMsg('error','&#x26A0; No internet connection. Please check your internet connection and try again.');
+    return;
+  }
   var members=getMembers();
   var fresh=members.find(function(m){return m.id===currentUser.id;});
   if(!fresh){showWithdrawMsg('error','Session error. Please log out and log back in.'); return;}
@@ -5409,6 +5446,10 @@ function updateWithdrawFeePreview(){
 function submitWithdrawal(){
   if(!currentUser||currentUser==='admin'||currentUser.role==='superadmin'||currentUser.role==='subadmin'){
     showWithdrawMsg('error','Please log in as a member to submit a withdrawal.');
+    return;
+  }
+  if(!navigator.onLine){
+    showWithdrawMsg('error','&#x26A0; No internet connection. Please check your internet connection and try again.');
     return;
   }
   if(!isWithdrawalDay()){
@@ -5874,6 +5915,7 @@ function renderAdminTransactions(){
 
 // ── SETTINGS ──────────────────────────────────────────
 function saveProfile(){
+  if(!navigator.onLine){alert('\u26A0 No internet connection. Please check your internet connection and try again.'); return;}
   var members=getMembers();
   var idx=members.findIndex(function(m){return m.id===currentUser.id;});
   if(idx<0) return;
@@ -5886,6 +5928,7 @@ function saveProfile(){
   alert('\u2705 Profile updated! Changes are now reflected in the admin dashboard.');
 }
 function changePassword(){
+  if(!navigator.onLine){alert('\u26A0 No internet connection. Please check your internet connection and try again.'); return;}
   if(val('setPwOld')!==currentUser.password){alert('Current password is incorrect.'); return;}
   var nw=val('setPwNew');
   if(!nw||nw.length<6){alert('New password must be at least 6 characters.'); return;}
@@ -9203,6 +9246,7 @@ function updateAdTimer(secs){
 
 function claimAdEarn(adId){
   if(!currentUser||isAdminUser()) return;
+  if(!navigator.onLine){alert('\u26A0 No internet connection. Please check your internet connection and try again.'); return;}
   if(activeAdTimer) clearInterval(activeAdTimer);
   activeAdTimer=null;
 
@@ -9438,6 +9482,19 @@ function showUpgradeForm(tierName,fee){
 function submitUpgradeRequest(){
   var formWrap=el('upgradeFormWrap');
   if(!formWrap||!currentUser||isAdminUser()) return;
+  if(!navigator.onLine){
+    var uEl=el('upgradeMsg');
+    if(uEl){
+      uEl.style.display='block';
+      uEl.style.background='var(--red-pale)';
+      uEl.style.border='1px solid var(--red)';
+      uEl.style.color='var(--red)';
+      uEl.innerHTML='&#x26A0; No internet connection. Please check your internet connection and try again.';
+    } else {
+      alert('\u26A0 No internet connection. Please check your internet connection and try again.');
+    }
+    return;
+  }
   var targetTier=formWrap.dataset.targetTier;
   var fee=parseInt(formWrap.dataset.fee)||0;
   var notes=(val('upgradeNotes')||'').trim();
@@ -10353,6 +10410,7 @@ function renderMemberPages(member){
 
 function claimPageReward(pageId){
   if(!currentUser||isAdminUser()) return;
+  if(!navigator.onLine){alert('\u26A0 No internet connection. Please check your internet connection and try again.'); return;}
   // Guard: link must have been opened AND member must have stayed 10 seconds
   if(!verifiedPageLinks[pageId]){
     var claimBtn=el('memberPagesList') && el('memberPagesList').querySelector('[data-claimpage="'+pageId+'"]');
@@ -10414,6 +10472,10 @@ function closeForgotPwModal(){
 function fpNext(){
   var phone=(val('fpPhone')||'').trim();
   hideErr('fpError1');
+  if(!navigator.onLine){
+    showErr('fpError1','&#x26A0; No internet connection. Please check your internet connection and try again.');
+    return;
+  }
   if(!phone||phone.length<10){showErr('fpError1','Please enter your registered phone number.'); return;}
   var members=getMembers();
   var m=members.find(function(x){return x.phone===phone;});
@@ -10428,6 +10490,10 @@ function fpNext(){
 
 function fpReset(){
   hideErr('fpError2');
+  if(!navigator.onLine){
+    showErr('fpError2','&#x26A0; No internet connection. Please check your internet connection and try again.');
+    return;
+  }
   if(!fpMember){showErr('fpError2','Session expired. Please start again.'); return;}
   var answer=(val('fpAnswer')||'').trim().toLowerCase();
   var newPass=(val('fpNewPass')||'');
@@ -11069,6 +11135,19 @@ function saveUpgradeReqs(v){sv('gop_upgrades',v); try{jbPut('upgrades',v);}catch
 
 function submitIssue(){
   if(!currentUser||currentUser==='admin'||currentUser.role==='superadmin'||currentUser.role==='subadmin') return;
+  if(!navigator.onLine){
+    var mEl=el('issueMsg');
+    if(mEl){
+      mEl.style.display='block';
+      mEl.style.background='var(--red-pale)';
+      mEl.style.border='1px solid var(--red)';
+      mEl.style.color='var(--red)';
+      mEl.innerHTML='&#x26A0; No internet connection. Please check your internet connection and try again.';
+    } else {
+      alert('\u26A0 No internet connection. Please check your internet connection and try again.');
+    }
+    return;
+  }
   var category=(val('issueCategory')||'').trim();
   var subject=(val('issueSubject')||'').trim();
   var body=(val('issueBody')||'').trim();
@@ -11545,6 +11624,7 @@ function checkDailyStreakBonus(member){
     var qty=parseInt((el('poolJoinQty')||{}).value)||1;
     var rem=pool.totalSlots-(pool.slotsSold||0);
     var errEl=el('poolJoinError');
+    if(!navigator.onLine){if(errEl){errEl.innerHTML='&#x26A0; No internet connection. Please check your internet connection and try again.';errEl.style.display='block';}return;}
     if(qty<1||isNaN(qty)){if(errEl){errEl.textContent='Enter at least 1 slot.';errEl.style.display='block';}return;}
     if(qty>rem){if(errEl){errEl.textContent='Only '+rem+' slot(s) remaining.';errEl.style.display='block';}return;}
     var total=qty*Number(pool.slotPrice);
