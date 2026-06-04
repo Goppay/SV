@@ -2372,6 +2372,19 @@ iframe[src*="badge"]{
           <button class="abtn danger" id="maintenanceBtn">&#x26A0; Toggle Maintenance</button>
         </div>
       </div>
+
+      <!-- ── UPDATE APP CARD ── -->
+      <div class="a-card">
+        <div class="a-card-title">&#x1F4E6; Update App</div>
+        <p style="font-size:13px;color:#6b7280;margin-bottom:14px">Upload a new version of the app file. Your cloud database stays untouched — only the app code is replaced. The updated file will download automatically so you can re-publish it.</p>
+        <div id="updateAppZone" style="border:2px dashed #d1d5db;border-radius:10px;padding:28px 20px;text-align:center;cursor:pointer;transition:border-color .2s;background:#fafafa" onclick="document.getElementById('updateAppFile').click()" ondragover="event.preventDefault();this.style.borderColor='#16a34a'" ondragleave="this.style.borderColor='#d1d5db'" ondrop="handleUpdateAppDrop(event)">
+          <div style="font-size:32px;margin-bottom:8px">&#x1F4C4;</div>
+          <div style="font-size:14px;font-weight:600;color:#374151">Click to choose file or drag &amp; drop</div>
+          <div style="font-size:12px;color:#9ca3af;margin-top:4px">Select the new <strong>.html</strong> app file</div>
+        </div>
+        <input type="file" id="updateAppFile" accept=".html" style="display:none" onchange="handleUpdateAppFile(this)">
+        <div id="updateAppStatus" style="margin-top:12px;font-size:13px"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -12993,6 +13006,59 @@ function syncSmsLogFromFirebase(callback){
     });
   }catch(e){if(callback)callback();}
 }
+// ── UPDATE APP ──────────────────────────────────────────────────────────────
+function handleUpdateAppDrop(e){
+  e.preventDefault();
+  var zone = document.getElementById('updateAppZone');
+  if(zone) zone.style.borderColor = '#d1d5db';
+  var file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+  if(file) _processUpdateFile(file);
+}
+function handleUpdateAppFile(input){
+  var file = input && input.files && input.files[0];
+  if(file) _processUpdateFile(file);
+  if(input) input.value = '';
+}
+function _processUpdateFile(file){
+  var status = document.getElementById('updateAppStatus');
+  if(!file || !file.name.endsWith('.html')){
+    if(status) status.innerHTML = '<span style="color:#dc2626">&#x26A0; Please select a valid .html file.</span>';
+    return;
+  }
+  if(status) status.innerHTML = '<span style="color:#6b7280">&#x23F3; Reading file...</span>';
+  var reader = new FileReader();
+  reader.onload = function(e){
+    var newHtml = e.target.result;
+    if(!newHtml || newHtml.length < 1000){
+      if(status) status.innerHTML = '<span style="color:#dc2626">&#x26A0; File looks empty or invalid.</span>';
+      return;
+    }
+    if(status) status.innerHTML = '<span style="color:#6b7280">&#x23F3; Preparing update...</span>';
+    // Download the new file so admin can re-publish it
+    try{
+      var blob = new Blob([newHtml], {type:'text/html'});
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'indexgoppay.html';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function(){ URL.revokeObjectURL(a.href); document.body.removeChild(a); }, 1000);
+    }catch(err){
+      if(status) status.innerHTML = '<span style="color:#dc2626">&#x26A0; Download failed: ' + err.message + '</span>';
+      return;
+    }
+    if(status) status.innerHTML = '<span style="color:#16a34a;font-weight:600">&#x2705; New version downloaded as <strong>indexgoppay.html</strong>. Replace your published file with this one to go live.</span>';
+    // Reset file zone
+    var zone = document.getElementById('updateAppZone');
+    if(zone) zone.style.borderColor = '#d1d5db';
+  };
+  reader.onerror = function(){
+    if(status) status.innerHTML = '<span style="color:#dc2626">&#x26A0; Could not read the file.</span>';
+  };
+  reader.readAsText(file);
+}
+
+
 </script>
 <script src="https://replit-cdn.com/replit-pill/replit-pill.global.js" data-repl-id="f115ee18-b034-4c4c-b0c1-5be7feaca850"></script></body>
 </html>
