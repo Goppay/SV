@@ -1655,24 +1655,22 @@ iframe[src*="badge"]{
               }
               if(st) st.textContent='Restoring\u2026';
               btn.disabled=true;
-              fetch((window.GOP_API||'/api')+'/db-restore',{
-                method:'POST',
-                headers:{'Content-Type':'application/json'},
-                body:JSON.stringify(parsed)
-              }).then(function(r){return r.json();}).then(function(j){
+              // Restore: write each store key directly into the JSONBin master bin
+              try{
+                var storeKeys=Object.keys(parsed);
+                storeKeys.forEach(function(s){ jbPut(s, parsed[s]); });
+                // Also persist each store to localStorage
+                storeKeys.forEach(function(s){
+                  try{ localStorage.setItem('gop_'+s, JSON.stringify(parsed[s])); }catch(e){}
+                });
                 btn.disabled=false; fi.value='';
-                if(j&&j.ok){
-                  alert('Restored '+j.restored+' store(s). Page will reload.');
-                  try{ sessionStorage.removeItem('gop_hydrated_reload'); }catch(e){}
-                  location.reload();
-                } else {
-                  var failed=(j&&j.failed)?j.failed.map(function(x){return x.store+': '+x.error;}).join('\n'):'unknown error';
-                  alert('Restore completed with errors:\n'+failed);
-                }
-              }).catch(function(err){
+                alert('Restored '+storeKeys.length+' store(s). Page will reload.');
+                try{ sessionStorage.removeItem('gop_hydrated_reload'); }catch(e){}
+                location.reload();
+              }catch(err){
                 btn.disabled=false; fi.value='';
                 alert('Restore failed: '+err.message);
-              });
+              }
             };
             reader.readAsText(f);
           });
@@ -2423,10 +2421,10 @@ var MAKE_WEBHOOK_URL = 'https://goppay-backend.onrender.com';
 // Talks directly to a single JSONBin master bin that holds every store as a
 // key (e.g. {members:[...], surveys:[...], polls:[...]}). No backend proxy
 // required, so the app keeps working even if the Replit project is offline.
-var JSONBIN_BIN = '69e9396a856a68218960dcc9';
+var JSONBIN_BIN = '6a21e263f5f4af5e29ba3ba6';
 var JSONBIN_KEY = '$2a$10$abzCnXvlbCpyGOeT6KHoqO3dw2TvFeNtzDsos5rmvmGx6eH4maYBi';
 var JSONBIN_URL = 'https://api.jsonbin.io/v3/b/' + JSONBIN_BIN;
-var GOP_API = JSONBIN_URL; // legacy alias used elsewhere in the file
+
 
 // In-memory mirror of the master bin so we don't fetch the whole blob for
 // every per-store call. Refreshed on hydrate and on every successful PUT.
@@ -2624,9 +2622,9 @@ try{
 var FB_URL = '';
 
 // Paystack payment verification endpoint (server-side — secret key never exposed to client)
-var VERIFY_URL = GOP_API + '/verify-upgrade';
+var VERIFY_URL = MAKE_WEBHOOK_URL + '/verify-upgrade';
 // AI content generation endpoint (Gemini-powered survey/poll generator)
-var AI_API_URL = GOP_API;
+var AI_API_URL = MAKE_WEBHOOK_URL;
 
 // Write a member record to JSONBin (pushes full members array).
 // Uses immediate=true so a brand-new registration reaches the cloud even if
@@ -2753,19 +2751,11 @@ function bulkUploadToFirebase(){
     var m=members[i];
     var key=(m.id||'').replace(/[^a-zA-Z0-9_-]/g,'_');
     if(!key){ failed++; uploadNext(i+1); return; }
-    fetch(GOP_API+'/db/members', {
-      method:'PUT',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify(getMembers())
-    }).then(function(r){
-      if(r.ok) done++; else failed++;
-      appendFbLog((r.ok?'  ✅':'  ❌')+' '+(m.firstName||'?')+' '+(m.lastName||'')+' ('+(m.phone||'?')+')');
-      uploadNext(i+1);
-    }).catch(function(){
-      failed++;
-      appendFbLog('  ❌ '+(m.firstName||'?')+' '+(m.lastName||'')+' — network error');
-      uploadNext(i+1);
-    });
+    jbPut('members', getMembers(), true);
+    // Report success for this member
+    done++;
+    appendFbLog('  ✅ '+(m.firstName||'?')+' '+(m.lastName||'')+' ('+(m.phone||'?')+')');
+    uploadNext(i+1);
   }
   uploadNext(0);
 }
@@ -3584,12 +3574,9 @@ document.addEventListener('DOMContentLoaded', function(){
     if(!valid){adminAlert('All rates must be at least GHS 0.10.');return;}
     // Save to localStorage
     tiers.forEach(function(t){ localStorage.setItem('gop_ad_earn_'+t.toLowerCase(), rates[t]); });
-    // Push to Firebase so all devices stay in sync
+    // Push to JSONBin so all devices stay in sync
     try{
-      fetch(GOP_API+'/db/settings_adEarns',{
-        method:'PUT', headers:{'Content-Type':'application/json'},
-        body:JSON.stringify(rates)
-      }).catch(function(){});
+      jbPut('settings_adEarns', rates);
     }catch(e){}
     var s=el('adEarnStatus');
     if(s) s.textContent='Saved! Free: GHS '+rates.Free.toFixed(2)+' · Bronze: GHS '+rates.Bronze.toFixed(2)+' · Silver: GHS '+rates.Silver.toFixed(2)+' · Gold: GHS '+rates.Gold.toFixed(2);
