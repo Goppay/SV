@@ -3936,6 +3936,36 @@ document.addEventListener('DOMContentLoaded', function(){
       if(raw){var p=null;try{p=JSON.parse(raw);}catch(e){}if(p&&p.poolId) startPoolPaymentConfirmation();}
     }
   })();
+
+  // Resume polling if an upgrade payment was pending before page refresh (same pattern as pool)
+  (function(){
+    var urlParams2=new URLSearchParams(window.location.search);
+    var hasRef2=urlParams2.get('trxref')||urlParams2.get('reference')||urlParams2.get('upgrade_callback');
+    if(hasRef2) return; // let checkPaystackReturn / upgrade_callback handler deal with it
+    var ugRaw=null;try{ugRaw=localStorage.getItem('gop_pending_upgrade');}catch(e){}
+    if(!ugRaw) return;
+    var ugPend=null;try{ugPend=JSON.parse(ugRaw);}catch(e){}
+    if(!ugPend||!ugPend.reqId) return;
+    // Poll Firebase every 3s for up to 60s for webhook-confirmed approval
+    var _attempts=0;
+    var _timer=setTimeout(function(){clearInterval(_poll);},60000);
+    var _poll=setInterval(function(){
+      _attempts++;
+      syncUpgradesFromFirebase(function(){
+        var _reqs=getUpgradeReqs();
+        var _found=_reqs.find(function(r){return r.id===ugPend.reqId&&r.status==='approved';});
+        if(_found){
+          clearTimeout(_timer); clearInterval(_poll);
+          try{localStorage.removeItem('gop_pending_upgrade');}catch(e){}
+          if(currentUser&&!isAdminUser()&&currentUser.id===_found.memberId){
+            autoApplyUpgrade(_found.memberId, _found.targetTier, _found.fee, _found.id);
+          }
+        } else if(_attempts>=20){
+          clearTimeout(_timer); clearInterval(_poll);
+        }
+      });
+    },3000);
+  })();
 });
 
 function bindClick(id, fn){var b=el(id);if(b) b.addEventListener('click',fn);}
@@ -9690,18 +9720,45 @@ function submitUpgradeRequest(){
         },100);
 
       } else {
-        // Popup closed without a Paystack callback (user closed manually before completing payment)
+        // Popup closed without a Paystack callback — poll Firebase for webhook-confirmed approval
+        // (same pattern as pool payment auto-verification)
         if(msgEl){
           msgEl.style.display='block';
           msgEl.style.background='#e0f2fe';
           msgEl.style.border='1px solid #0ea5e9';
           msgEl.style.color='#0369a1';
-          msgEl.innerHTML='&#x23F3; Payment window closed. If you completed payment, your upgrade request is <strong>pending admin verification</strong>. You will be notified once it is confirmed.<br><a href="#" id="upgradeCancelRetryLink" style="font-size:12px;color:var(--red);font-weight:600;margin-top:6px;display:inline-block">&#x2716; Didn\'t pay? Cancel this request</a>';
+          msgEl.innerHTML='&#x23F3; <strong>Verifying your payment&hellip;</strong> Please wait up to 60 seconds while we confirm with Paystack.';
         }
-        setTimeout(function(){
-          var cLink=el('upgradeCancelRetryLink');
-          if(cLink) cLink.addEventListener('click',function(e){e.preventDefault(); cancelUpgradeAttempt();});
-        },100);
+        var _ugAttempts=0;
+        var _ugTimer=setTimeout(function(){
+          clearInterval(_ugPoll);
+          if(msgEl){
+            msgEl.style.background='#e0f2fe';
+            msgEl.style.border='1px solid #0ea5e9';
+            msgEl.style.color='#0369a1';
+            msgEl.innerHTML='&#x23F3; Payment window closed. If you completed payment, your upgrade is <strong>pending admin verification</strong>. You will be notified once confirmed.<br><a href="#" id="upgradeCancelRetryLink" style="font-size:12px;color:var(--red);font-weight:600;margin-top:6px;display:inline-block">&#x2716; Didn\'t pay? Cancel this request</a>';
+          }
+          setTimeout(function(){var cLink=el('upgradeCancelRetryLink');if(cLink)cLink.addEventListener('click',function(e){e.preventDefault();cancelUpgradeAttempt();});},100);
+        },60000);
+        var _ugPoll=setInterval(function(){
+          _ugAttempts++;
+          syncUpgradesFromFirebase(function(){
+            var _reqs=getUpgradeReqs();
+            var _found=_reqs.find(function(r){return r.id===req.id&&r.status==='approved';});
+            if(_found){
+              clearTimeout(_ugTimer); clearInterval(_ugPoll);
+              try{localStorage.removeItem('gop_pending_upgrade');}catch(e){}
+              if(msgEl){msgEl.style.display='block';msgEl.style.background='var(--green-pale)';msgEl.style.border='1px solid var(--green)';msgEl.style.color='var(--green)';msgEl.innerHTML='&#x2705; Payment confirmed! Activating your upgrade&hellip;';}
+              if(btn){btn.disabled=false;btn.innerHTML='&#x1F4B3; Pay &amp; Upgrade via Paystack &#x2192;';}
+              autoApplyUpgrade(currentUser.id, targetTier, fee, req.id);
+              if(el('upgradeFormWrap')) el('upgradeFormWrap').style.display='none';
+            } else if(_ugAttempts>=20){
+              clearTimeout(_ugTimer); clearInterval(_ugPoll);
+              if(msgEl){msgEl.style.background='#e0f2fe';msgEl.style.border='1px solid #0ea5e9';msgEl.style.color='#0369a1';msgEl.innerHTML='&#x23F3; Payment window closed. If you completed payment, your upgrade is <strong>pending admin verification</strong>. You will be notified once confirmed.<br><a href="#" id="upgradeCancelRetryLink" style="font-size:12px;color:var(--red);font-weight:600;margin-top:6px;display:inline-block">&#x2716; Didn\'t pay? Cancel this request</a>';}
+              setTimeout(function(){var cLink=el('upgradeCancelRetryLink');if(cLink)cLink.addEventListener('click',function(e){e.preventDefault();cancelUpgradeAttempt();});},100);
+            }
+          });
+        },3000);
       }
     }
   },500);
