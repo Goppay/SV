@@ -296,7 +296,7 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
 .qbar-fill{height:100%;background:var(--green);border-radius:10px;transition:width .4s}
 
 /* ADMIN */
-#adminDashboard{display:none;position:fixed;inset:0;z-index:450;background:#f0f2f5;overflow-y:scroll;overscroll-behavior:contain;-webkit-overflow-scrolling:auto}
+#adminDashboard{display:none;position:fixed;inset:0;z-index:450;background:#f0f2f5;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-top:env(safe-area-inset-top,0px)}
 .a-nav{background:#0d1117;padding:0 22px;height:62px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
 .a-nav-logo{font-family:var(--font-display);font-size:17px;color:#fff}
 .a-nav-logo span{color:var(--gold)}
