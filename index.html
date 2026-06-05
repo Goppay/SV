@@ -6074,8 +6074,8 @@ function copyRefLink(){
 }
 
 // ── LOGOUT ────────────────────────────────────────────
-// ── IDLE TIMEOUT (10 minutes) ─────────────────────────
-var IDLE_LIMIT_MS = 10 * 60 * 1000;
+// ── IDLE TIMEOUT (1 hour) ─────────────────────────────
+var IDLE_LIMIT_MS = 60 * 60 * 1000;
 var idleTimer     = null;
 
 function resetIdleTimer(){
