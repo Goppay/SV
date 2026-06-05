@@ -1568,112 +1568,6 @@ iframe[src*="badge"]{
   <nav class="a-nav">
     <div class="a-nav-logo" id="aNavLogo">Ghana<span style="color:var(--gold)">OpinionPay</span><span class="a-badge">Admin</span></div>
     <div style="display:flex;align-items:center;gap:10px">
-      <a id="adminExportBtn" href="/api/db-backup" download style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#fff;font-size:12px;padding:5px 13px;border-radius:7px;cursor:pointer;font-family:var(--font-body);text-decoration:none">&#x2B07; Export Snapshot</a>
-      <button id="adminImportBtn" title="Pull every admin & user action from the cloud and merge into this device" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#fff;font-size:12px;padding:5px 13px;border-radius:7px;cursor:pointer;font-family:var(--font-body)">&#x2B06; Import Data</button>
-      <label style="display:inline-flex;align-items:center;gap:5px;color:#fff;font-size:11px;opacity:.85;cursor:pointer">
-        <input type="checkbox" id="adminAutoImportChk" checked style="margin:0">Auto every 30s
-      </label>
-      <input type="file" id="adminImportFile" accept="application/json,.json" style="display:none">
-      <script>(function(){
-        function onReady(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded',fn); }
-        onReady(function(){
-          var btn=document.getElementById('adminImportBtn');
-          var fi=document.getElementById('adminImportFile');
-          var st=document.getElementById('adminSyncStatus');
-          var auto=document.getElementById('adminAutoImportChk');
-          if(!btn) return;
-
-          // Pull every store (members, surveys, polls, videos, ads, ann, withdrawals,
-          // issues, upgrades, pages, pools, pool_entries, sms_log, visits, etc.) from
-          // the cloud and merge into local storage. Captures every action performed
-          // by admins and users on any device.
-          function autoImport(silent){
-            if(typeof hydrateFromJsonBin!=='function'){ if(!silent) alert('Sync not ready yet \u2014 try again in a moment.'); return; }
-            if(st) st.textContent='Importing\u2026';
-            if(!silent) btn.disabled=true;
-            try{
-              hydrateFromJsonBin().then(function(){
-                if(st) st.textContent='Imported \u2713 '+new Date().toLocaleTimeString();
-                btn.disabled=false;
-                // Re-render whichever admin tab is showing so changes appear live.
-                try{ if(typeof renderAdminAll==='function') renderAdminAll(); }catch(e){}
-                try{ if(typeof refreshAdminCurrentTab==='function') refreshAdminCurrentTab(); }catch(e){}
-              }).catch(function(err){
-                btn.disabled=false;
-                if(st) st.textContent='Import failed';
-                if(!silent) alert('Import failed: '+(err&&err.message?err.message:err));
-              });
-            }catch(e){
-              btn.disabled=false;
-              if(!silent) alert('Import failed: '+e.message);
-            }
-          }
-
-          btn.addEventListener('click',function(){ autoImport(false); });
-
-          // Background auto-import every 30s while the admin panel is loaded.
-          if(window._adminAutoImport){clearInterval(window._adminAutoImport);window._adminAutoImport=null;}
-          function startAuto(){
-            if(window._adminAutoImport) return;
-            window._adminAutoImport=setInterval(function(){
-              if(auto&&!auto.checked) return;
-              if(document.hidden) return;
-              autoImport(true);
-            }, 30000);
-          }
-          startAuto();
-          if(auto){
-            auto.addEventListener('change',function(){
-              if(auto.checked){ autoImport(true); }
-            });
-          }
-
-          // Restore-from-file (legacy) still available via the hidden file input
-          // — long-press the button (>1.2s) to trigger the file picker.
-          var pressTimer=null;
-          btn.addEventListener('mousedown',function(){
-            pressTimer=setTimeout(function(){
-              if(!fi) return;
-              if(!confirm('Restore from a JSON snapshot file? This will OVERWRITE every store in the cloud database. Continue?')) return;
-              fi.click();
-            }, 1200);
-          });
-          btn.addEventListener('mouseup',function(){if(pressTimer){clearTimeout(pressTimer);pressTimer=null;}});
-          btn.addEventListener('mouseleave',function(){if(pressTimer){clearTimeout(pressTimer);pressTimer=null;}});
-
-          if(fi) fi.addEventListener('change',function(){
-            var f=fi.files&&fi.files[0]; if(!f) return;
-            var reader=new FileReader();
-            reader.onload=function(){
-              var parsed;
-              try{ parsed=JSON.parse(reader.result); }
-              catch(e){ alert('Invalid JSON file: '+e.message); fi.value=''; return; }
-              if(!parsed||typeof parsed!=='object'||Array.isArray(parsed)){
-                alert('File must be an object mapping store names to data.'); fi.value=''; return;
-              }
-              if(st) st.textContent='Restoring\u2026';
-              btn.disabled=true;
-              // Restore: write each store key directly into the JSONBin master bin
-              try{
-                var storeKeys=Object.keys(parsed);
-                storeKeys.forEach(function(s){ jbPut(s, parsed[s]); });
-                // Also persist each store to localStorage
-                storeKeys.forEach(function(s){
-                  try{ localStorage.setItem('gop_'+s, JSON.stringify(parsed[s])); }catch(e){}
-                });
-                btn.disabled=false; fi.value='';
-                alert('Restored '+storeKeys.length+' store(s). Page will reload.');
-                try{ sessionStorage.removeItem('gop_hydrated_reload'); }catch(e){}
-                location.reload();
-              }catch(err){
-                btn.disabled=false; fi.value='';
-                alert('Restore failed: '+err.message);
-              }
-            };
-            reader.readAsText(f);
-          });
-        });
-      })();</script>
       <button class="a-logout" id="aLogoutBtn">Log Out</button>
     </div>
   </nav>
@@ -3524,6 +3418,12 @@ document.addEventListener('DOMContentLoaded', function(){
   bindClick('suspendedSendBtn', submitSuspendedMessage);
   bindClick('suspendedLogoutBtn', logout);
   bindClick('closePenaltyBtn', closePenaltyModal);
+  // Close any modal/overlay when clicking the blank backdrop
+  document.addEventListener('click', function(e){
+    if(e.target && e.target.classList && e.target.classList.contains('modal-overlay')){
+      e.target.classList.remove('open');
+    }
+  });
   bindClick('doPenaltyBtn', applyPenalty);
   bindClick('copyRefMainBtn', copyRefMainLink);
   bindClick('submitIssueBtn', submitIssue);
