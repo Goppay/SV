@@ -1588,24 +1588,32 @@ iframe[src*="badge"]{
       <div class="am"><div class="am-label">Pages Followed</div><div class="am-val" id="aTotalPages" style="color:var(--blue)">0</div><div class="am-sub">All-time follows</div></div>
       <div class="am"><div class="am-label">Total Ads Viewed</div><div class="am-val" id="aTotalAds" style="color:var(--blue)">0</div><div class="am-sub">All-time by members</div></div>
     </div>
-    <div class="a-tabs">
-      <button class="a-tab active" data-atab="payments">&#x1F4B3; Pending Payments</button>
-      <button class="a-tab" data-atab="members">&#x1F465; Members</button>
-      <button class="a-tab" data-atab="upgrades">&#x2B06; Upgrades <span id="upgradeTabBadge" style="display:none;background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;margin-left:4px">0</span></button>
-      <button class="a-tab" data-atab="profiles">&#x1F4C4; Profiles</button>
-      <button class="a-tab" data-atab="duplicates">&#x26A0; Duplicates</button>
-      <button class="a-tab" data-atab="withdrawals">&#x1F4B8; Withdrawals</button>
-      <button class="a-tab" data-atab="content">&#x1F4CB; Content</button>
-      <button class="a-tab" data-atab="issues">&#x1F6A8; Issues</button>
-      <button class="a-tab" data-atab="pages">&#x1F4F1; Pages</button>
-      <button class="a-tab" data-atab="ads">&#x1F4E2; Ads</button>
-      <button class="a-tab" data-atab="visits">&#x1F4CA; Site Visits</button>
-      <button class="a-tab" data-atab="sms">&#x1F4F2; SMS</button>
-      <button class="a-tab" data-atab="schedule">&#x1F4C5; Schedule</button>
-      <button class="a-tab" data-atab="pools">&#x1F3B1; Pools</button>
-      <button class="a-tab" data-atab="atransactions">&#x1F4C3; Transactions</button>
-      <button class="a-tab" data-atab="activity">&#x1F4DC; Activity</button>
-      <button class="a-tab" data-atab="asettings">&#x2699; Settings</button>
+    <!-- Admin toggle menu trigger -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div id="activeAdminTabLabel" style="font-size:14px;font-weight:700;color:#0d1117">&#x1F4B3; Pending Payments</div>
+      <button id="adminMenuBtn" onclick="toggleAdminMenu()" style="background:#0d1117;color:#fff;border:none;border-radius:9px;padding:9px 14px;font-size:18px;cursor:pointer;line-height:1;font-family:var(--font-body)">&#x2630;</button>
+    </div>
+    <!-- Admin slide-down menu panel -->
+    <div id="adminMenuPanel" style="display:none;background:#fff;border:1.5px solid #e5e7eb;border-radius:12px;padding:10px;margin-bottom:14px;box-shadow:0 4px 18px rgba(0,0,0,.12);position:relative;z-index:50">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+        <button class="a-tab active" data-atab="payments">&#x1F4B3; Payments</button>
+        <button class="a-tab" data-atab="members">&#x1F465; Members</button>
+        <button class="a-tab" data-atab="upgrades">&#x2B06; Upgrades <span id="upgradeTabBadge" style="display:none;background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;margin-left:4px">0</span></button>
+        <button class="a-tab" data-atab="profiles">&#x1F4C4; Profiles</button>
+        <button class="a-tab" data-atab="duplicates">&#x26A0; Duplicates</button>
+        <button class="a-tab" data-atab="withdrawals">&#x1F4B8; Withdrawals</button>
+        <button class="a-tab" data-atab="content">&#x1F4CB; Content</button>
+        <button class="a-tab" data-atab="issues">&#x1F6A8; Issues</button>
+        <button class="a-tab" data-atab="pages">&#x1F4F1; Pages</button>
+        <button class="a-tab" data-atab="ads">&#x1F4E2; Ads</button>
+        <button class="a-tab" data-atab="visits">&#x1F4CA; Site Visits</button>
+        <button class="a-tab" data-atab="sms">&#x1F4F2; SMS</button>
+        <button class="a-tab" data-atab="schedule">&#x1F4C5; Schedule</button>
+        <button class="a-tab" data-atab="pools">&#x1F3B1; Pools</button>
+        <button class="a-tab" data-atab="atransactions">&#x1F4C3; Transactions</button>
+        <button class="a-tab" data-atab="activity">&#x1F4DC; Activity</button>
+        <button class="a-tab" data-atab="asettings">&#x2699; Settings</button>
+      </div>
     </div>
     <div class="a-section active" id="atab-payments">
       <div class="a-card">
@@ -3566,7 +3574,15 @@ document.addEventListener('DOMContentLoaded', function(){
   // Admin dashboard
   bindClick('aLogoutBtn', logout);
   document.querySelectorAll('.a-tab').forEach(function(tab){
-    tab.addEventListener('click',function(){switchAdminTab(tab.dataset.atab, tab);});
+    tab.addEventListener('click',function(){
+      // Update the active label and close the menu
+      var label=tab.textContent.trim();
+      var labelEl=el('activeAdminTabLabel');
+      if(labelEl) labelEl.textContent=label;
+      var panel=el('adminMenuPanel');
+      if(panel) panel.style.display='none';
+      switchAdminTab(tab.dataset.atab, tab);
+    });
   });
   bindClick('refreshDupBtn', renderDuplicatesTable);
   // Tier filter buttons
@@ -4830,12 +4846,23 @@ function toggleDashMenu(){
   panel.style.display=panel.style.display==='none'?'block':'none';
 }
 
-// Close the slide-down menu when tapping any blank space outside it
+function toggleAdminMenu(){
+  var panel=el('adminMenuPanel');
+  if(!panel) return;
+  panel.style.display=panel.style.display==='none'?'block':'none';
+}
+
+// Close either slide-down menu when tapping any blank space outside it
 document.addEventListener('click',function(e){
-  var panel=el('dashMenuPanel');
-  var btn=el('dashMenuBtn');
-  if(panel&&panel.style.display==='block'&&!panel.contains(e.target)&&e.target!==btn&&!btn.contains(e.target)){
-    panel.style.display='none';
+  var dPanel=el('dashMenuPanel');
+  var dBtn=el('dashMenuBtn');
+  if(dPanel&&dPanel.style.display==='block'&&!dPanel.contains(e.target)&&!dBtn.contains(e.target)){
+    dPanel.style.display='none';
+  }
+  var aPanel=el('adminMenuPanel');
+  var aBtn=el('adminMenuBtn');
+  if(aPanel&&aPanel.style.display==='block'&&!aPanel.contains(e.target)&&aBtn&&!aBtn.contains(e.target)){
+    aPanel.style.display='none';
   }
 },{capture:true});
 
