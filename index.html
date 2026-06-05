@@ -11711,14 +11711,14 @@ function checkDailyStreakBonus(member){
     }));}catch(e){}
     closePoolJoinModal();
     // Open Paystack payment page — pass full metadata so webhook can record entry
-    var amountKobo=Math.round(total*100);
+    // paystack.shop expects amount in GHS (not pesewas), so pass total directly
     var meta=JSON.stringify({
       pool_id:pool.id, pool_title:pool.title,
       slots:qty, member:currentUser.id,
       member_name:memberName, member_phone:memberPhone
     });
     var url='https://paystack.shop/pay/'+POOL_PAYSTACK_SLUG
-      +'?amount='+amountKobo
+      +'?amount='+total
       +'&email='+encodeURIComponent(currentUser.email||memberPhone+'@goppay.gh')
       +'&metadata='+encodeURIComponent(meta);
     var pw=Math.min(520,window.innerWidth-20); var ph=Math.min(680,window.innerHeight-20);
