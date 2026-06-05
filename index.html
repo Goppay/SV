@@ -1177,6 +1177,8 @@ iframe[src*="badge"]{
       <div id="activeDashTabLabel" style="font-size:14px;font-weight:700;color:var(--green)">&#x1F4CB; Surveys</div>
       <button id="dashMenuBtn" onclick="toggleDashMenu()" style="background:var(--green);color:#fff;border:none;border-radius:9px;padding:9px 14px;font-size:18px;cursor:pointer;line-height:1;font-family:var(--font-body)">&#x2630;</button>
     </div>
+    <!-- Backdrop: closes dash menu when tapping blank space -->
+    <div id="dashMenuBackdrop" onclick="toggleDashMenu()" style="display:none;position:fixed;inset:0;z-index:99"></div>
     <!-- Slide-down menu panel -->
     <div id="dashMenuPanel" style="display:none;background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:10px;margin-bottom:14px;box-shadow:0 4px 18px rgba(0,0,0,.10);z-index:100;position:relative">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
@@ -2093,7 +2095,8 @@ iframe[src*="badge"]{
       <div class="a-card">
         <div class="a-card-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
           <span>&#x1F4DC; Activity Feed &mdash; live admin &amp; member actions</span>
-          <span style="display:flex;align-items:center;gap:8px">
+          <span style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <input type="text" id="activitySearch" placeholder="&#x1F50D; Search actor or action..." style="padding:5px 10px;border:1.5px solid #e5e7eb;border-radius:7px;font-size:13px;font-family:var(--font-body);outline:none;min-width:180px">
             <select id="activityFilter" class="ph-sel" style="padding:5px 8px">
               <option value="all">All actions</option>
               <option value="login">Logins</option>
@@ -4825,23 +4828,19 @@ function clearAllNotifications(){
 
 function toggleDashMenu(){
   var panel=el('dashMenuPanel');
+  var backdrop=el('dashMenuBackdrop');
   if(!panel) return;
-  panel.style.display=panel.style.display==='none'?'block':'none';
+  var opening=panel.style.display==='none';
+  panel.style.display=opening?'block':'none';
+  if(backdrop) backdrop.style.display=opening?'block':'none';
 }
 
-// Close menu when clicking outside
-document.addEventListener('click',function(e){
-  var panel=el('dashMenuPanel');
-  var btn=el('dashMenuBtn');
-  if(panel&&panel.style.display==='block'&&!panel.contains(e.target)&&e.target!==btn){
-    panel.style.display='none';
-  }
-});
-
 function switchDashTabMenu(btn, label){
-  // Close menu
+  // Close menu and backdrop
   var panel=el('dashMenuPanel');
   if(panel) panel.style.display='none';
+  var backdrop=el('dashMenuBackdrop');
+  if(backdrop) backdrop.style.display='none';
   // Update label
   var labelEl=el('activeDashTabLabel');
   if(labelEl) labelEl.innerHTML=label;
@@ -6271,8 +6270,12 @@ function _activityIconOf(cat){
 function renderActivityFeed(){
   var body=document.getElementById('activityBody'); if(!body) return;
   var filt=(document.getElementById('activityFilter')||{}).value||'all';
+  var search=((document.getElementById('activitySearch')||{}).value||'').trim().toLowerCase();
   var arr=getActivity().slice().reverse();
   if(filt!=='all') arr=arr.filter(function(a){return _activityTypeOf(a.type)===filt;});
+  if(search) arr=arr.filter(function(a){
+    return (a.actor||'').toLowerCase().indexOf(search)>=0||(a.message||'').toLowerCase().indexOf(search)>=0;
+  });
   if(!arr.length){body.innerHTML='<tr><td colspan="4" class="empty-row">No activity for this filter.</td></tr>';return;}
   var html='';
   arr.slice(0,500).forEach(function(a){
@@ -6290,6 +6293,7 @@ function renderActivityFeed(){
 }
 document.addEventListener('DOMContentLoaded',function(){
   var f=document.getElementById('activityFilter'); if(f) f.addEventListener('change',renderActivityFeed);
+  var s=document.getElementById('activitySearch'); if(s) s.addEventListener('input',renderActivityFeed);
   var r=document.getElementById('activityRefreshBtn'); if(r) r.addEventListener('click',function(){
     if(typeof hydrateFromJsonBin==='function'){ hydrateFromJsonBin().then(renderActivityFeed); } else renderActivityFeed();
   });
