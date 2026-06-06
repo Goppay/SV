@@ -4130,14 +4130,14 @@ document.addEventListener('DOMContentLoaded', function(){
   restoreSession();
   // Paystack payment callback check (URL-based returns)
   checkPaystackReturn();
-  // Resume polling if a pool payment was pending before page refresh (popup flow)
+  // Resume polling if a pool payment was pending before page refresh (popup flow only)
+  // checkPaystackReturn() handles same-tab URL redirects — don't double-fire
   (function(){
     var urlParams=new URLSearchParams(window.location.search);
-    var hasRef=urlParams.get('trxref')||urlParams.get('reference')||urlParams.get('ref');
-    if(!hasRef){
-      var raw=null;try{raw=localStorage.getItem('gop_pending_pool_payment');}catch(e){}
-      if(raw){var p=null;try{p=JSON.parse(raw);}catch(e){}if(p&&p.poolId) startPoolPaymentConfirmation();}
-    }
+    var hasRef=urlParams.get('trxref')||urlParams.get('reference')||urlParams.get('ref')||urlParams.get('pool_callback');
+    if(hasRef) return; // same-tab redirect — checkPaystackReturn handles it
+    var raw=null;try{raw=localStorage.getItem('gop_pending_pool_payment');}catch(e){}
+    if(raw){var p=null;try{p=JSON.parse(raw);}catch(e){}if(p&&p.poolId) startPoolPaymentConfirmation();}
   })();
 
   // Resume polling if an upgrade payment was pending before page refresh (same pattern as pool)
@@ -12197,7 +12197,7 @@ function checkDailyStreakBonus(member){
 
   // Show banner and poll Firebase until webhook writes the entry (up to 90s)
   function startPoolPaymentConfirmation(){
-    // Fast path: popup already verified and created the entry — skip Firebase polling
+    // Fast path: popup or direct-verify already confirmed and created the entry — skip polling
     var _pv=null;
     try{_pv=JSON.parse(localStorage.getItem('gop_pool_popup_verified')||'null');}catch(e){}
     if(_pv){
@@ -12216,47 +12216,130 @@ function checkDailyStreakBonus(member){
     try{pending=JSON.parse(raw);}catch(e){}
     if(!pending||!pending.poolId) return;
 
-    // Show confirmation banner
-    showPoolConfirmBanner(true);
+    var ref=pending.paystackRef||pending.reference||'';
 
-    var attempts=0; var maxAttempts=20; // 20 × 3s = 60s = 1 minute
-    var _tenMinTimer=setTimeout(function(){
-      // 1-minute hard cancel — clear the poll interval and show auto-cancel UI
+    // Only attempt direct verify if we actually have a reference
+    if(ref && ref!=='undefined'){
+      showPoolConfirmBanner(true);
+      try{
+        fetch(VERIFY_URL+'?reference='+encodeURIComponent(ref))
+          .then(function(r){return r.json();})
+          .then(function(data){
+            if(data&&data.verified){
+              try{localStorage.removeItem('gop_pending_pool_payment');}catch(e){}
+              showPoolConfirmBanner(false);
+              var _entries=getPoolEntries();
+              if(!_entries.find(function(e){return e.paystackRef===ref;})){
+                var _ne={id:'PE'+Date.now(),poolId:pending.poolId,poolTitle:pending.poolTitle,memberId:pending.memberId,memberName:pending.memberName,memberPhone:pending.memberPhone,slotsCount:Number(pending.slotsCount)||1,amountPaid:Number(pending.amountPaid)||0,paystackRef:ref,purchasedAt:new Date().toISOString()};
+                _entries.push(_ne); savePoolEntries(_entries);
+                var _pools=getPools(); var _pi=_pools.findIndex(function(p){return p.id===pending.poolId;});
+                if(_pi>=0){_pools[_pi].slotsSold=(Number(_pools[_pi].slotsSold)||0)+Number(pending.slotsCount||1);savePools(_pools);}
+                try{syncPoolEntriesToFirebase();syncPoolsToFirebase();}catch(e){}
+              }
+              try{checkPoolExpiry();renderMemberPools();}catch(e){}
+              showPoolPaymentSuccessPopup(Number(pending.slotsCount)||1, pending.poolTitle||'pool');
+            } else {
+              _startPoolPolling(pending);
+            }
+          })
+          .catch(function(){ _startPoolPolling(pending); });
+      }catch(e){ _startPoolPolling(pending); }
+    } else {
+      // No reference yet (popup flow — popup hasn't closed/redirected back yet).
+      // Just poll Firebase for the webhook-written entry; the popup callback will
+      // set gop_pool_popup_verified when it succeeds, and startPoolPaymentConfirmation
+      // will be called again by the popup-close interval which will hit the fast path.
+      _startPoolPolling(pending);
+    }
+  }
+
+  function _startPoolPolling(pending){
+    showPoolConfirmBanner(true);
+    var attempts=0; var maxAttempts=40; // 40 × 5s = 200s ≈ 3 min 20s
+
+    var _hardTimer=setTimeout(function(){
       clearInterval(poll);
       try{localStorage.removeItem('gop_pending_pool_payment');}catch(e){}
       showPoolConfirmBanner(false);
-      // Mark any unverified pending entries for this member in UI
       renderMemberPools();
       showPoolPaymentAutoCancelPopup(pending);
-    },60000); // 1 minute in ms
+    }, 200000); // 3 min 20s hard timeout
 
     var poll=setInterval(function(){
       attempts++;
-      syncPoolEntriesFromFirebase(function(){
-        var entries=getPoolEntries();
-        var found=entries.find(function(e){
-          return e.poolId===pending.poolId && e.memberId===pending.memberId && e.webhookVerified;
-        });
-        if(found){
-          clearTimeout(_tenMinTimer);
-          clearInterval(poll);
+      var ref=pending.paystackRef||pending.reference||'';
+      if(ref && ref!=='undefined'){
+        // Try direct verify (fastest path)
+        try{
+          fetch(VERIFY_URL+'?reference='+encodeURIComponent(ref))
+            .then(function(r){return r.json();})
+            .then(function(data){
+              if(data&&data.verified){
+                _resolvePoolPayment(pending, ref, poll, _hardTimer);
+              } else if(attempts>=maxAttempts){
+                _cancelPoolPayment(pending, poll, _hardTimer);
+              }
+            })
+            .catch(function(){ _checkPoolFirebaseFallback(pending, attempts, maxAttempts, poll, _hardTimer); });
+        }catch(e){ _checkPoolFirebaseFallback(pending, attempts, maxAttempts, poll, _hardTimer); }
+      } else {
+        // No ref yet — check gop_pool_popup_verified (set by the popup callback) or Firebase
+        var _pv2=null;
+        try{_pv2=JSON.parse(localStorage.getItem('gop_pool_popup_verified')||'null');}catch(e){}
+        if(_pv2){
+          clearTimeout(_hardTimer); clearInterval(poll);
+          try{localStorage.removeItem('gop_pool_popup_verified');}catch(e){}
           try{localStorage.removeItem('gop_pending_pool_payment');}catch(e){}
           showPoolConfirmBanner(false);
-          syncPoolsFromFirebase(function(){
-            checkPoolExpiry();
-            renderMemberPools();
-          });
-          showPoolPaymentSuccessPopup(found.slotsCount, found.poolTitle);
-        } else if(attempts>=maxAttempts){
-          clearTimeout(_tenMinTimer);
-          clearInterval(poll);
-          try{localStorage.removeItem('gop_pending_pool_payment');}catch(e){}
-          showPoolConfirmBanner(false);
-          renderMemberPools();
-          showPoolPaymentAutoCancelPopup(pending);
+          try{checkPoolExpiry();renderMemberPools();}catch(e){}
+          showPoolPaymentSuccessPopup(Number(_pv2.slotsCount)||1, _pv2.poolTitle||'pool');
+        } else {
+          _checkPoolFirebaseFallback(pending, attempts, maxAttempts, poll, _hardTimer);
         }
+      }
+    },5000);
+  }
+
+  function _resolvePoolPayment(pending, ref, poll, timer){
+    clearTimeout(timer); clearInterval(poll);
+    try{localStorage.removeItem('gop_pending_pool_payment');}catch(e){}
+    showPoolConfirmBanner(false);
+    var _entries=getPoolEntries();
+    if(!_entries.find(function(e){return e.paystackRef===ref;})){
+      var _ne={id:'PE'+Date.now(),poolId:pending.poolId,poolTitle:pending.poolTitle,memberId:pending.memberId,memberName:pending.memberName,memberPhone:pending.memberPhone,slotsCount:Number(pending.slotsCount)||1,amountPaid:Number(pending.amountPaid)||0,paystackRef:ref,purchasedAt:new Date().toISOString()};
+      _entries.push(_ne); savePoolEntries(_entries);
+      var _pools=getPools(); var _pi=_pools.findIndex(function(p){return p.id===pending.poolId;});
+      if(_pi>=0){_pools[_pi].slotsSold=(Number(_pools[_pi].slotsSold)||0)+Number(pending.slotsCount||1);savePools(_pools);}
+      try{syncPoolEntriesToFirebase();syncPoolsToFirebase();}catch(e){}
+    }
+    try{checkPoolExpiry();renderMemberPools();}catch(e){}
+    showPoolPaymentSuccessPopup(Number(pending.slotsCount)||1, pending.poolTitle||'pool');
+  }
+
+  function _cancelPoolPayment(pending, poll, timer){
+    clearTimeout(timer); clearInterval(poll);
+    try{localStorage.removeItem('gop_pending_pool_payment');}catch(e){}
+    showPoolConfirmBanner(false);
+    renderMemberPools();
+    showPoolPaymentAutoCancelPopup(pending);
+  }
+
+  function _checkPoolFirebaseFallback(pending, attempts, maxAttempts, poll, timer){
+    syncPoolEntriesFromFirebase(function(){
+      var entries=getPoolEntries();
+      var found=entries.find(function(e){
+        return e.poolId===pending.poolId && e.memberId===pending.memberId;
       });
-    },3000);
+      if(found){
+        clearTimeout(timer); clearInterval(poll);
+        try{localStorage.removeItem('gop_pending_pool_payment');}catch(e){}
+        showPoolConfirmBanner(false);
+        try{checkPoolExpiry();renderMemberPools();}catch(e){}
+        showPoolPaymentSuccessPopup(found.slotsCount||Number(pending.slotsCount)||1, found.poolTitle||pending.poolTitle||'pool');
+      } else if(attempts>=maxAttempts){
+        _cancelPoolPayment(pending, poll, timer);
+      }
+    });
   }
 
   // Called on URL return from Paystack (full redirect, not popup)
