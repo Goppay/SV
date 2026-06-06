@@ -3828,11 +3828,23 @@ document.addEventListener('DOMContentLoaded', function(){
       .then(function(data){
         if(data.verified){
           if(_isPopup){
-            // Popup flow — signal parent window via localStorage then close
-            try{localStorage.setItem('gop_reg_verified_'+_ref,_trxref);}catch(e){}
+            // Popup flow — create the member account immediately in popup (same as pool creates entry)
+            if(_pendingData&&_pendingData.reg&&_pendingData.tier){
+              try{
+                createMemberAccount(_pendingData.reg, _pendingData.tier, _trxref);
+                try{localStorage.removeItem('gop_pending_payment');}catch(e){}
+                // Signal parent: account already created — just open dashboard
+                try{localStorage.setItem('gop_reg_popup_verified', JSON.stringify({phone:_pendingData.reg.phone}));}catch(e){}
+              }catch(e2){
+                // Fallback: old flag approach so parent creates account
+                try{localStorage.setItem('gop_reg_verified_'+_ref,_trxref);}catch(e3){}
+              }
+            } else {
+              try{localStorage.setItem('gop_reg_verified_'+_ref,_trxref);}catch(e){}
+            }
             _ov.innerHTML='<div style="width:58px;height:58px;border-radius:50%;background:#d4edda;display:flex;align-items:center;justify-content:center;font-size:28px">&#x2705;</div>'
               +'<div style="font-size:19px;font-weight:700;color:#0d4a22">Payment Confirmed!</div>'
-              +'<div style="font-size:13px;color:#4a4a42;max-width:300px">Creating your account now. This window will close automatically.</div>';
+              +'<div style="font-size:13px;color:#4a4a42;max-width:300px">Your account is being set up. This window will close shortly.</div>';
             setTimeout(function(){try{window.close();}catch(e){}},1800);
           } else {
             // Same-tab redirect flow — create account directly
@@ -3899,10 +3911,24 @@ document.addEventListener('DOMContentLoaded', function(){
       .then(function(r){return r.json();})
       .then(function(data){
         if(data.verified){
-          try{localStorage.setItem('gop_upgrade_verified_'+_reqId,_trxref);}catch(e){}
+          // Mark upgrade as approved immediately in popup (same as pool creates entry in popup)
+          try{
+            var _reqs=getUpgradeReqs();
+            var _ri=_reqs.findIndex(function(r){return r.id===_reqId;});
+            if(_ri>=0){
+              _reqs[_ri].paystackRef=_trxref; _reqs[_ri].status='approved'; _reqs[_ri].approvedAt=new Date().toISOString();
+              saveUpgradeReqs(_reqs); syncUpgradesToFirebase();
+            }
+            try{localStorage.removeItem('gop_pending_upgrade');}catch(e){}
+            // Signal parent: req already approved — just apply UI
+            try{localStorage.setItem('gop_upgrade_popup_verified', JSON.stringify({reqId:_reqId, trxref:_trxref}));}catch(e){}
+          }catch(e2){
+            // Fallback: old flag approach
+            try{localStorage.setItem('gop_upgrade_verified_'+_reqId,_trxref);}catch(e3){}
+          }
           _ov.innerHTML='<div style="width:58px;height:58px;border-radius:50%;background:#d4edda;display:flex;align-items:center;justify-content:center;font-size:28px">&#x2705;</div>'
             +'<div style="font-size:19px;font-weight:700;color:#0d4a22">Payment Confirmed!</div>'
-            +'<div style="font-size:13px;color:#4a4a42;max-width:300px">Your upgrade is being applied. This window will close automatically.</div>';
+            +'<div style="font-size:13px;color:#4a4a42;max-width:300px">Your upgrade is being applied. This window will close shortly.</div>';
           setTimeout(function(){try{window.close();}catch(e){}},1800);
         } else {
           try{localStorage.setItem('gop_upgrade_failed_'+_reqId,'1');}catch(e){}
@@ -3922,6 +3948,71 @@ document.addEventListener('DOMContentLoaded', function(){
     return; // Skip rest of DOMContentLoaded — we are in the popup callback context
   })();
   // ─────────────────────────────────────────────────────────────────────────
+
+  // ── PAYSTACK POOL PAYMENT CALLBACK ───────────────────────────────────────
+  // Paystack redirects back here (popup or same tab) after pool payment.
+  // Verify instantly via VERIFY_URL — no webhook polling needed on happy path.
+  (function(){
+    var _pc=new URLSearchParams(window.location.search);
+    if(_pc.get('pool_callback')!=='1') return;
+    var _trxref=_pc.get('trxref')||_pc.get('reference');
+    var _isPopup=!!window.opener;
+    try{window.history.replaceState({},'',window.location.pathname);}catch(e){}
+    var _pRaw=null;try{_pRaw=localStorage.getItem('gop_pending_pool_payment');}catch(e){}
+    var _pData=null;try{if(_pRaw)_pData=JSON.parse(_pRaw);}catch(e){}
+    var _ov=document.createElement('div');
+    _ov.style.cssText='position:fixed;inset:0;z-index:99999;background:#fff;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;font-family:sans-serif;padding:24px;text-align:center';
+    _ov.innerHTML='<div style="width:48px;height:48px;border:4px solid #d4edda;border-top-color:#0d4a22;border-radius:50%;animation:spin 1s linear infinite"></div><div style="font-size:18px;font-weight:700;color:#0d4a22">Verifying pool payment&hellip;</div><div style="font-size:13px;color:#7a7a70">Please wait while we confirm your payment with Paystack.</div>';
+    document.body.appendChild(_ov);
+    if(!_trxref){if(_isPopup){try{window.close();}catch(e){}}else{_ov.remove();}return;}
+    fetch(VERIFY_URL+'?reference='+encodeURIComponent(_trxref))
+      .then(function(r){return r.json();})
+      .then(function(data){
+        if(data.verified&&_pData){
+          // Payment confirmed — create pool entry immediately (no webhook required)
+          var _entries=getPoolEntries();
+          if(!_entries.find(function(e){return e.paystackRef===_trxref;})){
+            var _ne={id:'PE'+Date.now(),poolId:_pData.poolId,poolTitle:_pData.poolTitle,memberId:_pData.memberId,memberName:_pData.memberName,memberPhone:_pData.memberPhone,slotsCount:Number(_pData.slotsCount)||1,amountPaid:Number(_pData.amountPaid)||0,paystackRef:_trxref,purchasedAt:new Date().toISOString()};
+            _entries.push(_ne); savePoolEntries(_entries);
+            var _pools=getPools();var _pi=_pools.findIndex(function(p){return p.id===_pData.poolId;});
+            if(_pi>=0){_pools[_pi].slotsSold=(Number(_pools[_pi].slotsSold)||0)+Number(_pData.slotsCount||1);savePools(_pools);}
+          }
+          try{localStorage.removeItem('gop_pending_pool_payment');}catch(e){}
+          if(_isPopup){
+            // Signal the parent window to show success without polling
+            try{localStorage.setItem('gop_pool_popup_verified',JSON.stringify({trxref:_trxref,slotsCount:_pData.slotsCount,poolTitle:_pData.poolTitle}));}catch(e){}
+            _ov.innerHTML='<div style="width:58px;height:58px;border-radius:50%;background:#d4edda;display:flex;align-items:center;justify-content:center;font-size:28px">&#x2705;</div><div style="font-size:19px;font-weight:700;color:#0d4a22">Payment Confirmed!</div><div style="font-size:13px;color:#4a4a42;max-width:300px">Your pool slot has been reserved. This window will close shortly.</div>';
+            setTimeout(function(){try{window.close();}catch(e){}},1800);
+          } else {
+            // Same-tab flow — dismiss overlay, refresh pools, show success
+            _ov.innerHTML='<div style="width:58px;height:58px;border-radius:50%;background:#d4edda;display:flex;align-items:center;justify-content:center;font-size:28px">&#x2705;</div><div style="font-size:19px;font-weight:700;color:#0d4a22">Payment Confirmed!</div><div style="font-size:13px;color:#4a4a42;max-width:300px">Your slot in <strong>'+(_pData.poolTitle||'the pool')+'</strong> has been reserved!</div>';
+            setTimeout(function(){
+              _ov.remove();
+              try{checkPoolExpiry();renderMemberPools();}catch(e){}
+              showPoolPaymentSuccessPopup(Number(_pData.slotsCount)||1,_pData.poolTitle||'pool');
+            },1000);
+          }
+        } else {
+          _ov.innerHTML='<div style="width:58px;height:58px;border-radius:50%;background:#fdeaec;display:flex;align-items:center;justify-content:center;font-size:28px">&#x26A0;</div><div style="font-size:19px;font-weight:700;color:#CE1126">Payment Not Verified</div><div style="font-size:13px;color:#4a4a42;max-width:320px;line-height:1.6;margin-top:4px">'+(data.message||'Your payment could not be confirmed. If money was deducted, please contact Ghanaopinionpay@gmail.com with reference: '+_trxref)+'</div>'+(_isPopup?'<button onclick="window.close()" style="margin-top:14px;background:#CE1126;color:#fff;border:none;border-radius:8px;padding:10px 24px;font-size:13px;cursor:pointer">Close Window</button>':'');
+        }
+      })
+      .catch(function(){
+        // Verification server unreachable — fall back to webhook polling
+        _ov.innerHTML='<div style="font-size:22px">&#x26A0;</div><div style="font-size:16px;font-weight:700;color:#CE1126">Verification Unavailable</div><div style="font-size:13px;color:#4a4a42;max-width:300px;line-height:1.6;margin-top:4px">Could not reach the server. If you paid, your slot will be confirmed shortly via our payment processor.</div>';
+        if(_isPopup){setTimeout(function(){try{window.close();}catch(e){}},2500);}
+        else{setTimeout(function(){_ov.remove();try{startPoolPaymentConfirmation();}catch(e){}},2500);}
+      });
+  })();
+  // ─────────────────────────────────────────────────────────────────────────
+
+  // Preserve member session across Paystack same-tab redirect returns
+  // so restoreSession() doesn't incorrectly clear a valid logged-in session
+  (function(){
+    var _q=new URLSearchParams(window.location.search);
+    if(_q.get('trxref')||_q.get('reference')||_q.get('reg_callback')||_q.get('upgrade_callback')||_q.get('pool_callback')){
+      try{sessionStorage.setItem('gop_session_active','1');}catch(e){}
+    }
+  })();
 
   // Restore session after refresh — must be last so all DOM elements are ready
   restoreSession();
@@ -9680,7 +9771,20 @@ function submitUpgradeRequest(){
       clearInterval(pollInterval);
       if(btn){btn.disabled=false; btn.innerHTML='&#x1F4B3; Pay &amp; Upgrade via Paystack &#x2192;';}
 
-      // Check if payment was verified by the callback handler (set in localStorage by upgrade_callback page)
+      // Fast path: popup already approved the upgrade (new instant-verification approach)
+      var _upv=null;
+      try{_upv=JSON.parse(localStorage.getItem('gop_upgrade_popup_verified')||'null');}catch(e){}
+      if(_upv&&_upv.reqId===req.id){
+        try{localStorage.removeItem('gop_upgrade_popup_verified');}catch(e){}
+        try{localStorage.removeItem('gop_pending_upgrade');}catch(e){}
+        if(msgEl){msgEl.style.display='block';msgEl.style.background='var(--green-pale)';msgEl.style.border='1px solid var(--green)';msgEl.style.color='var(--green)';msgEl.innerHTML='&#x2705; Payment confirmed! Activating your upgrade&hellip;';}
+        autoApplyUpgrade(currentUser.id, targetTier, fee, req.id);
+        setVal('upgradeNotes','');
+        if(el('upgradeFormWrap')) el('upgradeFormWrap').style.display='none';
+        return;
+      }
+
+      // Check if payment was verified by the callback handler (old flag-based fallback)
       var verifiedRef=null;
       var payFailed=false;
       try{verifiedRef=localStorage.getItem('gop_upgrade_verified_'+req.id);}catch(e){}
@@ -9689,13 +9793,13 @@ function submitUpgradeRequest(){
       try{localStorage.removeItem('gop_upgrade_failed_'+req.id);}catch(e){}
 
       if(verifiedRef){
-        // Paystack confirmed payment — apply upgrade immediately
+        // Fallback: mark approved in parent and apply
         if(msgEl){
           msgEl.style.display='block';
           msgEl.style.background='var(--green-pale)';
           msgEl.style.border='1px solid var(--green)';
           msgEl.style.color='var(--green)';
-          msgEl.innerHTML='&#x23F3; Payment confirmed! Activating your upgrade&hellip;';
+          msgEl.innerHTML='&#x2705; Payment confirmed! Activating your upgrade&hellip;';
         }
         var allReqs=getUpgradeReqs();
         var ri=allReqs.findIndex(function(r){return r.id===req.id;});
@@ -9876,6 +9980,7 @@ function processUpgrade(reqId, action, denyReason){
       members2[mi2].notifications=members2[mi2].notifications||[];
       members2[mi2].notifications.push(mkNotif('&#x26A0; Your upgrade request to <strong>'+req.targetTier+'</strong> was denied. Reason: <strong>'+reason+'</strong>. Please contact support at Ghanaopinionpay@gmail.com if you need assistance.'));
       saveMembers(members2);
+      try{syncMemberToBackend(members2[mi2]);}catch(e){}
     }
     adminAlert('Upgrade denied. Reason: '+reason+'.');
   }
@@ -11774,10 +11879,12 @@ function checkDailyStreakBonus(member){
       slots:qty, member:currentUser.id,
       member_name:memberName, member_phone:memberPhone
     });
+    var poolCallbackUrl=window.location.href.split('?')[0]+'?pool_callback=1';
     var url='https://paystack.shop/pay/'+POOL_PAYSTACK_SLUG
       +'?amount='+total
       +'&email='+encodeURIComponent(currentUser.email||memberPhone+'@goppay.gh')
-      +'&metadata='+encodeURIComponent(meta);
+      +'&metadata='+encodeURIComponent(meta)
+      +'&callback_url='+encodeURIComponent(poolCallbackUrl);
     var pw=Math.min(520,window.innerWidth-20); var ph=Math.min(680,window.innerHeight-20);
     var ptop=Math.round((window.innerHeight-ph)/2); var pleft=Math.round((window.innerWidth-pw)/2);
     var payWin=window.open(url,'PoolPaystack','width='+pw+',height='+ph+',top='+ptop+',left='+pleft+',scrollbars=yes');
@@ -11795,6 +11902,18 @@ function checkDailyStreakBonus(member){
 
   // Show banner and poll Firebase until webhook writes the entry (up to 90s)
   function startPoolPaymentConfirmation(){
+    // Fast path: popup already verified and created the entry — skip Firebase polling
+    var _pv=null;
+    try{_pv=JSON.parse(localStorage.getItem('gop_pool_popup_verified')||'null');}catch(e){}
+    if(_pv){
+      try{localStorage.removeItem('gop_pool_popup_verified');}catch(e){}
+      try{localStorage.removeItem('gop_pending_pool_payment');}catch(e){}
+      showPoolConfirmBanner(false);
+      try{checkPoolExpiry();renderMemberPools();}catch(e){}
+      showPoolPaymentSuccessPopup(Number(_pv.slotsCount)||1, _pv.poolTitle||'pool');
+      return;
+    }
+
     var raw=null;
     try{raw=localStorage.getItem('gop_pending_pool_payment');}catch(e){}
     if(!raw) return;
@@ -12205,6 +12324,22 @@ function confirmPayment(){
       clearInterval(_paymentCheckInterval);
       restoreBtn();
 
+      // Fast path: popup already created the account (new instant-verification approach)
+      var _rpv=null;
+      try{_rpv=JSON.parse(localStorage.getItem('gop_reg_popup_verified')||'null');}catch(e){}
+      if(_rpv&&_rpv.phone){
+        try{localStorage.removeItem('gop_reg_popup_verified');}catch(e){}
+        try{localStorage.removeItem('gop_pending_payment');}catch(e){}
+        var _newM=getMembers().find(function(x){return x.phone===_rpv.phone;});
+        if(_newM){
+          currentUser=_newM; saveSession();
+          try{sessionStorage.setItem('gop_session_active','1');}catch(e){}
+          hide('paymentPage');
+          openMemberDashboard(_newM);
+        }
+        return;
+      }
+
       var verifiedTrxref=null;
       var regPayFailed=false;
       try{verifiedTrxref=localStorage.getItem('gop_reg_verified_'+ref);}catch(e){}
@@ -12213,7 +12348,7 @@ function confirmPayment(){
       try{localStorage.removeItem('gop_reg_failed_'+ref);}catch(e){}
 
       if(verifiedTrxref){
-        // Paystack confirmed — create account
+        // Fallback: old flag approach — create account in parent
         try{localStorage.removeItem('gop_pending_payment');}catch(e){}
         createMemberAccount(reg, tier, verifiedTrxref);
       } else if(regPayFailed){
