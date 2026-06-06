@@ -3261,12 +3261,6 @@ function restoreSession(){
       pendingReg={firstName:m.firstName,lastName:m.lastName,email:m.email,phone:m.phone,region:m.region,age:m.age,gender:m.gender||'N/A',secQuestion:m.secQuestion||'',secAnswer:m.secAnswer||'',password:m.password};
       showPaymentFailed('Your previous payment was not verified. Please try again.'); startIdleTracking(); return;
     }
-    // Only auto-restore member session if within same browser session (not on fresh page load/refresh)
-    try{
-      if(!sessionStorage.getItem('gop_session_active')){
-        localStorage.removeItem('gop_session'); return; // Show homepage on refresh
-      }
-    }catch(e){}
     if(m.status==='active'){openMemberDashboard(m); startIdleTracking(); return;}
     if(m.status==='suspended'){currentUser=m; showSuspendedPage(m); return;}
     if(m.status==='pending_deletion'){currentUser=m; showPendingDeletionPage(m); startIdleTracking(); return;}
