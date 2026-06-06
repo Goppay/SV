@@ -4030,7 +4030,7 @@ document.addEventListener('DOMContentLoaded', function(){
       .then(function(r){return r.json();})
       .then(function(data){
         if(data.verified){
-          // Mark upgrade as approved immediately in popup (same as pool creates entry in popup)
+          // Mark upgrade as approved immediately in popup
           try{
             var _reqs=getUpgradeReqs();
             var _ri=_reqs.findIndex(function(r){return r.id===_reqId;});
@@ -4039,11 +4039,25 @@ document.addEventListener('DOMContentLoaded', function(){
               saveUpgradeReqs(_reqs); syncUpgradesToFirebase();
             }
             try{localStorage.removeItem('gop_pending_upgrade');}catch(e){}
-            // Signal parent: req already approved — just apply UI
-            try{localStorage.setItem('gop_upgrade_popup_verified', JSON.stringify({reqId:_reqId, trxref:_trxref}));}catch(e){}
+            var _upPayload=JSON.stringify({reqId:_reqId, trxref:_trxref});
+            // Write into OPENER's localStorage (not this popup window's)
+            try{
+              if(window.opener&&window.opener.localStorage){
+                window.opener.localStorage.setItem('gop_upgrade_popup_verified',_upPayload);
+                window.opener.localStorage.removeItem('gop_pending_upgrade');
+              } else {
+                localStorage.setItem('gop_upgrade_popup_verified',_upPayload);
+              }
+            }catch(e){ try{localStorage.setItem('gop_upgrade_popup_verified',_upPayload);}catch(e2){} }
+            // postMessage as belt-and-suspenders
+            try{
+              if(window.opener) window.opener.postMessage({type:'GOP_UPGRADE_VERIFIED',reqId:_reqId,trxref:_trxref},window.location.origin);
+            }catch(e){}
           }catch(e2){
-            // Fallback: old flag approach
-            try{localStorage.setItem('gop_upgrade_verified_'+_reqId,_trxref);}catch(e3){}
+            try{
+              if(window.opener&&window.opener.localStorage) window.opener.localStorage.setItem('gop_upgrade_verified_'+_reqId,_trxref);
+              else localStorage.setItem('gop_upgrade_verified_'+_reqId,_trxref);
+            }catch(e3){}
           }
           _ov.innerHTML='<div style="width:58px;height:58px;border-radius:50%;background:#d4edda;display:flex;align-items:center;justify-content:center;font-size:28px">&#x2705;</div>'
             +'<div style="font-size:19px;font-weight:700;color:#0d4a22">Payment Confirmed!</div>'
@@ -4097,14 +4111,24 @@ document.addEventListener('DOMContentLoaded', function(){
             var _pools=getPools();var _pi=_pools.findIndex(function(p){return p.id===_pData.poolId;});
             if(_pi>=0){_pools[_pi].slotsSold=(Number(_pools[_pi].slotsSold)||0)+Number(_pData.slotsCount||1);savePools(_pools);}
           }
-          try{localStorage.removeItem('gop_pending_pool_payment');}catch(e){}
+          var _verifiedPayload=JSON.stringify({trxref:_trxref,slotsCount:_pData.slotsCount,poolTitle:_pData.poolTitle});
           if(_isPopup){
-            // Signal the parent window to show success without polling
-            try{localStorage.setItem('gop_pool_popup_verified',JSON.stringify({trxref:_trxref,slotsCount:_pData.slotsCount,poolTitle:_pData.poolTitle}));}catch(e){}
+            // Write into the OPENER's localStorage (not this popup window's)
+            try{
+              if(window.opener&&window.opener.localStorage){
+                window.opener.localStorage.setItem('gop_pool_popup_verified',_verifiedPayload);
+                window.opener.localStorage.removeItem('gop_pending_pool_payment');
+              }
+            }catch(e){}
+            // Also postMessage as a belt-and-suspenders fallback
+            try{
+              if(window.opener) window.opener.postMessage({type:'GOP_POOL_VERIFIED',slotsCount:_pData.slotsCount,poolTitle:_pData.poolTitle,trxref:_trxref},window.location.origin);
+            }catch(e){}
             _ov.innerHTML='<div style="width:58px;height:58px;border-radius:50%;background:#d4edda;display:flex;align-items:center;justify-content:center;font-size:28px">&#x2705;</div><div style="font-size:19px;font-weight:700;color:#0d4a22">Payment Confirmed!</div><div style="font-size:13px;color:#4a4a42;max-width:300px">Your pool slot has been reserved. This window will close shortly.</div>';
             setTimeout(function(){try{window.close();}catch(e){}},1800);
           } else {
             // Same-tab flow — dismiss overlay, refresh pools, show success
+            try{localStorage.removeItem('gop_pending_pool_payment');}catch(e){}
             _ov.innerHTML='<div style="width:58px;height:58px;border-radius:50%;background:#d4edda;display:flex;align-items:center;justify-content:center;font-size:28px">&#x2705;</div><div style="font-size:19px;font-weight:700;color:#0d4a22">Payment Confirmed!</div><div style="font-size:13px;color:#4a4a42;max-width:300px">Your slot in <strong>'+(_pData.poolTitle||'the pool')+'</strong> has been reserved!</div>';
             setTimeout(function(){
               _ov.remove();
@@ -4117,7 +4141,17 @@ document.addEventListener('DOMContentLoaded', function(){
         }
       })
       .catch(function(){
-        // Verification server unreachable — fall back to webhook polling
+        // Verification server unreachable — store the real trxref in the pending object
+        // so that when the popup closes and the parent polls, it uses the correct reference
+        try{
+          _pData=_pData||{};
+          _pData.paystackRef=_trxref;
+          if(_isPopup && window.opener && window.opener.localStorage){
+            window.opener.localStorage.setItem('gop_pending_pool_payment',JSON.stringify(_pData));
+          } else {
+            localStorage.setItem('gop_pending_pool_payment',JSON.stringify(_pData));
+          }
+        }catch(e){}
         _ov.innerHTML='<div style="font-size:22px">&#x26A0;</div><div style="font-size:16px;font-weight:700;color:#CE1126">Verification Unavailable</div><div style="font-size:13px;color:#4a4a42;max-width:300px;line-height:1.6;margin-top:4px">Could not reach the server. If you paid, your slot will be confirmed shortly via our payment processor.</div>';
         if(_isPopup){setTimeout(function(){try{window.close();}catch(e){}},2500);}
         else{setTimeout(function(){_ov.remove();try{startPoolPaymentConfirmation();}catch(e){}},2500);}
@@ -9962,11 +9996,32 @@ function submitUpgradeRequest(){
     showUMsg('error','&#x26A0; Payment cancelled. You can try again whenever you are ready.');
   }
 
+  // Listen for postMessage from upgrade popup (most reliable cross-window signal)
+  var _upgradeMsgHandler=function(evt){
+    if(evt.origin!==window.location.origin) return;
+    if(!evt.data||evt.data.type!=='GOP_UPGRADE_VERIFIED') return;
+    if(evt.data.reqId!==req.id) return;
+    window.removeEventListener('message',_upgradeMsgHandler);
+    clearInterval(pollInterval);
+    if(btn){btn.disabled=false; btn.innerHTML='&#x1F4B3; Pay &amp; Upgrade via Paystack &#x2192;';}
+    try{localStorage.removeItem('gop_upgrade_popup_verified');}catch(e){}
+    try{localStorage.removeItem('gop_pending_upgrade');}catch(e){}
+    if(msgEl){msgEl.style.display='block';msgEl.style.background='var(--green-pale)';msgEl.style.border='1px solid var(--green)';msgEl.style.color='var(--green)';msgEl.innerHTML='&#x2705; Payment confirmed! Activating your upgrade&hellip;';}
+    autoApplyUpgrade(currentUser.id, targetTier, fee, req.id);
+    setVal('upgradeNotes','');
+    if(el('upgradeFormWrap')) el('upgradeFormWrap').style.display='none';
+    try{pushInstantNotif('&#x2B06; Your upgrade to <strong>'+targetTier+'</strong> has been confirmed and applied!');}catch(e){}
+  };
+  window.addEventListener('message',_upgradeMsgHandler);
+
   var pollInterval=setInterval(function(){
     if(!payWin||payWin.closed){
       clearInterval(pollInterval);
+      window.removeEventListener('message',_upgradeMsgHandler);
       if(btn){btn.disabled=false; btn.innerHTML='&#x1F4B3; Pay &amp; Upgrade via Paystack &#x2192;';}
 
+      // Give opener.localStorage write a moment to settle before reading
+      setTimeout(function(){
       // Fast path: popup already approved the upgrade (new instant-verification approach)
       var _upv=null;
       try{_upv=JSON.parse(localStorage.getItem('gop_upgrade_popup_verified')||'null');}catch(e){}
@@ -10060,6 +10115,7 @@ function submitUpgradeRequest(){
           });
         },3000);
       }
+      },600); // end setTimeout settle delay
     }
   },500);
 }
@@ -12184,12 +12240,35 @@ function checkDailyStreakBonus(member){
     var ptop=Math.round((window.innerHeight-ph)/2); var pleft=Math.round((window.innerWidth-pw)/2);
     var payWin=window.open(url,'PoolPaystack','width='+pw+',height='+ph+',top='+ptop+',left='+pleft+',scrollbars=yes');
     if(!payWin) window.open(url,'_blank');
-    // When popup closes, start polling Firebase for webhook-confirmed entry
+
+    // Primary signal: postMessage from popup (most reliable — works even when
+    // opener.localStorage is blocked by browser security policies)
+    var _msgHandler=function(evt){
+      if(evt.origin!==window.location.origin) return;
+      if(!evt.data||evt.data.type!=='GOP_POOL_VERIFIED') return;
+      window.removeEventListener('message',_msgHandler);
+      clearInterval(_closeCheck);
+      // Payment already verified and entry already created inside the popup.
+      // Just update UI on this (parent) window.
+      try{localStorage.removeItem('gop_pending_pool_payment');}catch(e){}
+      try{localStorage.removeItem('gop_pool_popup_verified');}catch(e){}
+      showPoolConfirmBanner(false);
+      try{checkPoolExpiry();renderMemberPools();}catch(e){}
+      showPoolPaymentSuccessPopup(Number(evt.data.slotsCount)||1, evt.data.poolTitle||'pool');
+      try{pushInstantNotif('&#x1F3C6; Your slot purchase for <strong>'+(evt.data.poolTitle||'pool')+'</strong> was confirmed!');}catch(e){}
+    };
+    window.addEventListener('message',_msgHandler);
+
+    // Fallback: poll for popup close, then check opener.localStorage flag or Firebase
     var _closeCheck=setInterval(function(){
       try{
         if(!payWin||payWin.closed){
           clearInterval(_closeCheck);
-          startPoolPaymentConfirmation();
+          // Give opener.localStorage write a moment to settle before reading
+          setTimeout(function(){
+            window.removeEventListener('message',_msgHandler);
+            startPoolPaymentConfirmation();
+          },600);
         }
       }catch(e){clearInterval(_closeCheck);}
     },800);
