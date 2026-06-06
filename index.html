@@ -451,6 +451,22 @@ iframe[src*="badge"]{
 <div id="gopOfflineBanner" style="position:fixed;top:0;left:0;right:0;z-index:99999;background:#dc2626;color:#fff;padding:11px 16px;text-align:center;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;font-size:13.5px;font-weight:600;box-shadow:0 2px 12px rgba(0,0,0,.25);transform:translateY(-100%);transition:transform .3s ease;line-height:1.4">
   &#x26A0; You're offline &mdash; your changes won't be saved. Please check your internet connection.
 </div>
+<!-- EARLY HIDE: suppress homepage flash when a session or Paystack callback is present.
+     Runs synchronously before any paint so the homepage sections never flicker into view. -->
+<script>
+(function(){
+  try{
+    var _q=new URLSearchParams(window.location.search);
+    var _hasCallback=_q.get('trxref')||_q.get('reference')||_q.get('reg_callback')||_q.get('upgrade_callback')||_q.get('pool_callback');
+    var _hasSess=null;
+    try{_hasSess=localStorage.getItem('gop_session');}catch(e){}
+    if(_hasCallback||_hasSess){
+      // Hide all homepage sections immediately — JS will show the right screen once ready
+      document.documentElement.style.visibility='hidden';
+    }
+  }catch(e){}
+})();
+</script>
 <script>
 (function(){
   var banner=document.getElementById('gopOfflineBanner');
@@ -1189,6 +1205,7 @@ iframe[src*="badge"]{
         <button class="d-tab" data-tab="referral" onclick="switchDashTabMenu(this,'&#x1F4E4; Referral')">&#x1F4E4; Referral</button>
         <button class="d-tab" data-tab="upgrade" onclick="switchDashTabMenu(this,'&#x2B06; Upgrade')">&#x2B06; Upgrade</button>
         <button class="d-tab" data-tab="pool" onclick="switchDashTabMenu(this,'&#x1F3B1; Pool')">&#x1F3B1; Pool</button>
+        <button class="d-tab" data-tab="slots" onclick="switchDashTabMenu(this,'&#x1F3AB; My Slots')">&#x1F3AB; My Slots</button>
         <button class="d-tab" data-tab="report" onclick="switchDashTabMenu(this,'&#x1F6A8; Report Issue')">&#x1F6A8; Report Issue</button>
         <button class="d-tab" data-tab="transactions" onclick="switchDashTabMenu(this,'&#x1F4C3; Transactions')">&#x1F4C3; Transactions</button>
         <button class="d-tab" data-tab="settings" onclick="switchDashTabMenu(this,'&#x2699; Settings')">&#x2699; Settings</button>
@@ -1492,6 +1509,13 @@ iframe[src*="badge"]{
           <div style="font-size:11.5px;color:#9ca3af;text-align:center;margin-top:8px">&#x1F512; Secured by Paystack &mdash; card, MoMo &amp; bank accepted</div>
         </div>
       </div>
+    <div class="d-tab-sec" id="tab-slots">
+      <div class="d-card">
+        <div class="d-card-title">&#x1F3AB; My Pool Slots</div>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px;line-height:1.6">All pools you have purchased slots for. Multiple purchases for the same pool are combined into one. Status shows whether the pool is still running, and your outcome when it closes.</p>
+        <div id="mySlotsListWrap"><p style="font-size:13.5px;color:var(--text-muted);text-align:center;padding:20px">Loading your slots…</p></div>
+      </div>
+    </div>
     <div class="d-tab-sec" id="tab-transactions">
       <div class="d-card">
         <div class="d-card-title">&#x1F4C3; My Transactions</div>
@@ -2555,7 +2579,7 @@ try{
 var FB_URL = '';
 
 // Paystack payment verification endpoint (server-side — secret key never exposed to client)
-var VERIFY_URL = MAKE_WEBHOOK_URL + '/verify-upgrade';
+var VERIFY_URL = 'https://goppay-backend.onrender.com';
 // AI content generation endpoint (Gemini-powered survey/poll generator)
 var AI_API_URL = MAKE_WEBHOOK_URL;
 
@@ -3212,63 +3236,93 @@ function saveSession(){
 function restoreSession(){
   try{
     var raw=localStorage.getItem('gop_session');
-    if(!raw) return;
+    if(!raw){
+      // No session at all — just show homepage
+      try{document.documentElement.style.visibility='';}catch(e){}
+      return;
+    }
     var saved=JSON.parse(raw);
-    if(!saved) return;
+    if(!saved){
+      try{document.documentElement.style.visibility='';}catch(e){}
+      return;
+    }
 
     // Admin / sub-admin session
     if(saved.role==='superadmin'){
       currentUser=saved;
-      // openAdminDashboard handles fresh-device detection internally
       openAdminDashboard();
       startIdleTracking();
+      try{document.documentElement.style.visibility='';}catch(e){}
       return;
     }
     if(saved.role==='subadmin'){
-      // On a fresh device localStorage may not have sub-admin list yet.
-      // Try local first; if not found, pull from Firebase and re-verify.
       var localSubs=getSubAdmins();
       var sub=localSubs.find(function(s){return s.id===saved.id && s.active;});
       if(sub){
-        currentUser=saved; openAdminDashboard(); startIdleTracking(); return;
+        currentUser=saved; openAdminDashboard(); startIdleTracking();
+        try{document.documentElement.style.visibility='';}catch(e){}
+        return;
       } else if(!localSubs.length){
-        // Could be a fresh device — pull sub-admins from Firebase before deciding
         currentUser=saved;
         syncSubAdminsFromFirebase(function(){
           var remoteSubs=getSubAdmins();
           var rs=remoteSubs.find(function(s){return s.id===saved.id && s.active;});
           if(rs){ openAdminDashboard(); startIdleTracking(); }
           else { currentUser=null; localStorage.removeItem('gop_session'); }
+          try{document.documentElement.style.visibility='';}catch(e){}
         });
         return;
       }
-      localStorage.removeItem('gop_session'); return;
+      localStorage.removeItem('gop_session');
+      try{document.documentElement.style.visibility='';}catch(e){}
+      return;
     }
 
-    // Member session — re-read fresh from storage
+    // Member session
     var members=getMembers();
     var m=members.find(function(x){return x.id===saved.id;});
-    if(!m){localStorage.removeItem('gop_session'); return;}
+
+    // Member not found locally — may be first load on a new device before Firebase sync.
+    // Pull from Firebase before deciding whether to clear the session.
+    if(!m){
+      syncMembersFromBackend(function(){
+        var members2=getMembers();
+        var m2=members2.find(function(x){return x.id===saved.id;});
+        if(!m2){ localStorage.removeItem('gop_session'); try{document.documentElement.style.visibility='';}catch(e){} return; }
+        try{ var bl=JSON.parse(localStorage.getItem('gop_deleted')||'[]'); if(bl.indexOf(m2.id)>=0){ localStorage.removeItem('gop_session'); try{document.documentElement.style.visibility='';}catch(e){} return; } }catch(e){}
+        currentUser=m2;
+        _openMemberScreenForStatus(m2);
+        try{document.documentElement.style.visibility='';}catch(e){}
+      });
+      return;
+    }
+
     // Check blacklist
     try{
       var bl=JSON.parse(localStorage.getItem('gop_deleted')||'[]');
-      if(bl.indexOf(m.id)>=0){localStorage.removeItem('gop_session'); return;}
+      if(bl.indexOf(m.id)>=0){ localStorage.removeItem('gop_session'); try{document.documentElement.style.visibility='';}catch(e){} return; }
     }catch(e){}
 
     currentUser=m;
-    if(m.status==='awaiting_verification'){autoActivateMember(m.id, null); startIdleTracking(); return;}
-    if(m.status==='payment_failed'){
-      pendingReg={firstName:m.firstName,lastName:m.lastName,email:m.email,phone:m.phone,region:m.region,age:m.age,gender:m.gender||'N/A',secQuestion:m.secQuestion||'',secAnswer:m.secAnswer||'',password:m.password};
-      showPaymentFailed('Your previous payment was not verified. Please try again.'); startIdleTracking(); return;
-    }
-    if(m.status==='active'){openMemberDashboard(m); startIdleTracking(); return;}
-    if(m.status==='suspended'){currentUser=m; showSuspendedPage(m); return;}
-    if(m.status==='pending_deletion'){currentUser=m; showPendingDeletionPage(m); startIdleTracking(); return;}
-    // Other inactive states — clear session
-    localStorage.removeItem('gop_session');
+    _openMemberScreenForStatus(m);
+    try{document.documentElement.style.visibility='';}catch(e){}
   }catch(e){
     localStorage.removeItem('gop_session');
+    try{document.documentElement.style.visibility='';}catch(e){}
   }
+}
+
+// Route a member to the correct screen based on their status
+function _openMemberScreenForStatus(m){
+  if(m.status==='awaiting_verification'){ autoActivateMember(m.id, null); startIdleTracking(); return; }
+  if(m.status==='payment_failed'){
+    pendingReg={firstName:m.firstName,lastName:m.lastName,email:m.email,phone:m.phone,region:m.region,age:m.age,gender:m.gender||'N/A',secQuestion:m.secQuestion||'',secAnswer:m.secAnswer||'',password:m.password};
+    showPaymentFailed('Your previous payment was not verified. Please try again.'); startIdleTracking(); return;
+  }
+  if(m.status==='active'){ openMemberDashboard(m); startIdleTracking(); return; }
+  if(m.status==='suspended'){ showSuspendedPage(m); return; }
+  if(m.status==='pending_deletion'){ showPendingDeletionPage(m); startIdleTracking(); return; }
+  localStorage.removeItem('gop_session');
 }
 
 document.addEventListener('DOMContentLoaded', function(){
@@ -3719,6 +3773,7 @@ document.addEventListener('DOMContentLoaded', function(){
     document.querySelectorAll('.d-tab').forEach(function(tab){
       tab.addEventListener('click',function(){
         if(tab.dataset.tab==='pool') setTimeout(renderMemberPools, 50);
+        if(tab.dataset.tab==='slots') setTimeout(renderMySlots, 50);
       });
     });
     // Admin pool tab load
@@ -3874,6 +3929,7 @@ document.addEventListener('DOMContentLoaded', function(){
       +'<div style="font-size:18px;font-weight:700;color:#0d4a22">Verifying your payment&hellip;</div>'
       +'<div style="font-size:13px;color:#7a7a70">Please wait while we confirm your registration payment with Paystack.</div>';
     document.body.appendChild(_ov);
+    try{document.documentElement.style.visibility='';}catch(e){}
     if(!_trxref||!_ref){
       _ov.innerHTML='<div style="font-size:22px">&#x26A0;</div><div style="font-size:16px;font-weight:700;color:#CE1126">Missing payment reference</div><div style="font-size:13px;color:#7a7a70;margin-top:8px">Please contact support at Ghanaopinionpay@gmail.com.</div><button onclick="window.close()" style="margin-top:14px;background:#CE1126;color:#fff;border:none;border-radius:8px;padding:10px 24px;font-size:13px;cursor:pointer;font-family:sans-serif">Close</button>';
       return;
@@ -3965,6 +4021,7 @@ document.addEventListener('DOMContentLoaded', function(){
       +'<div style="font-size:18px;font-weight:700;color:#0d4a22">Verifying your payment&hellip;</div>'
       +'<div style="font-size:13px;color:#7a7a70">Please wait while we confirm your payment with Paystack.</div>';
     document.body.appendChild(_ov);
+    try{document.documentElement.style.visibility='';}catch(e){}
     if(!_trxref||!_reqId){
       _ov.innerHTML='<div style="font-size:22px">&#x26A0;</div><div style="font-size:16px;font-weight:700;color:#CE1126">Missing payment reference</div><div style="font-size:13px;color:#7a7a70;margin-top:8px">Please contact support.</div><button onclick="window.close()" style="margin-top:14px;background:#CE1126;color:#fff;border:none;border-radius:8px;padding:10px 24px;font-size:13px;cursor:pointer;font-family:sans-serif">Close</button>';
       return;
@@ -4026,6 +4083,7 @@ document.addEventListener('DOMContentLoaded', function(){
     _ov.style.cssText='position:fixed;inset:0;z-index:99999;background:#fff;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;font-family:sans-serif;padding:24px;text-align:center';
     _ov.innerHTML='<div style="width:48px;height:48px;border:4px solid #d4edda;border-top-color:#0d4a22;border-radius:50%;animation:spin 1s linear infinite"></div><div style="font-size:18px;font-weight:700;color:#0d4a22">Verifying pool payment&hellip;</div><div style="font-size:13px;color:#7a7a70">Please wait while we confirm your payment with Paystack.</div>';
     document.body.appendChild(_ov);
+    try{document.documentElement.style.visibility='';}catch(e){}
     if(!_trxref){if(_isPopup){try{window.close();}catch(e){}}else{_ov.remove();}return;}
     fetch(VERIFY_URL+'?reference='+encodeURIComponent(_trxref))
       .then(function(r){return r.json();})
@@ -9219,7 +9277,7 @@ function renderDashAds(member){
 function switchDashTabById(name){
   var btn=document.querySelector('#dashMenuPanel .d-tab[data-tab="'+name+'"]');
   if(btn){
-    var labels={surveys:'&#x1F4CB; Surveys',polls:'&#x26A1; Polls',videos:'&#x25B6; Videos',ads:'&#x1F4E2; View Ads',pages:'&#x1F4F1; Pages',withdraw:'&#x1F4B8; Withdraw',referral:'&#x1F4E4; Referral',upgrade:'&#x2B06; Upgrade',pool:'&#x1F3B1; Pool',report:'&#x1F6A8; Report Issue',transactions:'&#x1F4C3; Transactions',settings:'&#x2699; Settings'};
+    var labels={surveys:'&#x1F4CB; Surveys',polls:'&#x26A1; Polls',videos:'&#x25B6; Videos',ads:'&#x1F4E2; View Ads',pages:'&#x1F4F1; Pages',withdraw:'&#x1F4B8; Withdraw',referral:'&#x1F4E4; Referral',upgrade:'&#x2B06; Upgrade',pool:'&#x1F3B1; Pool',slots:'&#x1F3AB; My Slots',report:'&#x1F6A8; Report Issue',transactions:'&#x1F4C3; Transactions',settings:'&#x2699; Settings'};
     var labelEl=el('activeDashTabLabel');
     if(labelEl && labels[name]) labelEl.innerHTML=labels[name];
     switchDashTab(name, btn);
@@ -11937,6 +11995,105 @@ function checkDailyStreakBonus(member){
         +'</div>';
     });
     list.innerHTML=html||'<p style="font-size:13.5px;color:var(--text-muted);text-align:center;padding:14px">No pool entries yet.</p>';
+  }
+
+  // ── MY SLOTS TAB ──────────────────────────────────────
+  // Renders all pool slot purchases for the current member,
+  // grouped by pool (totalling multiple purchases), with contextual status.
+  function renderMySlots(){
+    var wrap=el('mySlotsListWrap');
+    if(!wrap) return;
+    wrap.innerHTML='<p style="font-size:13.5px;color:var(--text-muted);text-align:center;padding:20px">Loading…</p>';
+    syncPoolsFromFirebase(function(){
+      syncPoolEntriesFromFirebase(function(){
+        var pools=getPools();
+        var entries=getPoolEntries();
+        var memberId=currentUser?currentUser.id:null;
+        var myEntries=memberId?entries.filter(function(e){return e.memberId===memberId;}):[]; 
+        if(!myEntries.length){
+          wrap.innerHTML='<p style="font-size:13.5px;color:var(--text-muted);text-align:center;padding:24px">You haven\'t purchased any pool slots yet. Head to the <strong>Pool</strong> tab to join a pool!</p>';
+          return;
+        }
+        // Group by poolId — total all slots and amount paid per pool into one entry
+        var grouped={};
+        myEntries.forEach(function(e){
+          if(!grouped[e.poolId]){
+            grouped[e.poolId]={
+              poolId:e.poolId, poolTitle:e.poolTitle,
+              slotsCount:0, amountPaid:0,
+              firstPurchasedAt:e.purchasedAt, latestPurchasedAt:e.purchasedAt,
+              paystackRefs:[]
+            };
+          }
+          grouped[e.poolId].slotsCount+=Number(e.slotsCount)||0;
+          grouped[e.poolId].amountPaid+=Number(e.amountPaid)||0;
+          grouped[e.poolId].paystackRefs.push(e.paystackRef);
+          if(e.purchasedAt>grouped[e.poolId].latestPurchasedAt) grouped[e.poolId].latestPurchasedAt=e.purchasedAt;
+        });
+        var html='';
+        Object.values(grouped).forEach(function(group){
+          var pool=pools.find(function(p){return p.id===group.poolId;})||{};
+          var totalSlots=pool.totalSlots||0;
+          var mySlots=group.slotsCount;
+          var prize=Number(pool.prizeAmount||0);
+          var isWinner=pool.winnerId&&pool.winnerId===memberId;
+          var isEnded=!pool.isActive||pool.winnerId||poolDaysRemaining(pool.endsAt)<=0||(Number(pool.slotsSold)||0)>=totalSlots;
+          // --- Status label ---
+          var statusHtml, statusNote='';
+          if(!isEnded){
+            // Pool still open
+            statusHtml='<span style="background:var(--green-pale);color:var(--green);font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px;display:inline-flex;align-items:center;gap:5px">&#x23F3; Pending &mdash; Pool Open</span>';
+            var rem=totalSlots-(Number(pool.slotsSold)||0);
+            var pct2=totalSlots>0?Math.min(100,Math.round(((Number(pool.slotsSold)||0)/totalSlots)*100)):0;
+            var myPct=totalSlots>0?Math.round((mySlots/totalSlots)*100):0;
+            statusNote='<div style="margin:10px 0 4px;font-size:12px;color:var(--text-muted)">Pool fill: <strong>'+(Number(pool.slotsSold)||0)+'</strong> / '+totalSlots+' slots sold · '+rem+' remaining</div>'
+              +'<div style="height:7px;background:#f3f4f6;border-radius:10px;overflow:hidden;margin-bottom:4px"><div style="height:100%;width:'+pct2+'%;background:linear-gradient(90deg,var(--green),var(--green-light));border-radius:10px"></div></div>'
+              +'<div style="font-size:11.5px;color:var(--text-muted)">Your '+mySlots+' slot'+(mySlots!==1?'s':'')+' = ~'+myPct+'% chance of winning</div>';
+          } else if(isWinner){
+            statusHtml='<span style="background:#fef3c7;color:var(--gold-dark);border:1.5px solid var(--gold-dark);font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px;display:inline-flex;align-items:center;gap:5px">&#x1F3C6; Won!</span>';
+            statusNote='<div style="background:#fef3c7;border:1.5px solid var(--gold-dark);border-radius:9px;padding:10px 14px;margin-top:10px;text-align:center;font-size:13.5px;font-weight:700;color:var(--gold-dark)">&#x1F389; Congratulations! You won GHS '+prize.toFixed(2)+' — credited to your balance.</div>';
+          } else if(isEnded){
+            // Pool ended, member did not win
+            statusHtml='<span style="background:var(--red-pale);color:var(--red);font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px;display:inline-flex;align-items:center;gap:5px">&#x1F504; Try Again</span>';
+            statusNote='<div style="font-size:12.5px;color:var(--text-muted);margin-top:8px">This pool has ended. '+(pool.winnerName?'Winner: <strong>'+pool.winnerName+'</strong>. ':'')+'Better luck next time! Join another active pool.</div>';
+          }
+          var countdown='';
+          if(!isEnded&&pool.endsAt){
+            countdown='<div style="font-size:12px;color:var(--text-muted);margin-top:4px">&#x23F3; Closes in: <span class="pool-countdown" data-ends-at="'+pool.endsAt+'" style="font-family:monospace;font-weight:700;color:#374151">'+formatCountdown(pool.endsAt)+'</span></div>';
+          }
+          html+='<div style="background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:18px;margin-bottom:14px">'
+            +'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px">'
+            +'<div><div style="font-size:15px;font-weight:700;color:#0d1117">&#x1F3B1; '+(group.poolTitle||'Pool')+'</div>'
+            +'<div style="font-size:12.5px;color:var(--gold-dark);font-weight:600;margin-top:2px">&#x1F3C6; Prize: GHS '+prize.toFixed(2)+'</div>'
+            +countdown+'</div>'
+            +'<div>'+statusHtml+'</div></div>'
+            +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px">'
+            +'<div style="background:var(--warm-gray);border-radius:9px;padding:9px;text-align:center"><div style="font-size:22px;font-weight:700;color:var(--green)">'+mySlots+'</div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px">Slots Owned</div></div>'
+            +'<div style="background:var(--warm-gray);border-radius:9px;padding:9px;text-align:center"><div style="font-size:15px;font-weight:700;color:var(--red)">GHS '+Number(group.amountPaid).toFixed(2)+'</div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px">Total Paid</div></div>'
+            +'<div style="background:var(--warm-gray);border-radius:9px;padding:9px;text-align:center"><div style="font-size:15px;font-weight:700;color:var(--gold-dark)">GHS '+prize.toFixed(2)+'</div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px">Prize Pool</div></div>'
+            +'</div>'
+            +statusNote
+            +'<div style="font-size:11px;color:#9ca3af;margin-top:10px">First purchase: '+fmtPoolDate(group.firstPurchasedAt)+(group.paystackRefs.length>1?' · '+group.paystackRefs.length+' payments combined':'')+'</div>'
+            +'</div>';
+        });
+        wrap.innerHTML=html;
+        startPoolCountdownTimers();
+      });
+    });
+  }
+
+  // Push an instant notification to the current logged-in member and re-render notifications
+  function pushInstantNotif(text){
+    if(!currentUser||isAdminUser()) return;
+    var members=getMembers();
+    var idx=members.findIndex(function(m){return m.id===currentUser.id;});
+    if(idx<0) return;
+    members[idx].notifications=members[idx].notifications||[];
+    members[idx].notifications.push(mkNotif(text));
+    currentUser=members[idx];
+    saveMembers(members);
+    saveSession();
+    try{renderNotifications(currentUser);}catch(e){}
   }
 
   // ── COUNTDOWN TIMER HELPERS ──────────────────────────────────
