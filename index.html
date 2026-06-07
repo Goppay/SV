@@ -1634,6 +1634,7 @@ iframe[src*="badge"]{
         <button class="a-tab" data-atab="sms">&#x1F4F2; SMS</button>
         <button class="a-tab" data-atab="schedule">&#x1F4C5; Schedule</button>
         <button class="a-tab" data-atab="pools">&#x1F3B1; Pools</button>
+        <button class="a-tab" data-atab="aslots">&#x1F3AB; Slots</button>
         <button class="a-tab" data-atab="atransactions">&#x1F4C3; Transactions</button>
         <button class="a-tab" data-atab="activity">&#x1F4DC; Activity</button>
         <button class="a-tab" data-atab="asettings">&#x2699; Settings</button>
@@ -2099,23 +2100,43 @@ iframe[src*="badge"]{
           </div>
         </div>
       </div>
-    <div class="a-section" id="atab-atransactions">
+    </div>
+    <!-- ADMIN SLOTS TAB -->
+    <div class="a-section" id="atab-aslots">
       <div class="a-card">
         <div class="a-card-title">
-          <span>&#x1F4C3; All Member Transactions</span>
+          <span>&#x1F3AB; Pool Slot Purchases</span>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-            <input type="text" id="txSearchInput" placeholder="Search by name or phone..." style="padding:6px 11px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;outline:none;min-width:180px"/>
+            <input type="text" id="aSlotSearch" placeholder="Search by name, phone, pool, or transaction ID..." style="padding:6px 11px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;outline:none;min-width:220px"/>
+            <button class="abtn" id="aSlotRefreshBtn">&#x21BB; Refresh</button>
+          </div>
+        </div>
+        <p style="font-size:13px;color:#6b7280;margin-bottom:14px;line-height:1.6">All pool slot purchases made by members. Shows quantity, amount paid, transaction reference, time and date.</p>
+        <div style="overflow-x:auto">
+          <table class="atable">
+            <thead><tr><th>#</th><th>Member</th><th>Phone</th><th>Pool</th><th>Qty (Slots)</th><th>Amount Paid</th><th>Transaction ID / Paystack Ref</th><th>Date</th><th>Time</th></tr></thead>
+            <tbody id="adminSlotsBody"><tr><td colspan="9" class="empty-row">Loading slot purchases...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="a-section" id="atab-atransactions">
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <input type="text" id="txSearchInput" placeholder="Search by name, phone, or transaction ID..." style="padding:6px 11px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;outline:none;min-width:200px"/>
             <select id="txTypeFilter" style="padding:6px 10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;outline:none;cursor:pointer">
               <option value="all">All Types</option>
               <option value="withdrawal">Withdrawals</option>
+              <option value="registration">Registration Payments</option>
+              <option value="upgrade">Upgrade Payments</option>
+              <option value="slot">Slot Payments</option>
             </select>
             <button class="abtn" id="txRefreshBtn">&#x21BB; Refresh</button>
           </div>
         </div>
-        <p style="font-size:13px;color:#6b7280;margin-bottom:14px;line-height:1.6">All member withdrawal transactions across the platform.</p>
+        <p style="font-size:13px;color:#6b7280;margin-bottom:14px;line-height:1.6">All member transactions — registrations, upgrades, slot purchases, and withdrawals. Search by name, phone, or transaction ID.</p>
         <div style="overflow-x:auto">
           <table class="atable">
-            <thead><tr><th>#</th><th>Member</th><th>Phone</th><th>Tier</th><th>Type</th><th>Amount (GHS)</th><th>Fee</th><th>Received</th><th>Method</th><th>Account</th><th>Date</th><th>Status</th></tr></thead>
+            <thead><tr><th>#</th><th>Member</th><th>Phone</th><th>Tier</th><th>Type</th><th>Transaction ID</th><th>Amount (GHS)</th><th>Fee</th><th>Received</th><th>Method / Notes</th><th>Date</th><th>Status</th></tr></thead>
             <tbody id="adminTransactionsBody"><tr><td colspan="12" class="empty-row">Loading...</td></tr></tbody>
           </table>
         </div>
@@ -3830,12 +3851,16 @@ document.addEventListener('DOMContentLoaded', function(){
     document.querySelectorAll('.a-tab').forEach(function(tab){
       tab.addEventListener('click',function(){
         if(tab.dataset.atab==='pools'){ setTimeout(function(){renderAdminPools();renderAdminPoolEntries();},50); }
+        if(tab.dataset.atab==='aslots'){ setTimeout(renderAdminSlots,50); }
+        if(tab.dataset.atab==='atransactions'){ setTimeout(renderAdminTransactions,50); }
       });
     });
     // Admin buttons
     var cpb=el('createPoolBtn'); if(cpb) cpb.addEventListener('click',adminCreatePool);
     var rpb=el('refreshPoolsBtn'); if(rpb) rpb.addEventListener('click',renderAdminPools);
     var rpeb=el('refreshPoolEntriesBtn'); if(rpeb) rpeb.addEventListener('click',renderAdminPoolEntries);
+    var asrb=el('aSlotRefreshBtn'); if(asrb) asrb.addEventListener('click',renderAdminSlots);
+    var aSlotSrch=el('aSlotSearch'); if(aSlotSrch) aSlotSrch.addEventListener('input',renderAdminSlots);
   
   // Track site visit
   trackSiteVisit();
@@ -4713,6 +4738,26 @@ function showPaymentWaiting(m){
       if(retryDiv) retryDiv.style.display='block';
     }
   }, 60000);
+  // After 5 minutes with no verification, show a one-time failure popup
+  var _verifyTimeoutShown=false;
+  setTimeout(function(){
+    if(!_activationFired && !_verifyTimeoutShown && el('ppWaiting') && el('ppWaiting').style.display!=='none'){
+      _verifyTimeoutShown=true;
+      var _ov=document.createElement('div');
+      _ov.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:16px';
+      _ov.innerHTML='<div style="background:#fff;border-radius:18px;padding:32px 24px;max-width:380px;width:100%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.2)">'
+        +'<div style="font-size:40px;margin-bottom:12px">⏳</div>'
+        +'<div style="font-size:18px;font-weight:700;color:#CE1126;margin-bottom:8px">Verification Unsuccessful</div>'
+        +'<div style="font-size:13.5px;color:#6b7280;margin-bottom:18px;line-height:1.6">Your payment could not be verified after the expected time. If money was deducted, please contact support at <strong>Ghanaopinionpay@gmail.com</strong> with your reference.</div>'
+        +'<div style="display:flex;gap:10px">'
+        +'<button id="_verTORetry" style="flex:1;background:var(--green,#16a34a);color:#fff;border:none;border-radius:10px;padding:12px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit">↺ Try Again</button>'
+        +'<button id="_verTODismiss" style="flex:1;background:#f3f4f6;color:#374151;border:none;border-radius:10px;padding:12px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit">Dismiss</button>'
+        +'</div></div>';
+      _ov.querySelector('#_verTORetry').addEventListener('click',function(){_ov.remove();retryPayment();});
+      _ov.querySelector('#_verTODismiss').addEventListener('click',function(){_ov.remove();});
+      document.body.appendChild(_ov);
+    }
+  }, 300000);
 }
 
 function showPaymentFailed(msg){
@@ -4946,7 +4991,7 @@ function showActiveItemsPopup(activePools, annText){
   }
   html+='<button onclick="document.getElementById(\'activeItemsPopup\').remove()" style="width:100%;padding:13px;background:var(--green);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;margin-top:4px">Got it!</button>';
   if(activePools&&activePools.length){
-    html+='<button onclick="document.getElementById(\'activeItemsPopup\').remove();setTimeout(function(){var t=document.querySelector(\'[data-tab=pools]\');if(t)t.click();},100);" style="width:100%;padding:11px;background:none;border:none;font-size:13px;color:var(--green);cursor:pointer;font-weight:700;margin-top:8px">&#x1F3B1; Go to Pools →</button>';
+    html+='<button onclick="document.getElementById(\'activeItemsPopup\').remove();setTimeout(function(){var t=document.querySelector(\'[data-tab=pool]\');if(t)t.click();},100);" style="width:100%;padding:11px;background:none;border:none;font-size:13px;color:var(--green);cursor:pointer;font-weight:700;margin-top:8px">&#x1F3B1; Go to Pool →</button>';
   }
   html+='</div></div>';
   document.body.insertAdjacentHTML('beforeend',html);
@@ -5023,9 +5068,13 @@ function openMemberDashboard(member){
     var fresh=getMembers().find(function(x){return x.id===member.id;})||member;
     currentUser=fresh;
     renderMemberContent(fresh);
-    // Show a one-per-session popup highlighting active pools and announcements
-    if(!window._gopLoginPopupShown){
-      window._gopLoginPopupShown=true;
+    // Show a one-per-account popup highlighting active pools and announcements
+    // Only on the very first login (loginCount===1), not on refresh or subsequent logins
+    var _popupKey='gop_popup_shown_'+fresh.id;
+    var _alreadyShown=false;
+    try{_alreadyShown=!!localStorage.getItem(_popupKey);}catch(e){}
+    if(!_alreadyShown && (fresh.loginCount||1)===1){
+      try{localStorage.setItem(_popupKey,'1');}catch(e){}
       setTimeout(function(){
         try{
           var _pools=getPools().filter(function(p){
@@ -5073,6 +5122,12 @@ function openMemberDashboard(member){
   syncPagesFromFirebase(function(){
     renderDashPages(currentUser||member);
     renderMemberPages(currentUser||member);
+  });
+  // Pull pool entries on login so slots are visible on any device immediately
+  syncPoolsFromFirebase(function(){
+    syncPoolEntriesFromFirebase(function(){
+      try{if(el('mySlotsListWrap')) renderMySlots();}catch(e){}
+    });
   });
 
   // Silently push this member's latest record to Firebase so admin sees them
@@ -5176,10 +5231,10 @@ function renderNotifications(member){
   _activePools.forEach(function(p){
     var daysLeft=poolDaysRemaining(p.endsAt);
     var slotsLeft=p.totalSlots-(Number(p.slotsSold)||0);
-    html+='<div class="notif-item" style="background:linear-gradient(135deg,#f0fdf4,#fff);border:1.5px solid var(--green);border-radius:10px;margin-bottom:5px;padding:10px 12px;cursor:pointer" onclick="var t=document.querySelector(\'[data-tab=pools]\');if(t)t.click();">';
+    html+='<div class="notif-item" style="background:linear-gradient(135deg,#f0fdf4,#fff);border:1.5px solid var(--green);border-radius:10px;margin-bottom:5px;padding:10px 12px;cursor:pointer" onclick="var t=document.querySelector(\'[data-tab=pool]\');if(t)t.click();">';
     html+='<div style="font-weight:700;font-size:13px;color:#166534;margin-bottom:3px">&#x1F3B1; Pool Available: '+p.title+'</div>';
     html+='<div style="font-size:12px;color:#374151">Prize: <strong>GHS '+Number(p.prizeAmount).toFixed(2)+'</strong> &nbsp;·&nbsp; GHS '+Number(p.slotPrice).toFixed(2)+'/slot</div>';
-    html+='<div style="font-size:11.5px;color:var(--text-muted);margin-top:2px">'+slotsLeft+' slot'+(slotsLeft!==1?'s':'')+' remaining &nbsp;·&nbsp; '+daysLeft+' day'+(daysLeft!==1?'s':'')+' left &nbsp;·&nbsp; <span style="color:var(--green);font-weight:600">Tap to join →</span></div>';
+    html+='<div style="font-size:11.5px;color:var(--text-muted);margin-top:2px">'+slotsLeft+' slot'+(slotsLeft!==1?'s':'')+' remaining &nbsp;·&nbsp; '+daysLeft+' day'+(daysLeft!==1?'s':'')+' left</div>';
     html+='</div>';
   });
   if(member.notifications&&member.notifications.length){
@@ -6355,44 +6410,180 @@ function renderAdminTransactions(){
   if(!tbody) return;
   var search=(el('txSearchInput')?el('txSearchInput').value.trim().toLowerCase():'');
   var typeFilter=el('txTypeFilter')?el('txTypeFilter').value:'all';
-  var withdrawals=getWithdrawals().slice().reverse();
+  var members=getMembers();
+
+  // Build unified transaction list from multiple sources
+  var allTx=[];
+
+  // 1. Withdrawals
+  getWithdrawals().forEach(function(w){
+    allTx.push({
+      type:'withdrawal',
+      memberName:w.memberName||'-',
+      memberId:w.memberId||'',
+      phone:w.phone||'-',
+      txId:w.reference||w.paystackRef||'-',
+      amount:parseFloat(w.amount)||0,
+      fee:w.fee||0,
+      received:w.amountAfterFee!=null?w.amountAfterFee:parseFloat(w.amount),
+      method:w.method||'-',
+      account:w.account||'-',
+      date:w.date||'-',
+      phase:w.phase||'Pending'
+    });
+  });
+
+  // 2. Registration payments (from members with a paystackRef that is not FREE-)
+  members.forEach(function(m){
+    var ref=m.paystackRef||'';
+    if(!ref||ref.indexOf('FREE-')===0) return; // skip free registrations
+    allTx.push({
+      type:'registration',
+      memberName:(m.firstName||'')+' '+(m.lastName||''),
+      memberId:m.id,
+      phone:m.phone||'-',
+      txId:ref,
+      amount:m.fee||0,
+      fee:0,
+      received:m.fee||0,
+      method:'Paystack',
+      account:m.phone||'-',
+      date:m.joinedDate||'-',
+      phase:'Complete'
+    });
+  });
+
+  // 3. Upgrade payments
+  try{
+    var upgrades=JSON.parse(localStorage.getItem('gop_upgrades')||'[]');
+    upgrades.forEach(function(u){
+      if(!u.paystackRef&&!u.reference) return;
+      allTx.push({
+        type:'upgrade',
+        memberName:u.memberName||'-',
+        memberId:u.memberId||'',
+        phone:u.phone||u.memberPhone||'-',
+        txId:u.paystackRef||u.reference||'-',
+        amount:u.amount||u.fee||0,
+        fee:0,
+        received:u.amount||u.fee||0,
+        method:'Paystack',
+        account:u.phone||u.memberPhone||'-',
+        date:u.date||u.requestedAt||'-',
+        phase:u.status==='approved'?'Complete':u.status==='denied'?'Reversed':'Pending'
+      });
+    });
+  }catch(e){}
+
+  // 4. Pool slot purchases
+  try{
+    var poolEntries=getPoolEntries();
+    poolEntries.forEach(function(pe){
+      allTx.push({
+        type:'slot',
+        memberName:pe.memberName||'-',
+        memberId:pe.memberId||'',
+        phone:pe.memberPhone||'-',
+        txId:pe.paystackRef||'-',
+        amount:Number(pe.amountPaid)||0,
+        fee:0,
+        received:Number(pe.amountPaid)||0,
+        method:'Paystack (Pool)',
+        account:(pe.poolTitle||'Pool')+' · '+((pe.slotsCount||1)+' slot'+(pe.slotsCount!==1?'s':'')),
+        date:pe.purchasedAt?new Date(pe.purchasedAt).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}):'-',
+        phase:'Complete'
+      });
+    });
+  }catch(e){}
+
+  // Sort by date desc (most recent first)
+  allTx.sort(function(a,b){
+    var da=new Date(a.date||0).getTime()||0;
+    var db=new Date(b.date||0).getTime()||0;
+    return db-da;
+  });
+
+  // Filter by type
+  if(typeFilter&&typeFilter!=='all'){
+    allTx=allTx.filter(function(t){return t.type===typeFilter;});
+  }
+
+  // Filter by search
   if(search){
-    withdrawals=withdrawals.filter(function(w){
-      return (w.memberName||'').toLowerCase().indexOf(search)>=0||(w.phone||'').indexOf(search)>=0;
+    allTx=allTx.filter(function(t){
+      return (t.memberName||'').toLowerCase().indexOf(search)>=0
+        ||(t.phone||'').indexOf(search)>=0
+        ||(t.txId||'').toLowerCase().indexOf(search)>=0;
     });
   }
-  // type filter (currently only withdrawals exist; reserved for future transaction types)
-  if(typeFilter&&typeFilter!=='all'){
-    withdrawals=withdrawals.filter(function(w){ return (w.type||'withdrawal')===typeFilter; });
-  }
-  var members=getMembers();
-  var rows='';
+
   var phaseColor={'Complete':'#22c55e','Processing':'#3b82f6','Pending':'#f59e0b','Reversed':'#ef4444'};
-  withdrawals.forEach(function(w,i){
-    var col=phaseColor[w.phase]||'#9ca3af';
-    var fee=w.fee||0;
-    var received=w.amountAfterFee!=null?w.amountAfterFee:parseFloat(w.amount);
-    var m=members.find(function(x){return x.id===w.memberId;});
+  var typeLabels={
+    withdrawal:'<span style="font-size:11.5px;background:#f0f9ff;color:#0369a1;padding:2px 8px;border-radius:6px;font-weight:600">Withdrawal</span>',
+    registration:'<span style="font-size:11.5px;background:#f0fdf4;color:#16a34a;padding:2px 8px;border-radius:6px;font-weight:600">Registration</span>',
+    upgrade:'<span style="font-size:11.5px;background:#fff7ed;color:#c2410c;padding:2px 8px;border-radius:6px;font-weight:600">Upgrade</span>',
+    slot:'<span style="font-size:11.5px;background:#fdf4ff;color:#7e22ce;padding:2px 8px;border-radius:6px;font-weight:600">Slot Purchase</span>'
+  };
+  var rows='';
+  allTx.forEach(function(t,i){
+    var col=phaseColor[t.phase]||'#9ca3af';
+    var m=members.find(function(x){return x.id===t.memberId;});
     var tier=m?m.tier:'-';
     rows+='<tr>';
     rows+='<td style="font-size:12px;color:#9ca3af">'+(i+1)+'</td>';
-    rows+='<td style="font-size:13px;font-weight:600">'+(w.memberName||'-')+'</td>';
-    rows+='<td style="font-size:12.5px">'+(w.phone||'-')+'</td>';
+    rows+='<td style="font-size:13px;font-weight:600">'+(t.memberName||'-')+'</td>';
+    rows+='<td style="font-size:12.5px">'+(t.phone||'-')+'</td>';
     rows+='<td><span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;background:'+(tier==='Gold'?'#fef9c3':tier==='Silver'?'#f1f5f9':tier==='Bronze'?'#fef3c7':'#f9fafb')+';color:'+(tier==='Gold'?'#854d0e':tier==='Silver'?'#374151':tier==='Bronze'?'#78350f':'#6b7280')+'">'+tier+'</span></td>';
-    rows+='<td><span style="font-size:11.5px;background:#f0f9ff;color:#0369a1;padding:2px 8px;border-radius:6px;font-weight:600">Withdrawal</span></td>';
-    rows+='<td style="font-weight:600">GHS '+parseFloat(w.amount).toFixed(2)+'</td>';
-    rows+='<td style="color:var(--red)">GHS '+fee.toFixed(2)+'</td>';
-    rows+='<td style="font-weight:700;color:var(--green)">GHS '+received.toFixed(2)+'</td>';
-    rows+='<td style="font-size:12.5px">'+(w.method||'-')+'</td>';
-    rows+='<td style="font-size:12.5px;font-family:monospace">'+(w.account||'-')+'</td>';
-    rows+='<td style="font-size:12px;color:#6b7280">'+(w.date||'-')+'</td>';
-    rows+='<td><span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;background:'+col+'22;color:'+col+'">'+w.phase+'</span></td>';
+    rows+='<td>'+(typeLabels[t.type]||t.type)+'</td>';
+    rows+='<td style="font-size:11.5px;font-family:monospace;max-width:160px;word-break:break-all">'+(t.txId||'-')+'</td>';
+    rows+='<td style="font-weight:600">GHS '+t.amount.toFixed(2)+'</td>';
+    rows+='<td style="color:var(--red)">GHS '+(t.fee||0).toFixed(2)+'</td>';
+    rows+='<td style="font-weight:700;color:var(--green)">GHS '+t.received.toFixed(2)+'</td>';
+    rows+='<td style="font-size:12.5px">'+(t.account||t.method||'-')+'</td>';
+    rows+='<td style="font-size:12px;color:#6b7280">'+(t.date||'-')+'</td>';
+    rows+='<td><span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;background:'+col+'22;color:'+col+'">'+t.phase+'</span></td>';
     rows+='</tr>';
   });
   tbody.innerHTML=rows||'<tr><td colspan="12" class="empty-row">No transactions found.</td></tr>';
 }
 
 // ── SETTINGS ──────────────────────────────────────────
+function renderAdminSlots(){
+  var tbody=el('adminSlotsBody');
+  if(!tbody) return;
+  var search=(el('aSlotSearch')?el('aSlotSearch').value.trim().toLowerCase():'');
+  syncPoolEntriesFromFirebase(function(){
+    var entries=getPoolEntries().slice().sort(function(a,b){
+      return (b.purchasedAt||'').localeCompare(a.purchasedAt||'');
+    });
+    if(search){
+      entries=entries.filter(function(e){
+        return (e.memberName||'').toLowerCase().indexOf(search)>=0
+          ||(e.memberPhone||'').indexOf(search)>=0
+          ||(e.poolTitle||'').toLowerCase().indexOf(search)>=0
+          ||(e.paystackRef||'').toLowerCase().indexOf(search)>=0;
+      });
+    }
+    var rows='';
+    entries.forEach(function(e,i){
+      var dt=e.purchasedAt?new Date(e.purchasedAt):null;
+      var dateStr=dt?dt.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}):'-';
+      var timeStr=dt?dt.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true}):'-';
+      rows+='<tr>';
+      rows+='<td style="font-size:12px;color:#9ca3af">'+(i+1)+'</td>';
+      rows+='<td style="font-size:13px;font-weight:600">'+(e.memberName||'-')+'</td>';
+      rows+='<td style="font-size:12.5px">'+(e.memberPhone||'-')+'</td>';
+      rows+='<td style="font-size:12.5px;font-weight:600;color:#166534">'+(e.poolTitle||'-')+'</td>';
+      rows+='<td style="text-align:center;font-weight:700;font-size:15px;color:#7e22ce">'+(e.slotsCount||1)+'</td>';
+      rows+='<td style="font-weight:700;color:var(--green)">GHS '+Number(e.amountPaid||0).toFixed(2)+'</td>';
+      rows+='<td style="font-size:11.5px;font-family:monospace;max-width:180px;word-break:break-all">'+(e.paystackRef||'-')+'</td>';
+      rows+='<td style="font-size:12px;color:#6b7280">'+dateStr+'</td>';
+      rows+='<td style="font-size:12px;color:#6b7280">'+timeStr+'</td>';
+      rows+='</tr>';
+    });
+    tbody.innerHTML=rows||'<tr><td colspan="9" class="empty-row">No slot purchases found.</td></tr>';
+  });
+}
 function saveProfile(){
   if(!navigator.onLine){alert('\u26A0 No internet connection. Please check your internet connection and try again.'); return;}
   var members=getMembers();
@@ -6696,6 +6887,9 @@ function switchAdminTab(name, btn){
   if(name==='schedule') renderScheduleTab();
   if(name==='atransactions'){
     syncWithdrawalsFromFirebase(function(){ renderAdminTransactions(); });
+  }
+  if(name==='aslots'){
+    syncPoolEntriesFromFirebase(function(){ renderAdminSlots(); });
   }
   if(name==='activity') renderActivityFeed();
 }
