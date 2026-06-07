@@ -2387,8 +2387,14 @@ var JSONBIN_URL = 'https://api.jsonbin.io/v3/b/' + JSONBIN_BIN;
 // every per-store call. Refreshed on hydrate and on every successful PUT.
 var _gopMaster = null;
 var _gopMasterPromise = null;
+var _gopMasterTs = 0; // ms timestamp of last successful fetch
 function _gopFetchMaster(force){
+  // Even with force=true we reuse the in-memory cache when it is less than
+  // 5 seconds old. This prevents a rapid burst of member saves (completing a
+  // survey, updating streak, etc.) from each firing a separate JSONBin GET.
+  var FRESH_MS = 5000;
   if(!force && _gopMaster) return Promise.resolve(_gopMaster);
+  if(force && _gopMaster && (Date.now()-_gopMasterTs) < FRESH_MS) return Promise.resolve(_gopMaster);
   if(_gopMasterPromise) return _gopMasterPromise;
   _gopMasterPromise = fetch(JSONBIN_URL+'/latest', {
     method:'GET',
@@ -2398,6 +2404,7 @@ function _gopFetchMaster(force){
   .then(function(j){
     _gopMaster = (j && typeof j==='object') ? (j.record || j) : {};
     if(!_gopMaster || typeof _gopMaster!=='object') _gopMaster = {};
+    _gopMasterTs = Date.now();
     _gopMasterPromise = null;
     return _gopMaster;
   })
@@ -2588,10 +2595,29 @@ var AI_API_URL = MAKE_WEBHOOK_URL;
 // the user closes the tab seconds later — admin must always see every signup.
 function syncMemberToBackend(member){
   try{
-    var members=getMembers();
-    var idx=members.findIndex(function(m){return m.id===member.id;});
-    if(idx>=0) members[idx]=member; else members.push(member);
-    jbPut('members', members, true);
+    // Fetch the remote members array first so we never overwrite another
+    // active member's changes. The 5-second cache in _gopFetchMaster keeps
+    // this from firing a separate JSONBin GET for every rapid action.
+    _gopFetchMaster(true).then(function(master){
+      var remote=(master&&Array.isArray(master['members']))?master['members'].filter(Boolean):[];
+      var local=getMembers();
+      var merged=remote.slice();
+      var idMap={};
+      merged.forEach(function(m,i){if(m&&m.id)idMap[m.id]=i;});
+      // Fold in any local members not yet in remote (safety net)
+      local.forEach(function(m){if(m&&m.id&&idMap[m.id]===undefined){idMap[m.id]=merged.length;merged.push(m);}});
+      // Upsert this member's record
+      if(idMap[member.id]!==undefined) merged[idMap[member.id]]=member; else merged.push(member);
+      try{sv('gop_members',merged);}catch(e){}
+      jbPut('members',merged,true);
+    }).catch(function(){
+      try{
+        var members=getMembers();
+        var idx=members.findIndex(function(m){return m.id===member.id;});
+        if(idx>=0) members[idx]=member; else members.push(member);
+        jbPut('members',members,true);
+      }catch(e){}
+    });
   }catch(e){}
 }
 
@@ -2600,14 +2626,37 @@ function ensureMemberInFirebase(member){
   syncMemberToBackend(member);
 }
 
-// Write a visit record — accumulate locally and push full visits array.
-// Immediate flush so site visits aren't lost when a casual visitor leaves.
+// Write a visit record — fetch the current remote array first, merge the new
+// visit in, then push back.  This prevents the lost-update race where Device A
+// overwrites Device B's visits because each device only has its own local copy.
 function syncVisitToBackend(visit){
   try{
-    var visits=getVisits();
-    var idx=visits.findIndex(function(v){return v.id===visit.id;});
-    if(idx>=0) visits[idx]=visit; else visits.push(visit);
-    jbPut('visits', visits, true);
+    _gopFetchMaster(true).then(function(master){
+      // Start from the remote array as the authoritative base
+      var remote=(master&&Array.isArray(master['visits']))?master['visits'].filter(Boolean):[];
+      // Fold in any local-only visits (recorded before last hydration completed)
+      var local=getVisits();
+      var remoteIds={};
+      remote.forEach(function(v){if(v&&v.id)remoteIds[v.id]=true;});
+      local.forEach(function(v){if(v&&v.id&&!remoteIds[v.id]){remote.push(v);remoteIds[v.id]=true;}});
+      // Upsert the current visit
+      var idx=remote.findIndex(function(v){return v.id===visit.id;});
+      if(idx>=0) remote[idx]=visit; else remote.push(visit);
+      // Keep array bounded and save locally so the admin metrics are current.
+      // Use sv() directly (not saveVisits) to avoid saveVisits' own jbPut
+      // firing a second redundant PUT right after this one.
+      if(remote.length>2000) remote=remote.slice(-2000);
+      try{sv('gop_visits',remote);}catch(e){}
+      jbPut('visits',remote,true);
+    }).catch(function(){
+      // Network unavailable — fall back to local-only push to avoid losing the visit
+      try{
+        var visits=getVisits();
+        var idx=visits.findIndex(function(v){return v.id===visit.id;});
+        if(idx>=0) visits[idx]=visit; else visits.push(visit);
+        jbPut('visits',visits,true);
+      }catch(e){}
+    });
   }catch(e){}
 }
 
@@ -2893,7 +2942,7 @@ function syncScheduleFromFirebase(cb){
 // Pull ALL admin data from Firebase in parallel — called on admin dashboard open
 function syncAllAdminDataFromFirebase(callback){
   _fbSyncing=true; // block auto-pushes while pulling
-  var pending=18; // includes SMS log + SMS settings + cross-device activity feed
+  var pending=20; // includes SMS log + SMS settings + cross-device activity feed + pools + pool_entries
   function done(){
     if(--pending<=0){
       _fbSyncing=false; // re-enable pushes
@@ -2922,6 +2971,8 @@ function syncAllAdminDataFromFirebase(callback){
   syncSmsLogFromFirebase(done);      // restore SMS history on any device/incognito
   syncSmsSettingsFromFirebase(done); // restore API key + Sender ID on any device/incognito
   syncActivityFromFirebase(done);    // cross-device activity log so admin sees actions from every device
+  syncPoolsFromFirebase(done);       // pools visible on admin dashboard immediately on open
+  syncPoolEntriesFromFirebase(done); // pool slot purchases visible immediately
 }
 
 // Push ALL local content data to Firebase (used by Upload button for initial seed)
@@ -2971,10 +3022,9 @@ function syncPagesFromFirebase(callback){
 
 // Sync full member record to Firebase after admin actions (PUT = full record, not partial)
 function syncMemberStatusToBackend(member){
-  try{
-    var key=member.id.replace(/[^a-zA-Z0-9_-]/g,'_');
-    jbPut('members', getMembers());
-  }catch(e){}
+  // Reuse the safe fetch-merge-push path so admin status changes
+  // (suspend, activate, tier upgrade) never overwrite concurrent member saves.
+  syncMemberToBackend(member);
 }
 
 var TIER_DAILY  = {Free:1, Bronze:3, Silver:6, Gold:10};
@@ -3316,7 +3366,7 @@ function restoreSession(){
 function _openMemberScreenForStatus(m){
   if(m.status==='awaiting_verification'){ autoActivateMember(m.id, null); startIdleTracking(); return; }
   if(m.status==='payment_failed'){
-    pendingReg={firstName:m.firstName,lastName:m.lastName,email:m.email,phone:m.phone,region:m.region,age:m.age,gender:m.gender||'N/A',secQuestion:m.secQuestion||'',secAnswer:m.secAnswer||'',password:m.password};
+    pendingReg={firstName:m.firstName,lastName:m.lastName,email:m.email,phone:m.phone,region:m.region,age:m.age,gender:m.gender||'N/A',secQuestion:m.secQuestion||'',secAnswer:m.secAnswer||'',password:m.password,ghanaCard:m.ghanaCard||''};
     showPaymentFailed('Your previous payment was not verified. Please try again.'); startIdleTracking(); return;
   }
   if(m.status==='active'){ openMemberDashboard(m); startIdleTracking(); return; }
@@ -4126,13 +4176,18 @@ document.addEventListener('DOMContentLoaded', function(){
       .then(function(r){return r.json();})
       .then(function(data){
         if(data.verified&&_pData){
-          // Payment confirmed — create pool entry immediately (no webhook required)
-          var _entries=getPoolEntries();
-          if(!_entries.find(function(e){return e.paystackRef===_trxref;})){
-            var _ne={id:'PE'+Date.now(),poolId:_pData.poolId,poolTitle:_pData.poolTitle,memberId:_pData.memberId,memberName:_pData.memberName,memberPhone:_pData.memberPhone,slotsCount:Number(_pData.slotsCount)||1,amountPaid:Number(_pData.amountPaid)||0,paystackRef:_trxref,purchasedAt:new Date().toISOString()};
-            _entries.push(_ne); savePoolEntries(_entries);
-            var _pools=getPools();var _pi=_pools.findIndex(function(p){return p.id===_pData.poolId;});
-            if(_pi>=0){_pools[_pi].slotsSold=(Number(_pools[_pi].slotsSold)||0)+Number(_pData.slotsCount||1);savePools(_pools);}
+          // Payment confirmed — create pool entry immediately (no webhook required).
+          // _writePoolPurchase does a fetch-merge-push so concurrent purchases from
+          // different members never overwrite each other in JSONBin.
+          var _ne2={id:'PE'+Date.now(),poolId:_pData.poolId,poolTitle:_pData.poolTitle,memberId:_pData.memberId,memberName:_pData.memberName,memberPhone:_pData.memberPhone,slotsCount:Number(_pData.slotsCount)||1,amountPaid:Number(_pData.amountPaid)||0,paystackRef:_trxref,purchasedAt:new Date().toISOString()};
+          try{_writePoolPurchase(_ne2,_pData.poolId,null);}catch(e){
+            // Fallback if _writePoolPurchase not yet defined in this popup context
+            var _entries=getPoolEntries();
+            if(!_entries.find(function(e){return e.paystackRef===_trxref;})){
+              _entries.push(_ne2); savePoolEntries(_entries);
+              var _pools=getPools();var _pi=_pools.findIndex(function(p){return p.id===_pData.poolId;});
+              if(_pi>=0){_pools[_pi].slotsSold=(Number(_pools[_pi].slotsSold)||0)+Number(_pData.slotsCount||1);savePools(_pools);}
+            }
           }
           var _verifiedPayload=JSON.stringify({trxref:_trxref,slotsCount:_pData.slotsCount,poolTitle:_pData.poolTitle});
           if(_isPopup){
@@ -4374,8 +4429,10 @@ function doLogin(){
   }
   var m = getMembers().find(function(x){return x.phone===phone && x.password===pass;});
   if(!m){
-    // Member not found locally — try JSONBin (handles fresh-device / cross-browser login)
-    jbGet('members', function(data){
+    // Member not found locally — force-fresh fetch from JSONBin (handles fresh-device / cross-browser login).
+    // Use _gopFetchMaster(true) to bypass cache so we always get the latest ghSurveyDone, ghanaCard, etc.
+    _gopFetchMaster(true).then(function(master){
+      var data = master && master.members ? master.members : [];
       var remote=Array.isArray(data)?data.filter(Boolean):[];
       var fm=remote.find(function(x){return x&&x.phone===phone&&x.password===pass;});
       if(!fm){showErr('loginError','Incorrect phone number or password.'); return;}
@@ -4385,7 +4442,7 @@ function doLogin(){
         saveMembers(local);
       }
       doLoginWithMember(fm, phone);
-    });
+    }).catch(function(){ showErr('loginError','Connection error. Please check your internet and try again.'); });
     return;
   }
   doLoginWithMember(m, phone);
@@ -4402,7 +4459,7 @@ function doLoginWithMember(m, phone){
   }
   if(m.status==='payment_failed'){
     closeLoginModal(); currentUser=m;
-    pendingReg={firstName:m.firstName,lastName:m.lastName,email:m.email,phone:m.phone,region:m.region,age:m.age,gender:m.gender||'N/A',secQuestion:m.secQuestion||'',secAnswer:m.secAnswer||'',password:m.password};
+    pendingReg={firstName:m.firstName,lastName:m.lastName,email:m.email,phone:m.phone,region:m.region,age:m.age,gender:m.gender||'N/A',secQuestion:m.secQuestion||'',secAnswer:m.secAnswer||'',password:m.password,ghanaCard:m.ghanaCard||''};
     showPaymentFailed('Your previous payment was not verified. Please try again.'); return;
   }
   if(m.status==='suspended'){
@@ -4942,7 +4999,10 @@ function openMemberDashboard(member){
     }
   }catch(e){ _firstRender(); }
 
-  // Second pass — pull latest content from Firebase then re-render (gets admin updates)
+  // Second pass — pull latest content from Firebase then re-render (gets admin updates).
+  // Discard the in-memory cache so newly registered users always see the latest
+  // announcements and content that was published after the page first loaded.
+  _gopMaster=null;
   var pending=4;
   function contentDone(){
     if(--pending<=0){
@@ -4988,7 +5048,7 @@ function openMemberDashboard(member){
     try{
       // Invalidate the in-memory cache so each auto-refresh pulls genuinely
       // fresh data from JSONBin — without this, newly-added admin surveys,
-      // polls, videos, and ads are invisible until the page is fully reloaded.
+      // polls, videos, ads, and pools are invisible until the page is fully reloaded.
       _gopMaster = null;
       syncAnnFromFirebase(function(){ try{ renderNotifications(currentUser); }catch(e){} });
       var rerender=function(){ try{ renderMemberContent(currentUser); }catch(e){} };
@@ -4999,6 +5059,12 @@ function openMemberDashboard(member){
       syncVideosFromFirebase(done);
       syncAdsFromFirebase(done);
       syncPagesFromFirebase(function(){ try{ renderDashPages(currentUser); renderMemberPages(currentUser); }catch(e){} });
+      // Keep pools fresh — new pools created by admin appear within 30 s
+      syncPoolsFromFirebase(function(){
+        syncPoolEntriesFromFirebase(function(){
+          try{ if(el('poolListWrap')) renderMemberPools(); }catch(e){}
+        });
+      });
     }catch(e){}
   }, 30000);
 }
@@ -11892,6 +11958,50 @@ function checkDailyStreakBonus(member){
   function syncPoolsToFirebase(){
     try{jbPut('pools',getPools());}catch(e){}
   }
+
+  // Safe atomic write for a pool slot purchase: fetch remote pool_entries AND
+  // pools first, merge everything, add the new entry (deduped by paystackRef),
+  // then recompute slotsSold from actual entries so concurrent purchases from
+  // different devices never overwrite each other or lose their slot counts.
+  function _writePoolPurchase(newEntry, poolId, onDone){
+    _gopFetchMaster(true).then(function(master){
+      // ── pool_entries ──────────────────────────────────────────────
+      var remoteE=(master&&Array.isArray(master['pool_entries']))?master['pool_entries'].filter(Boolean):[];
+      var localE=getPoolEntries();
+      var mergedE=remoteE.slice();
+      var eIds={};var eRefs={};
+      mergedE.forEach(function(e){if(e&&e.id)eIds[e.id]=true;if(e&&e.paystackRef)eRefs[e.paystackRef]=true;});
+      // Fold in local entries not yet in remote
+      localE.forEach(function(e){if(e&&e.id&&!eIds[e.id]){mergedE.push(e);eIds[e.id]=true;if(e.paystackRef)eRefs[e.paystackRef]=true;}});
+      // Add new entry only if paystackRef is not already present
+      if(newEntry&&newEntry.paystackRef&&!eRefs[newEntry.paystackRef]){
+        mergedE.push(newEntry);
+      }
+      // ── pools ─────────────────────────────────────────────────────
+      var remoteP=(master&&Array.isArray(master['pools']))?master['pools'].filter(Boolean):[];
+      var localP=getPools();
+      var mergedP=remoteP.slice();
+      var pIdMap={};
+      mergedP.forEach(function(p,i){if(p&&p.id)pIdMap[p.id]=i;});
+      localP.forEach(function(p){if(p&&p.id&&pIdMap[p.id]===undefined){pIdMap[p.id]=mergedP.length;mergedP.push(p);}});
+      // Recompute slotsSold by counting entries — avoids the +1 increment race
+      if(pIdMap[poolId]!==undefined){
+        var actual=mergedE.reduce(function(s,e){return s+(e&&e.poolId===poolId?Number(e.slotsCount)||1:0);},0);
+        mergedP[pIdMap[poolId]].slotsSold=actual;
+      }
+      // ── persist ───────────────────────────────────────────────────
+      try{localStorage.setItem('gop_pool_entries',JSON.stringify(mergedE));}catch(e){}
+      try{localStorage.setItem('gop_pools',JSON.stringify(mergedP));}catch(e){}
+      try{jbPut('pool_entries',mergedE,true);}catch(e){}
+      try{jbPut('pools',mergedP,true);}catch(e){}
+      if(onDone) try{onDone();}catch(e){}
+    }).catch(function(){
+      // Offline fallback — save locally and push whatever we have
+      try{var entries=getPoolEntries();if(newEntry&&!entries.find(function(e){return e.paystackRef===newEntry.paystackRef;}))entries.push(newEntry);savePoolEntries(entries);}catch(e){}
+      if(onDone) try{onDone();}catch(e){}
+    });
+  }
+
   function syncPoolsFromFirebase(cb){
     try{jbGet('pools',function(d){
       if(Array.isArray(d)&&d.length){localStorage.setItem('gop_pools',JSON.stringify(d));}
@@ -11980,6 +12090,9 @@ function checkDailyStreakBonus(member){
     var wrap=el('poolListWrap');
     if(!wrap) return;
     wrap.innerHTML='<p style="font-size:13.5px;color:var(--text-muted);text-align:center;padding:20px">Loading pools...</p>';
+    // Force-fresh: discard in-memory cache so we always pull the latest pools
+    // from JSONBin (covers pools created after the page first loaded).
+    _gopMaster=null;
     syncPoolsFromFirebase(function(){
       syncPoolEntriesFromFirebase(function(){
         var pools=getPools();
@@ -12047,7 +12160,6 @@ function checkDailyStreakBonus(member){
       +'<div class="pool-stat"><div class="pool-stat-val">GHS '+price.toFixed(2)+'</div><div class="pool-stat-label">Price Per Slot</div></div>'
       +'<div class="pool-stat"><div class="pool-stat-val">'+fmtPoolDate(pool.endsAt)+'</div><div class="pool-stat-label">Closing Date</div></div>'
       +'</div>'
-      +'<div class="pool-info-note">&#x1F3C6; Winner selected randomly from all slot holders. More slots = higher chances of winning!</div>'
       +mySlotHtml+btnHtml+winnerHtml
       +'</div>';
   }
@@ -12150,7 +12262,7 @@ function checkDailyStreakBonus(member){
             var myPct=totalSlots>0?Math.round((mySlots/totalSlots)*100):0;
             statusNote='<div style="margin:10px 0 4px;font-size:12px;color:var(--text-muted)">Pool fill: <strong>'+(Number(pool.slotsSold)||0)+'</strong> / '+totalSlots+' slots sold · '+rem+' remaining</div>'
               +'<div style="height:7px;background:#f3f4f6;border-radius:10px;overflow:hidden;margin-bottom:4px"><div style="height:100%;width:'+pct2+'%;background:linear-gradient(90deg,var(--green),var(--green-light));border-radius:10px"></div></div>'
-              +'<div style="font-size:11.5px;color:var(--text-muted)">Your '+mySlots+' slot'+(mySlots!==1?'s':'')+' = ~'+myPct+'% chance of winning</div>';
+;
           } else if(isWinner){
             statusHtml='<span style="background:#fef3c7;color:var(--gold-dark);border:1.5px solid var(--gold-dark);font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px;display:inline-flex;align-items:center;gap:5px">&#x1F3C6; Won!</span>';
             statusNote='<div style="background:#fef3c7;border:1.5px solid var(--gold-dark);border-radius:9px;padding:10px 14px;margin-top:10px;text-align:center;font-size:13.5px;font-weight:700;color:var(--gold-dark)">&#x1F389; Congratulations! You won GHS '+prize.toFixed(2)+' — credited to your balance.</div>';
@@ -12387,14 +12499,22 @@ function checkDailyStreakBonus(member){
       try{localStorage.removeItem('gop_pending_pool_payment');}catch(e){}
       try{localStorage.removeItem('gop_pool_popup_verified');}catch(e){}
       showPoolConfirmBanner(false);
-      // Create entry if not already there
-      var _entries=getPoolEntries();
-      if(paystackRef && !_entries.find(function(e){return e.paystackRef===paystackRef;})){
+      // Create entry if not already there.
+      // Save to localStorage immediately for instant UI feedback, then push to
+      // JSONBin via _writePoolPurchase (fetch-merge-push) so concurrent purchases
+      // from different members are never lost.
+      if(paystackRef){
         var _ne={id:'PE'+Date.now(),poolId:pending.poolId,poolTitle:pending.poolTitle,memberId:pending.memberId,memberName:pending.memberName,memberPhone:pending.memberPhone,slotsCount:Number(slotsCount)||1,amountPaid:Number(pending.amountPaid)||0,paystackRef:paystackRef,purchasedAt:new Date().toISOString()};
-        _entries.push(_ne); savePoolEntries(_entries);
-        var _pools=getPools(); var _pi=_pools.findIndex(function(p){return p.id===pending.poolId;});
-        if(_pi>=0){_pools[_pi].slotsSold=(Number(_pools[_pi].slotsSold)||0)+Number(slotsCount||1);savePools(_pools);}
-        try{syncPoolEntriesToFirebase();syncPoolsToFirebase();}catch(e){}
+        // Immediate local save so the render below shows the new entry instantly
+        var _localE=getPoolEntries();
+        if(!_localE.find(function(e){return e.paystackRef===paystackRef;})){
+          _localE.push(_ne);
+          try{localStorage.setItem('gop_pool_entries',JSON.stringify(_localE));}catch(e){}
+          var _localP=getPools();var _lpi=_localP.findIndex(function(p){return p.id===pending.poolId;});
+          if(_lpi>=0){_localP[_lpi].slotsSold=(Number(_localP[_lpi].slotsSold)||0)+Number(slotsCount||1);try{localStorage.setItem('gop_pools',JSON.stringify(_localP));}catch(e){}}
+        }
+        // Background safe merge → JSONBin (won't block the render below)
+        try{_writePoolPurchase(_ne,pending.poolId,null);}catch(e){try{syncPoolEntriesToFirebase();syncPoolsToFirebase();}catch(e2){}}
       }
       try{checkPoolExpiry();renderMemberPools();}catch(e){}
       showPoolPaymentSuccessPopup(Number(slotsCount)||1, poolTitle||'pool');
@@ -12703,7 +12823,8 @@ function confirmPayment(){
     firstName:pendingReg.firstName, lastName:pendingReg.lastName,
     email:pendingReg.email, phone:pendingReg.phone,
     region:pendingReg.region, age:pendingReg.age,
-    gender:pendingReg.gender||'N/A', secQuestion:pendingReg.secQuestion||'', secAnswer:pendingReg.secAnswer||'', password:pendingReg.password
+    gender:pendingReg.gender||'N/A', secQuestion:pendingReg.secQuestion||'', secAnswer:pendingReg.secAnswer||'', password:pendingReg.password,
+    ghanaCard:pendingReg.ghanaCard||''
   };
   var tier={tier:selectedTier.tier, fee:selectedTier.fee};
 
@@ -12726,6 +12847,7 @@ function confirmPayment(){
       id:'M'+Date.now(),firstName:reg.firstName,lastName:reg.lastName,
       email:reg.email,phone:reg.phone,region:reg.region,age:reg.age,gender:reg.gender||'N/A',
       secQuestion:reg.secQuestion||'',secAnswer:reg.secAnswer||'',password:reg.password,
+      ghanaCard:pendingReg.ghanaCard||'',
       tier:'Free',fee:0,paystackRef:'FREE-'+Date.now(),
       status:'active',
       joinedDate:today(),paymentSubmittedAt:new Date().toISOString(),
@@ -12996,6 +13118,7 @@ function createMemberAccount(reg, tier, ref){
     email:reg.email, phone:reg.phone,
     region:reg.region, age:reg.age, gender:reg.gender||'N/A',
     secQuestion:reg.secQuestion||'', secAnswer:reg.secAnswer||'', password:reg.password,
+    ghanaCard:reg.ghanaCard||'',
     tier:tier.tier, fee:tier.fee,
     paystackRef:ref,
     status:'active',
