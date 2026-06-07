@@ -1478,7 +1478,7 @@ iframe[src*="badge"]{
             <span>&#x1F3B1; Pools &mdash; Buy Slots, Win Big!</span>
           </div>
           <div style="background:var(--green-pale);border:1px solid var(--green);border-radius:9px;padding:12px 14px;margin-bottom:16px;font-size:13px;color:var(--green);line-height:1.65">
-            &#x1F3C6; <strong>How it works:</strong> Click <strong>Join Pool</strong> on any active pool, choose the number of slots you want, and pay securely via Paystack. The winner is picked randomly — the more slots you hold, the higher your chances! Pool closes immediately when all slots are sold or the timer runs out.
+            &#x1F3C6; <strong>How it works:</strong> Click <strong>Join Pool</strong> on any active pool, choose the number of slots you want, and pay securely via Paystack. The member with the <strong>most slots</strong> wins the prize — the more slots you hold, the better your chances! Pool closes when all slots are sold or the timer runs out.
           </div>
           <div id="poolListWrap"><p style="font-size:13.5px;color:var(--text-muted);text-align:center;padding:20px">Loading pools...</p></div>
         </div>
@@ -2077,7 +2077,7 @@ iframe[src*="badge"]{
             <div class="fg" style="margin:0"><label>Duration (Days)</label><input type="number" id="poolDays" placeholder="e.g. 7" min="1" max="365"/></div>
           </div>
           <div style="background:var(--gold-pale);border:1px solid var(--gold-dark);border-radius:9px;padding:10px 14px;margin-bottom:14px;font-size:12.5px;color:#6b5200;line-height:1.65">
-            &#x1F4A1; Winner determined <strong>randomly</strong> from all slot holders (weighted by slots owned). Pool closes automatically when all slots are purchased. Members pay via <strong>Paystack</strong> — winner is awarded the prize automatically.
+            &#x1F4A1; Winner is the member with the <strong>highest total slots</strong> (tie-break: earliest purchase). Pool closes automatically when all slots are purchased or time expires. Members pay via <strong>Paystack</strong> — winner is awarded the prize automatically and all members are notified.
           </div>
           <div id="poolCreateStatus" style="display:none;margin-bottom:12px;padding:10px 13px;border-radius:9px;font-size:13px"></div>
           <button class="add-btn" id="createPoolBtn" style="background:var(--green)">&#x1F3B1; Create Pool</button>
@@ -3843,7 +3843,10 @@ document.addEventListener('DOMContentLoaded', function(){
     // Pool tab auto-load for member dashboard
     document.querySelectorAll('.d-tab').forEach(function(tab){
       tab.addEventListener('click',function(){
-        if(tab.dataset.tab==='pool') setTimeout(renderMemberPools, 50);
+        if(tab.dataset.tab==='pool'){
+          _gopMaster=null; // always bust cache on tab click for freshest pools
+          setTimeout(renderMemberPools, 50);
+        }
         if(tab.dataset.tab==='slots') setTimeout(renderMySlots, 50);
       });
     });
@@ -4466,6 +4469,13 @@ function doLogin(){
         local.push(fm);
         saveMembers(local);
       }
+      // Also hydrate pools and pool_entries on this fresh device
+      try{
+        var rp=Array.isArray(master['pools'])?master['pools'].filter(Boolean):null;
+        if(rp&&rp.length) localStorage.setItem('gop_pools',JSON.stringify(rp));
+        var re=Array.isArray(master['pool_entries'])?master['pool_entries'].filter(Boolean):null;
+        if(re&&re.length) localStorage.setItem('gop_pool_entries',JSON.stringify(re));
+      }catch(e){}
       doLoginWithMember(fm, phone);
     }).catch(function(){ showErr('loginError','Connection error. Please check your internet and try again.'); });
     return;
@@ -5102,18 +5112,29 @@ function openMemberDashboard(member){
   // Discard the in-memory cache so newly registered users always see the latest
   // announcements and content that was published after the page first loaded.
   _gopMaster=null;
-  var pending=4;
+  var pending=5; // surveys + polls + videos + ads + pools/pool_entries
   function contentDone(){
     if(--pending<=0){
       var fresh=getMembers().find(function(x){return x.id===member.id;})||member;
       currentUser=fresh;
       renderMemberContent(fresh);
+      // Re-render notifications with latest member data (may include pool winner broadcast)
+      try{renderNotifications(currentUser);}catch(e){}
+      // Pre-load pool tab so new users see pools without needing to click the tab
+      try{if(el('poolListWrap')) renderMemberPools();}catch(e){}
     }
   }
   syncSurveysFromFirebase(contentDone);
   syncPollsFromFirebase(contentDone);
   syncVideosFromFirebase(contentDone);
   syncAdsFromFirebase(contentDone);
+  // Pools and pool_entries are fetched fresh inside renderMemberPools (called in contentDone).
+  // Still decrement the counter here so the coordinated render fires correctly.
+  syncPoolsFromFirebase(function(){
+    syncPoolEntriesFromFirebase(function(){
+      contentDone();
+    });
+  });
   // Also pull ann separately (doesn't affect pending counter)
   syncAnnFromFirebase(function(){
     renderNotifications(currentUser||member);
@@ -5122,12 +5143,6 @@ function openMemberDashboard(member){
   syncPagesFromFirebase(function(){
     renderDashPages(currentUser||member);
     renderMemberPages(currentUser||member);
-  });
-  // Pull pool entries on login so slots are visible on any device immediately
-  syncPoolsFromFirebase(function(){
-    syncPoolEntriesFromFirebase(function(){
-      try{if(el('mySlotsListWrap')) renderMySlots();}catch(e){}
-    });
   });
 
   // Silently push this member's latest record to Firebase so admin sees them
@@ -5155,6 +5170,19 @@ function openMemberDashboard(member){
       // fresh data from JSONBin — without this, newly-added admin surveys,
       // polls, videos, ads, and pools are invisible until the page is fully reloaded.
       _gopMaster = null;
+      // Re-pull current member record so cross-device notifications (e.g. pool
+      // winner broadcasts) appear during an active session without a full reload.
+      _gopFetchMaster(true).then(function(master){
+        try{
+          var remoteMembers=(master&&Array.isArray(master['members']))?master['members'].filter(Boolean):[];
+          if(remoteMembers.length){
+            localStorage.setItem('gop_members',JSON.stringify(remoteMembers));
+            var fresh=remoteMembers.find(function(m){return m.id===currentUser.id;});
+            if(fresh){currentUser=fresh;saveSession();}
+          }
+        }catch(e){}
+        try{renderNotifications(currentUser);}catch(e){}
+      }).catch(function(){});
       syncAnnFromFirebase(function(){ try{ renderNotifications(currentUser); }catch(e){} });
       var rerender=function(){ try{ renderMemberContent(currentUser); }catch(e){} };
       var pend=4;
@@ -5168,6 +5196,7 @@ function openMemberDashboard(member){
       syncPoolsFromFirebase(function(){
         syncPoolEntriesFromFirebase(function(){
           try{ if(el('poolListWrap')) renderMemberPools(); }catch(e){}
+          try{ if(el('mySlotsListWrap')) renderMySlots(); }catch(e){}
         });
       });
     }catch(e){}
@@ -5242,7 +5271,15 @@ function renderNotifications(member){
       var realIdx=member.notifications.length-1-i;
       var notifText=n.text||'';
       var notifTs=n.ts?new Date(n.ts).toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:true}):'Date unknown';
-      html+='<div class="notif-item" style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">';
+      // Pool winner broadcast gets gold treatment; personal win gets green glow
+      var isWinBroadcast=notifText.indexOf('Pool Result')>=0||notifText.indexOf('Most Slots')>=0;
+      var isPersonalWin=notifText.indexOf('You won the')>=0&&notifText.indexOf('Pool')>=0;
+      var itemStyle=isPersonalWin
+        ?'display:flex;align-items:flex-start;justify-content:space-between;gap:8px;background:linear-gradient(135deg,#f0fdf4,#ecfdf5);border-left:4px solid var(--green);border-radius:0 9px 9px 0;padding:9px 13px;margin-bottom:5px'
+        :isWinBroadcast
+        ?'display:flex;align-items:flex-start;justify-content:space-between;gap:8px;background:linear-gradient(135deg,#fefce8,#fef9c3);border-left:4px solid var(--gold-dark);border-radius:0 9px 9px 0;padding:9px 13px;margin-bottom:5px'
+        :'display:flex;align-items:flex-start;justify-content:space-between;gap:8px';
+      html+='<div class="notif-item" style="'+itemStyle+'">';
       html+='<span style="flex:1;line-height:1.5">'+notifText+'<br><span style="font-size:10.5px;color:#9ca3af;font-weight:400">'+notifTs+'</span></span>';
       html+='<button class="notif-del-btn" data-nidx="'+realIdx+'" title="Delete notification" style="background:none;border:none;cursor:pointer;color:#bbb;font-size:15px;flex-shrink:0;padding:0 2px;line-height:1;margin-top:1px">&#x2715;</button>';
       html+='</div>';
@@ -12260,19 +12297,27 @@ function checkDailyStreakBonus(member){
   }
 
   function syncPoolsFromFirebase(cb){
-    try{jbGet('pools',function(d){
-      if(Array.isArray(d)&&d.length){localStorage.setItem('gop_pools',JSON.stringify(d));}
-      if(cb) cb();
-    });}catch(e){if(cb) cb();}
+    // Force a fresh fetch (bypass cache) so pools are always up-to-date cross-device.
+    try{
+      _gopFetchMaster(true).then(function(master){
+        var d=(master&&Array.isArray(master['pools']))?master['pools'].filter(Boolean):null;
+        if(d&&d.length) try{localStorage.setItem('gop_pools',JSON.stringify(d));}catch(e){}
+        if(cb) try{cb();}catch(e){}
+      }).catch(function(){if(cb) try{cb();}catch(e){}});
+    }catch(e){if(cb) try{cb();}catch(e){}}
   }
   function syncPoolEntriesToFirebase(){
     try{jbPut('pool_entries',getPoolEntries());}catch(e){}
   }
   function syncPoolEntriesFromFirebase(cb){
-    try{jbGet('pool_entries',function(d){
-      if(Array.isArray(d)&&d.length){localStorage.setItem('gop_pool_entries',JSON.stringify(d));}
-      if(cb) cb();
-    });}catch(e){if(cb) cb();}
+    // Force a fresh fetch so slot purchases show cross-device immediately.
+    try{
+      _gopFetchMaster(true).then(function(master){
+        var d=(master&&Array.isArray(master['pool_entries']))?master['pool_entries'].filter(Boolean):null;
+        if(d&&d.length) try{localStorage.setItem('gop_pool_entries',JSON.stringify(d));}catch(e){}
+        if(cb) try{cb();}catch(e){}
+      }).catch(function(){if(cb) try{cb();}catch(e){}});
+    }catch(e){if(cb) try{cb();}catch(e){}}
   }
 
   function fmtPoolDate(dateStr){
@@ -12285,17 +12330,51 @@ function checkDailyStreakBonus(member){
   }
 
   // ── WINNER LOGIC ─────────────────────────────────────────────
-  // Called when a pool is full (all slots sold) or time expires.
+  // Called when a pool is full (all slots sold), time expires, or admin closes it.
+  // Winner = participant with the highest total slot count.
+  // Tie-break: whoever purchased first (earliest purchasedAt timestamp).
+  function maskPhone(phone){
+    // Hide first 7 digits: *******XX (last 3 visible)
+    var p=String(phone||'');
+    if(p.length<3) return '***';
+    var visible=p.slice(-3);
+    var stars='*'.repeat(Math.max(0,p.length-3));
+    return stars+visible;
+  }
+
   function resolvePool(pool){
     if(pool.winnerId) return; // already resolved
     var entries=getPoolEntries().filter(function(e){return e.poolId===pool.id;});
     if(!entries.length) return;
-    // Build weighted ticket array (each slot = 1 ticket)
-    var tickets=[];
+
+    // Aggregate total slots per member
+    var memberTotals={};
     entries.forEach(function(e){
-      for(var i=0;i<(e.slotsCount||1);i++) tickets.push(e);
+      var id=e.memberId;
+      if(!memberTotals[id]){
+        memberTotals[id]={
+          memberId:id,
+          memberName:e.memberName,
+          memberPhone:e.memberPhone,
+          totalSlots:0,
+          firstPurchasedAt:e.purchasedAt||'9999'
+        };
+      }
+      memberTotals[id].totalSlots+=Number(e.slotsCount)||0;
+      // Track earliest purchase for tie-break
+      if((e.purchasedAt||'9999')<memberTotals[id].firstPurchasedAt){
+        memberTotals[id].firstPurchasedAt=e.purchasedAt;
+      }
     });
-    var winner=tickets[Math.floor(Math.random()*tickets.length)];
+
+    // Pick winner: highest slot count; tie → earliest purchasedAt
+    var candidates=Object.values(memberTotals);
+    candidates.sort(function(a,b){
+      if(b.totalSlots!==a.totalSlots) return b.totalSlots-a.totalSlots;
+      return (a.firstPurchasedAt||'').localeCompare(b.firstPurchasedAt||'');
+    });
+    var winner=candidates[0];
+
     // Mark pool as closed with winner
     var pools=getPools();
     var pi=pools.findIndex(function(p){return p.id===pool.id;});
@@ -12305,23 +12384,60 @@ function checkDailyStreakBonus(member){
     pools[pi].winnerId=winner.memberId;
     pools[pi].winnerName=winner.memberName;
     pools[pi].winnerPhone=winner.memberPhone;
-    // Award prize to winner's balance
+    pools[pi].winnerSlots=winner.totalSlots;
+
+    // Award prize to winner's balance & send personal notification
     var members=getMembers();
     var mi=members.findIndex(function(m){return m.id===winner.memberId;});
     if(mi>=0){
       members[mi].balance=(Number(members[mi].balance)||0)+Number(pools[pi].prizeAmount);
       members[mi].monthEarned=(Number(members[mi].monthEarned)||0)+Number(pools[pi].prizeAmount);
-      var notif='&#x1F3C6; <strong>Congratulations!</strong> You won the <strong>'+pools[pi].title+'</strong> pool! <strong>GHS '+Number(pools[pi].prizeAmount).toFixed(2)+'</strong> has been added to your balance!';
+      var winNotif='&#x1F3C6; <strong>Congratulations! You won the <em>'+pools[pi].title+'</em> pool!</strong> You held the most slots ('+winner.totalSlots+') and <strong>GHS '+Number(pools[pi].prizeAmount).toFixed(2)+'</strong> has been added to your balance!';
       members[mi].notifications=members[mi].notifications||[];
-      members[mi].notifications.push(mkNotif(notif));
-      saveMembers(members);
-      syncMemberToBackend(members[mi]);
-      // Update current session if winner is logged in
-      if(currentUser&&currentUser.id===winner.memberId){
-        currentUser=members[mi]; saveSession();
-        if(typeof updateDashboardMetrics==='function') updateDashboardMetrics();
-      }
+      members[mi].notifications.push(mkNotif(winNotif));
     }
+
+    // Broadcast winner announcement to ALL other members
+    var maskedPhone=maskPhone(winner.memberPhone);
+    var broadcastNotif='&#x1F3C6; <strong>Pool Result — '+pools[pi].title+':</strong> The winner with the highest slots is <strong>'+winner.memberName+'</strong> ('+maskedPhone+') with <strong>'+winner.totalSlots+' slot'+(winner.totalSlots!==1?'s':'')+'</strong>! Congratulations! 🎉';
+    members.forEach(function(m,idx){
+      if(m.id===winner.memberId) return; // winner already got personal notif
+      members[idx].notifications=members[idx].notifications||[];
+      members[idx].notifications.push(mkNotif(broadcastNotif));
+    });
+
+    saveMembers(members);
+
+    // Atomically push ALL members (with winner prize + broadcast notifications) in one write.
+    // Using _gopFetchMaster(true) ensures we start from the latest remote state so no
+    // other member's data is overwritten by a stale local snapshot.
+    (function(){
+      var _localMembers=members; // captured after all notifications are added
+      _gopFetchMaster(true).then(function(master){
+        var remote=(master&&Array.isArray(master['members']))?master['members'].filter(Boolean):[];
+        var idMap={};
+        var merged=remote.slice();
+        merged.forEach(function(m,i){if(m&&m.id)idMap[m.id]=i;});
+        _localMembers.forEach(function(m){
+          if(!m||!m.id) return;
+          if(idMap[m.id]!==undefined) merged[idMap[m.id]]=m;
+          else merged.push(m);
+        });
+        try{localStorage.setItem('gop_members',JSON.stringify(merged));}catch(e){}
+        jbPut('members',merged,true);
+      }).catch(function(){
+        // Fallback — push local snapshot
+        try{jbPut('members',_localMembers,true);}catch(e){}
+      });
+    })();
+
+    // Update current session if winner is logged in
+    if(currentUser&&currentUser.id===winner.memberId){
+      var _mi2=members.findIndex(function(m){return m.id===winner.memberId;});
+      if(_mi2>=0){currentUser=members[_mi2]; saveSession();}
+      if(typeof updateDashboardMetrics==='function') updateDashboardMetrics();
+    }
+
     // Save updated pools list with winner info
     localStorage.setItem('gop_pools',JSON.stringify(pools));
     syncPoolsToFirebase();
@@ -12347,19 +12463,33 @@ function checkDailyStreakBonus(member){
     var wrap=el('poolListWrap');
     if(!wrap) return;
     wrap.innerHTML='<p style="font-size:13.5px;color:var(--text-muted);text-align:center;padding:20px">Loading pools...</p>';
-    // Force-fresh: discard in-memory cache so we always pull the latest pools
-    // from JSONBin (covers pools created after the page first loaded).
+    // Always bust the in-memory cache so we get truly fresh data from JSONBin,
+    // not a 5-second-old snapshot that might be missing recently-created pools.
     _gopMaster=null;
-    syncPoolsFromFirebase(function(){
-      syncPoolEntriesFromFirebase(function(){
-        var pools=getPools();
-        var entries=getPoolEntries();
-        var memberId=currentUser?currentUser.id:null;
-        var myEntries=memberId?entries.filter(function(e){return e.memberId===memberId;}):[]; 
-        renderPoolCards(pools, myEntries, wrap);
-        renderMyPoolEntries(myEntries);
-        checkPoolExpiry();
-      });
+    // Force a fresh JSONBin fetch, then write both pools and pool_entries to
+    // localStorage before rendering — guarantees new users see all pools.
+    _gopFetchMaster(true).then(function(master){
+      try{
+        var rp=Array.isArray(master['pools'])?master['pools'].filter(Boolean):null;
+        if(rp&&rp.length) try{localStorage.setItem('gop_pools',JSON.stringify(rp));}catch(e){}
+        var re=Array.isArray(master['pool_entries'])?master['pool_entries'].filter(Boolean):null;
+        if(re&&re.length) try{localStorage.setItem('gop_pool_entries',JSON.stringify(re));}catch(e){}
+      }catch(e){}
+      var pools=getPools();
+      var entries=getPoolEntries();
+      var memberId=currentUser?currentUser.id:null;
+      var myEntries=memberId?entries.filter(function(e){return e.memberId===memberId;}):[]; 
+      renderPoolCards(pools, myEntries, wrap);
+      renderMyPoolEntries(myEntries);
+      checkPoolExpiry();
+    }).catch(function(){
+      // Fallback to whatever is in localStorage
+      var pools=getPools();
+      var entries=getPoolEntries();
+      var memberId=currentUser?currentUser.id:null;
+      var myEntries=memberId?entries.filter(function(e){return e.memberId===memberId;}):[]; 
+      renderPoolCards(pools, myEntries, wrap);
+      renderMyPoolEntries(myEntries);
     });
   }
 
@@ -12397,10 +12527,11 @@ function checkDailyStreakBonus(member){
     }
     var winnerHtml='';
     if(pool.winnerId){
+      var _wMasked=maskPhone(pool.winnerPhone);
       winnerHtml='<div style="background:#fef3c7;border:1.5px solid var(--gold-dark);border-radius:10px;padding:12px 14px;margin-top:10px;text-align:center">'
-        +'<div style="font-size:13px;font-weight:700;color:var(--gold-dark);margin-bottom:2px">&#x1F3C6; Winner</div>'
+        +'<div style="font-size:13px;font-weight:700;color:var(--gold-dark);margin-bottom:2px">&#x1F3C6; Winner — Most Slots</div>'
         +'<div style="font-size:16px;font-weight:700;color:#0d1117">'+pool.winnerName+'</div>'
-        +(pool.winnerPhone?'<div style="font-size:12px;color:#6b7280">'+pool.winnerPhone+'</div>':'')
+        +'<div style="font-size:12px;color:#6b7280">'+_wMasked+(pool.winnerSlots?' &nbsp;·&nbsp; '+pool.winnerSlots+' slot'+(pool.winnerSlots!==1?'s':''):'')+'</div>'
         +'<div style="font-size:12px;color:var(--green);margin-top:4px;font-weight:600">&#x1F4B0; GHS '+Number(pool.prizeAmount).toFixed(2)+' awarded</div>'
         +'</div>';
     }
@@ -12526,7 +12657,7 @@ function checkDailyStreakBonus(member){
           } else if(isEnded){
             // Pool ended, member did not win
             statusHtml='<span style="background:var(--red-pale);color:var(--red);font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px;display:inline-flex;align-items:center;gap:5px">&#x1F504; Try Again</span>';
-            statusNote='<div style="font-size:12.5px;color:var(--text-muted);margin-top:8px">This pool has ended. '+(pool.winnerName?'Winner: <strong>'+pool.winnerName+'</strong>. ':'')+'Better luck next time! Join another active pool.</div>';
+            statusNote='<div style="font-size:12.5px;color:var(--text-muted);margin-top:8px">This pool has ended. '+(pool.winnerName?'Winner: <strong>'+pool.winnerName+'</strong> ('+maskPhone(pool.winnerPhone)+')'+(pool.winnerSlots?' with <strong>'+pool.winnerSlots+' slot'+(pool.winnerSlots!==1?'s':'')+'</strong>':'')+(pool.winnerId===currentUser.id?' — That\'s you! 🎉':'')+'. ':'')+'Better luck next time! Join another active pool.</div>';
           }
           var countdown='';
           if(!isEnded&&pool.endsAt){
@@ -12913,7 +13044,7 @@ function checkDailyStreakBonus(member){
         var pct=pool.totalSlots>0?Math.min(100,Math.round((sold/pool.totalSlots)*100)):0;
         var statusLabel=pool.isActive?'<span class="s-active">Active</span>':'<span class="s-suspended">Closed</span>';
         var winnerHtml=pool.winnerId
-          ?'<div style="background:#fef3c7;border:1px solid var(--gold-dark);border-radius:8px;padding:8px 12px;margin-top:8px;font-size:12.5px"><strong>&#x1F3C6; Winner:</strong> '+pool.winnerName+' ('+pool.winnerPhone+') — GHS '+Number(pool.prizeAmount).toFixed(2)+' awarded</div>'
+          ?'<div style="background:#fef3c7;border:1px solid var(--gold-dark);border-radius:8px;padding:8px 12px;margin-top:8px;font-size:12.5px"><strong>&#x1F3C6; Winner (Most Slots):</strong> '+pool.winnerName+' ('+pool.winnerPhone+')'+(pool.winnerSlots?' — <strong>'+pool.winnerSlots+' slots</strong>':'')+' — GHS '+Number(pool.prizeAmount).toFixed(2)+' awarded</div>'
           :'';
         html+='<div class="a-pool-card">'
           +'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px">'
@@ -12941,9 +13072,14 @@ function checkDailyStreakBonus(member){
     var pools=getPools();
     var pi=pools.findIndex(function(p){return p.id===poolId;});
     if(pi<0) return;
+    var wasActive=pools[pi].isActive;
     pools[pi].isActive=!pools[pi].isActive;
     localStorage.setItem('gop_pools',JSON.stringify(pools));
     syncPoolsToFirebase();
+    // If admin is closing the pool and no winner has been picked yet, resolve it now
+    if(wasActive && !pools[pi].winnerId){
+      resolvePool(pools[pi]);
+    }
     renderAdminPools();
   }
 
@@ -12968,7 +13104,7 @@ function checkDailyStreakBonus(member){
       var pct=pool.totalSlots>0?Math.min(100,Math.round((sold/pool.totalSlots)*100)):0;
       var statusLabel=pool.isActive?'<span class="s-active">Active</span>':'<span class="s-suspended">Closed</span>';
       var winnerHtml=pool.winnerId
-        ?'<div style="background:#fef3c7;border:1px solid var(--gold-dark);border-radius:8px;padding:8px 12px;margin-top:8px;font-size:12.5px"><strong>&#x1F3C6; Winner:</strong> '+pool.winnerName+' ('+pool.winnerPhone+') — GHS '+Number(pool.prizeAmount).toFixed(2)+' awarded</div>'
+        ?'<div style="background:#fef3c7;border:1px solid var(--gold-dark);border-radius:8px;padding:8px 12px;margin-top:8px;font-size:12.5px"><strong>&#x1F3C6; Winner (Most Slots):</strong> '+pool.winnerName+' ('+pool.winnerPhone+')'+(pool.winnerSlots?' — <strong>'+pool.winnerSlots+' slots</strong>':'')+' — GHS '+Number(pool.prizeAmount).toFixed(2)+' awarded</div>'
         :'';
       html+='<div class="a-pool-card">'
         +'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px">'
