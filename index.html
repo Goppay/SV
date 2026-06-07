@@ -4917,6 +4917,41 @@ function refreshDailyAssignments(memberRef){
 }
 
 // ── MEMBER DASHBOARD ─────────────────────────────────
+function showActiveItemsPopup(activePools, annText){
+  var existing=el('activeItemsPopup');
+  if(existing) existing.remove();
+  var html='<div id="activeItemsPopup" style="position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;padding:16px">'
+    +'<div style="background:#fff;border-radius:18px;padding:24px;max-width:420px;width:100%;box-shadow:0 24px 64px rgba(0,0,0,0.35);max-height:85vh;overflow-y:auto">'
+    +'<div style="text-align:center;margin-bottom:18px">'
+    +'<div style="font-size:36px;margin-bottom:6px">&#x1F514;</div>'
+    +'<div style="font-size:17px;font-weight:800;color:#0d1117">What\'s New on Goppay</div>'
+    +'</div>';
+  if(annText){
+    html+='<div style="background:#fff9e6;border:1.5px solid var(--gold-dark);border-radius:12px;padding:13px 15px;margin-bottom:12px">'
+      +'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--gold-dark);margin-bottom:6px">&#x1F4E2; Announcement</div>'
+      +'<div style="font-size:13.5px;color:#374151;line-height:1.65">'+annText+'</div>'
+      +'</div>';
+  }
+  if(activePools&&activePools.length){
+    html+='<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--green);margin-bottom:8px">&#x1F3B1; Active Pools — Join & Win!</div>';
+    activePools.forEach(function(p){
+      var dLeft=poolDaysRemaining(p.endsAt);
+      var sLeft=p.totalSlots-(Number(p.slotsSold)||0);
+      html+='<div style="background:#f0fdf4;border:1.5px solid var(--green);border-radius:12px;padding:12px 14px;margin-bottom:9px">'
+        +'<div style="font-weight:700;font-size:14px;color:#0d1117;margin-bottom:4px">&#x1F3B1; '+p.title+'</div>'
+        +'<div style="font-size:12.5px;color:#374151">&#x1F3C6; Prize: <strong>GHS '+Number(p.prizeAmount).toFixed(2)+'</strong> &nbsp;·&nbsp; GHS '+Number(p.slotPrice).toFixed(2)+' / slot</div>'
+        +'<div style="font-size:12px;color:var(--text-muted);margin-top:3px">'+sLeft+' slot'+(sLeft!==1?'s':'')+' remaining &nbsp;·&nbsp; '+dLeft+' day'+(dLeft!==1?'s':'')+' left</div>'
+        +'</div>';
+    });
+  }
+  html+='<button onclick="document.getElementById(\'activeItemsPopup\').remove()" style="width:100%;padding:13px;background:var(--green);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;margin-top:4px">Got it!</button>';
+  if(activePools&&activePools.length){
+    html+='<button onclick="document.getElementById(\'activeItemsPopup\').remove();setTimeout(function(){var t=document.querySelector(\'[data-tab=pools]\');if(t)t.click();},100);" style="width:100%;padding:11px;background:none;border:none;font-size:13px;color:var(--green);cursor:pointer;font-weight:700;margin-top:8px">&#x1F3B1; Go to Pools →</button>';
+  }
+  html+='</div></div>';
+  document.body.insertAdjacentHTML('beforeend',html);
+}
+
 function openMemberDashboard(member){
   if(waitInterval) clearInterval(waitInterval);
   hide('paymentPage');
@@ -4988,6 +5023,21 @@ function openMemberDashboard(member){
     var fresh=getMembers().find(function(x){return x.id===member.id;})||member;
     currentUser=fresh;
     renderMemberContent(fresh);
+    // Show a one-per-session popup highlighting active pools and announcements
+    if(!window._gopLoginPopupShown){
+      window._gopLoginPopupShown=true;
+      setTimeout(function(){
+        try{
+          var _pools=getPools().filter(function(p){
+            return p.isActive&&!p.winnerId&&poolDaysRemaining(p.endsAt)>0&&(Number(p.slotsSold)||0)<p.totalSlots;
+          });
+          var _annObj=getAnn();
+          if(_annObj&&!annAppliesTo(_annObj,fresh)) _annObj=null;
+          var _annText=_annObj?_annObj.text:'';
+          if(_pools.length||_annText) showActiveItemsPopup(_pools,_annText);
+        }catch(e){}
+      },900);
+    }
   }
   try{
     if(typeof hydrateFromJsonBin==='function' && !window._gopHydrated){
@@ -5073,9 +5123,7 @@ function renderNotifications(member){
   var html='';
   var annObj=getAnn();
   if(annObj && !annAppliesTo(annObj, member)) annObj=null;
-  // Suppress an admin announcement the user has already deleted
-  var annDeleted=(member.deletedNotifIds||[]).indexOf('ANN:'+(annObj?(annObj.text||''):''))>=0;
-  if(annDeleted) annObj=null;
+  // Announcements persist for the life of the announcement — they cannot be dismissed.
   var ann=annObj?annObj.text:'';
   // Migrate legacy strings to objects, ensure every notification has a stable id,
   // and filter out any notifications the user has previously deleted.
@@ -5100,7 +5148,16 @@ function renderNotifications(member){
       if(_mi2>=0){_mm[_mi2].notifications=member.notifications;saveMembers(_mm);}
     }
   }
-  var hasAny=ann||(member.notifications&&member.notifications.length);
+  // Compute active pools for persistent pool alerts
+  var _activePools=(function(){
+    try{
+      return getPools().filter(function(p){
+        return p.isActive && !p.winnerId && poolDaysRemaining(p.endsAt)>0 && (Number(p.slotsSold)||0)<p.totalSlots;
+      });
+    }catch(e){return [];}
+  })();
+
+  var hasAny=ann||_activePools.length||(member.notifications&&member.notifications.length);
   if(hasAny){
     html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">';
     html+='<span style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px">Notifications</span>';
@@ -5109,12 +5166,22 @@ function renderNotifications(member){
     }
     html+='</div>';
   }
+  // Announcement — persistent, no dismiss button
   if(ann){
-    html+='<div class="notif-item gold" style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">';
+    html+='<div class="notif-item gold" style="display:flex;align-items:flex-start;gap:8px">';
     html+='<span style="flex:1">&#x1F4E2; <strong>Goppay:</strong> '+ann+'</span>';
-    html+='<button class="notif-del-btn" data-anndel="1" title="Delete notification" style="background:none;border:none;cursor:pointer;color:#bbb;font-size:15px;flex-shrink:0;padding:0 2px;line-height:1;margin-top:1px">&#x2715;</button>';
     html+='</div>';
   }
+  // Active pool alerts — persistent, refresh every 30 s via the auto-sync
+  _activePools.forEach(function(p){
+    var daysLeft=poolDaysRemaining(p.endsAt);
+    var slotsLeft=p.totalSlots-(Number(p.slotsSold)||0);
+    html+='<div class="notif-item" style="background:linear-gradient(135deg,#f0fdf4,#fff);border:1.5px solid var(--green);border-radius:10px;margin-bottom:5px;padding:10px 12px;cursor:pointer" onclick="var t=document.querySelector(\'[data-tab=pools]\');if(t)t.click();">';
+    html+='<div style="font-weight:700;font-size:13px;color:#166534;margin-bottom:3px">&#x1F3B1; Pool Available: '+p.title+'</div>';
+    html+='<div style="font-size:12px;color:#374151">Prize: <strong>GHS '+Number(p.prizeAmount).toFixed(2)+'</strong> &nbsp;·&nbsp; GHS '+Number(p.slotPrice).toFixed(2)+'/slot</div>';
+    html+='<div style="font-size:11.5px;color:var(--text-muted);margin-top:2px">'+slotsLeft+' slot'+(slotsLeft!==1?'s':'')+' remaining &nbsp;·&nbsp; '+daysLeft+' day'+(daysLeft!==1?'s':'')+' left &nbsp;·&nbsp; <span style="color:var(--green);font-weight:600">Tap to join →</span></div>';
+    html+='</div>';
+  });
   if(member.notifications&&member.notifications.length){
     member.notifications.slice().reverse().forEach(function(n,i){
       var realIdx=member.notifications.length-1-i;
@@ -5125,21 +5192,17 @@ function renderNotifications(member){
       html+='<button class="notif-del-btn" data-nidx="'+realIdx+'" title="Delete notification" style="background:none;border:none;cursor:pointer;color:#bbb;font-size:15px;flex-shrink:0;padding:0 2px;line-height:1;margin-top:1px">&#x2715;</button>';
       html+='</div>';
     });
-  } else if(!ann){
+  } else if(!ann&&!_activePools.length){
     html+='<p style="font-size:13px;color:var(--text-muted);text-align:center;padding:10px 0">No notifications.</p>';
   }
   setHTML('notifList', html);
 
-  // Bind delete buttons
+  // Bind delete buttons (pool alerts and announcements have no delete btn)
   var notifList=el('notifList');
   if(!notifList) return;
   notifList.querySelectorAll('.notif-del-btn').forEach(function(btn){
     btn.addEventListener('click',function(){
-      if(btn.dataset.anndel){
-        deleteAnnouncementNotif();
-      } else {
-        deleteNotification(parseInt(btn.dataset.nidx));
-      }
+      deleteNotification(parseInt(btn.dataset.nidx));
     });
   });
   var clearBtn=el('clearAllNotifsBtn');
