@@ -5184,6 +5184,9 @@ function openMemberDashboard(member){
     }, 1200);
   }
 
+  // Snapshot of last-seen pool+entry data — used to skip re-renders when nothing changed
+  var _lastPoolSnap='';
+
   // Background auto-refresh: pull latest admin content (announcements, surveys,
   // polls, videos, ads, pages) every 30s so users see new items without a reload.
   if(window._userSyncInterval){clearInterval(window._userSyncInterval);window._userSyncInterval=null;}
@@ -5218,11 +5221,17 @@ function openMemberDashboard(member){
       syncVideosFromFirebase(done);
       syncAdsFromFirebase(done);
       syncPagesFromFirebase(function(){ try{ renderDashPages(currentUser); renderMemberPages(currentUser); }catch(e){} });
-      // Keep pools fresh — new pools created by admin appear within 30 s
+      // Keep pools fresh — only re-render if data actually changed
       syncPoolsFromFirebase(function(){
         syncPoolEntriesFromFirebase(function(){
-          try{ if(el('poolListWrap')) renderMemberPools(); }catch(e){}
-          try{ if(el('mySlotsListWrap')) renderMySlots(); }catch(e){}
+          try{
+            var _snap=JSON.stringify(getPools())+JSON.stringify(getPoolEntries());
+            if(_snap!==_lastPoolSnap){
+              _lastPoolSnap=_snap;
+              if(el('poolListWrap')) renderMemberPools();
+              if(el('mySlotsListWrap')) renderMySlots();
+            }
+          }catch(e){}
         });
       });
     }catch(e){}
