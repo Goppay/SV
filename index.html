@@ -22,8 +22,8 @@
   --font-display:'Playfair Display',serif;--font-body:'Outfit',sans-serif;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html{scroll-behavior:smooth}
-body{font-family:var(--font-body);background:var(--cream);color:var(--text);font-size:16px;line-height:1.7;overflow-x:hidden}
+html{scroll-behavior:smooth;overscroll-behavior:none}
+body{font-family:var(--font-body);background:var(--cream);color:var(--text);font-size:16px;line-height:1.7;overflow-x:hidden;overscroll-behavior:none}
 .container{max-width:1100px;margin:0 auto;padding:0 24px}
 a{text-decoration:none}
 textarea,input,select,button{font-family:var(--font-body)}
@@ -245,7 +245,7 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
 #ppFailed p{font-size:13.5px;color:var(--text-muted);line-height:1.6;margin-bottom:16px}
 
 /* MEMBER DASHBOARD */
-#memberDashboard{display:none;position:fixed;inset:0;z-index:400;background:#f5f7f9;overflow-y:auto}
+#memberDashboard{display:none;position:fixed;inset:0;z-index:400;background:#f5f7f9;overflow-y:auto;overscroll-behavior:none}
 .d-nav{background:var(--green);padding:0 20px;height:62px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
 .d-nav-logo{font-family:var(--font-display);font-size:17px;color:#fff}
 .d-nav-logo span{color:var(--gold)}
@@ -296,7 +296,7 @@ footer{background:var(--green);color:rgba(255,255,255,.7);padding:56px 24px 28px
 .qbar-fill{height:100%;background:var(--green);border-radius:10px;transition:width .4s}
 
 /* ADMIN */
-#adminDashboard{display:none;position:fixed;inset:0;z-index:450;background:#f0f2f5;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-top:env(safe-area-inset-top,0px)}
+#adminDashboard{display:none;position:fixed;inset:0;z-index:450;background:#f0f2f5;overflow-y:auto;overscroll-behavior:none;padding-top:env(safe-area-inset-top,0px)}
 .a-nav{background:#0d1117;padding:0 22px;height:62px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
 .a-nav-logo{font-family:var(--font-display);font-size:17px;color:#fff}
 .a-nav-logo span{color:var(--gold)}
@@ -4386,7 +4386,8 @@ function closeDeleteModal(){el('deleteModal').classList.remove('open');}
 function closeAddContentModal(){el('addContentModal').classList.remove('open');_pendingGenSurveyItem=null;}
 function closeSurveyModal(){
   el('surveyModal').classList.remove('open');
-  document.body.style.overflow='auto';
+  var dashOpen=el('memberDashboard').style.display!=='none'||el('adminDashboard').style.display!=='none';
+  document.body.style.overflow=dashOpen?'hidden':'auto';
   if(currentUser && currentUser!=='admin') renderSurveyList(currentUser);
 }
 
