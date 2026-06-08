@@ -1486,6 +1486,28 @@ iframe[src*="badge"]{
           <div class="d-card-title">&#x1F4CB; My Pool Entries</div>
           <div id="myPoolEntriesList"></div>
         </div>
+        <div class="d-card" id="pastWinnersCard" style="display:none">
+          <div class="d-card-title">&#x1F3C6; Past Pool Winners</div>
+          <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px;line-height:1.6">A record of all concluded pools and their winners.</p>
+          <div style="overflow-x:auto">
+            <table style="width:100%;border-collapse:collapse;font-size:13px">
+              <thead>
+                <tr style="background:var(--green);color:#fff">
+                  <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px">#</th>
+                  <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px">Pool</th>
+                  <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px">Winner</th>
+                  <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px">Phone</th>
+                  <th style="padding:10px 12px;text-align:center;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px">Slots Held</th>
+                  <th style="padding:10px 12px;text-align:center;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px">Prize</th>
+                  <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px">Closed On</th>
+                </tr>
+              </thead>
+              <tbody id="pastWinnersBody">
+                <tr><td colspan="7" style="padding:18px;text-align:center;color:var(--text-muted)">No concluded pools yet.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
 
       <!-- Pool Join Modal -->
@@ -12337,12 +12359,16 @@ function checkDailyStreakBonus(member){
   // Winner = participant with the highest total slot count.
   // Tie-break: whoever purchased first (earliest purchasedAt timestamp).
   function maskPhone(phone){
-    // Hide first 7 digits: *******XX (last 3 visible)
     var p=String(phone||'');
     if(p.length<3) return '***';
     var visible=p.slice(-3);
     var stars='*'.repeat(Math.max(0,p.length-3));
     return stars+visible;
+  }
+  function winnerLastName(fullName){
+    if(!fullName) return 'Unknown';
+    var parts=String(fullName).trim().split(/\s+/);
+    return parts[parts.length-1];
   }
 
   function resolvePool(pool){
@@ -12402,7 +12428,7 @@ function checkDailyStreakBonus(member){
 
     // Broadcast winner announcement to ALL other members
     var maskedPhone=maskPhone(winner.memberPhone);
-    var broadcastNotif='&#x1F3C6; <strong>Pool Result — '+pools[pi].title+':</strong> The winner with the highest slots is <strong>'+winner.memberName+'</strong> ('+maskedPhone+') with <strong>'+winner.totalSlots+' slot'+(winner.totalSlots!==1?'s':'')+'</strong>! Congratulations! 🎉';
+    var broadcastNotif='&#x1F3C6; <strong>Pool Result — '+pools[pi].title+':</strong> The winner with the highest slots is <strong>'+winnerLastName(winner.memberName)+'</strong> ('+maskedPhone+') with <strong>'+winner.totalSlots+' slot'+(winner.totalSlots!==1?'s':'')+'</strong>! Congratulations! 🎉';
     members.forEach(function(m,idx){
       if(m.id===winner.memberId) return; // winner already got personal notif
       members[idx].notifications=members[idx].notifications||[];
@@ -12484,6 +12510,7 @@ function checkDailyStreakBonus(member){
       var myEntries=memberId?entries.filter(function(e){return e.memberId===memberId;}):[]; 
       renderPoolCards(pools, myEntries, wrap);
       renderMyPoolEntries(myEntries);
+      renderPastWinnersTable();
       checkPoolExpiry();
     }).catch(function(){
       // Fallback to whatever is in localStorage
@@ -12493,6 +12520,7 @@ function checkDailyStreakBonus(member){
       var myEntries=memberId?entries.filter(function(e){return e.memberId===memberId;}):[]; 
       renderPoolCards(pools, myEntries, wrap);
       renderMyPoolEntries(myEntries);
+      renderPastWinnersTable();
     });
   }
 
@@ -12533,7 +12561,7 @@ function checkDailyStreakBonus(member){
       var _wMasked=maskPhone(pool.winnerPhone);
       winnerHtml='<div style="background:#fef3c7;border:1.5px solid var(--gold-dark);border-radius:10px;padding:12px 14px;margin-top:10px;text-align:center">'
         +'<div style="font-size:13px;font-weight:700;color:var(--gold-dark);margin-bottom:2px">&#x1F3C6; Winner — Most Slots</div>'
-        +'<div style="font-size:16px;font-weight:700;color:#0d1117">'+pool.winnerName+'</div>'
+        +'<div style="font-size:16px;font-weight:700;color:#0d1117">'+winnerLastName(pool.winnerName)+'</div>'
         +'<div style="font-size:12px;color:#6b7280">'+_wMasked+(pool.winnerSlots?' &nbsp;·&nbsp; '+pool.winnerSlots+' slot'+(pool.winnerSlots!==1?'s':''):'')+'</div>'
         +'<div style="font-size:12px;color:var(--green);margin-top:4px;font-weight:600">&#x1F4B0; GHS '+Number(pool.prizeAmount).toFixed(2)+' awarded</div>'
         +'</div>';
@@ -12585,9 +12613,7 @@ function checkDailyStreakBonus(member){
       var endedNote=(!isWinner&&isClosed)
         ?'<div style="background:var(--red-pale);border:1px solid var(--red);border-radius:9px;padding:10px 14px;margin-top:10px;font-size:13px;color:var(--red)">&#x23F0; This pool has ended. Better luck next time! Join another active pool.</div>'
         :'';
-      var verifiedBadge=group.purchases.some(function(p){return p.webhookVerified;})
-        ?'<span style="background:#e0f2fe;color:#0369a1;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:12px;margin-left:6px">&#x2714; Payment Verified</span>'
-        :'<span style="background:#fef9c3;color:#854d0e;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:12px;margin-left:6px">&#x23F3; Pending Verification</span>';
+
       html+='<div style="background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:16px;margin-bottom:12px">'
         +(isWinner?'<div style="background:#fef3c7;border:1.5px solid var(--gold-dark);border-radius:9px;padding:10px 14px;margin-bottom:12px;text-align:center;font-size:14px;font-weight:700;color:var(--gold-dark)">&#x1F3C6; Congratulations! You won this pool and GHS '+Number(pool.prizeAmount||0).toFixed(2)+' has been added to your balance!</div>':'')
         +'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px">'
@@ -12599,11 +12625,39 @@ function checkDailyStreakBonus(member){
         +'<div style="background:var(--warm-gray);border-radius:9px;padding:9px;text-align:center"><div style="font-size:15px;font-weight:700;color:var(--red)">GHS '+Number(group.amountPaid).toFixed(2)+'</div><div style="font-size:11px;color:var(--text-muted)">Total Paid</div></div>'
         +'</div>'
         +(totalSlots>0?'<div style="margin-bottom:8px"><div style="font-size:11.5px;color:var(--text-muted);margin-bottom:4px">Pool fill: '+sold+'</div><div style="height:7px;background:#f3f4f6;border-radius:10px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:linear-gradient(90deg,var(--green),var(--green-light));border-radius:10px"></div></div></div>':'')
-        +'<div style="font-size:11.5px;color:var(--text-muted);display:flex;align-items:center;flex-wrap:wrap;gap:4px">&#x1F4C5; Joined '+fmtPoolDate(group.purchasedAt)+verifiedBadge+'</div>'
+        +'<div style="font-size:11.5px;color:var(--text-muted)">&#x1F4C5; Joined '+fmtPoolDate(group.purchasedAt)+'</div>'
         +endedNote
         +'</div>';
     });
     list.innerHTML=html||'<p style="font-size:13.5px;color:var(--text-muted);text-align:center;padding:14px">No pool entries yet.</p>';
+  }
+
+  // ── PAST WINNERS TABLE (user-facing) ──────────────────
+  function renderPastWinnersTable(){
+    var card=el('pastWinnersCard');
+    var tbody=el('pastWinnersBody');
+    if(!card||!tbody) return;
+    var pools=getPools();
+    var concluded=pools.filter(function(p){return p.winnerId;});
+    concluded.sort(function(a,b){return (b.closedAt||'').localeCompare(a.closedAt||'');});
+    if(!concluded.length){card.style.display='none';return;}
+    card.style.display='block';
+    var html='';
+    concluded.forEach(function(p,i){
+      var isMe=currentUser&&p.winnerId===currentUser.id;
+      var rowBg=isMe?'background:linear-gradient(90deg,#fef3c7,#fffbeb);':'';
+      html+='<tr style="border-bottom:1px solid var(--border);'+rowBg+'">'
+        +'<td style="padding:10px 12px;color:var(--text-muted)">'+(i+1)+'</td>'
+        +'<td style="padding:10px 12px;font-weight:600;color:#0d1117">&#x1F3B1; '+p.title+'</td>'
+        +'<td style="padding:10px 12px;font-weight:700;color:'+(isMe?'var(--gold-dark)':'var(--green)')+';">'
+          +(isMe?'&#x1F3C6; ':'')+winnerLastName(p.winnerName)+(isMe?' <span style="font-size:10.5px;background:var(--gold-dark);color:#fff;padding:1px 7px;border-radius:10px;font-weight:700;vertical-align:middle">YOU</span>':'')+'</td>'
+        +'<td style="padding:10px 12px;font-family:monospace;font-size:12.5px">'+maskPhone(p.winnerPhone)+'</td>'
+        +'<td style="padding:10px 12px;text-align:center;font-weight:700">'+(p.winnerSlots||0)+' <span style="font-size:11px;font-weight:400;color:var(--text-muted)">/ '+p.totalSlots+'</span></td>'
+        +'<td style="padding:10px 12px;text-align:center;font-weight:700;color:var(--green)">GHS '+Number(p.prizeAmount).toFixed(2)+'</td>'
+        +'<td style="padding:10px 12px;color:var(--text-muted);font-size:12.5px">'+(p.closedAt?fmtPoolDate(p.closedAt):'—')+'</td>'
+        +'</tr>';
+    });
+    tbody.innerHTML=html;
   }
 
   // ── MY SLOTS TAB ──────────────────────────────────────
@@ -12664,7 +12718,7 @@ function checkDailyStreakBonus(member){
           } else if(isEnded){
             // Pool ended, member did not win
             statusHtml='<span style="background:var(--red-pale);color:var(--red);font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px;display:inline-flex;align-items:center;gap:5px">&#x1F504; Try Again</span>';
-            statusNote='<div style="font-size:12.5px;color:var(--text-muted);margin-top:8px">This pool has ended. '+(pool.winnerName?'Winner: <strong>'+pool.winnerName+'</strong> ('+maskPhone(pool.winnerPhone)+')'+(pool.winnerSlots?' with <strong>'+pool.winnerSlots+' slot'+(pool.winnerSlots!==1?'s':'')+'</strong>':'')+(pool.winnerId===currentUser.id?' — That\'s you! 🎉':'')+'. ':'')+'Better luck next time! Join another active pool.</div>';
+            statusNote='<div style="font-size:12.5px;color:var(--text-muted);margin-top:8px">This pool has ended. '+(pool.winnerName?'Winner: <strong>'+winnerLastName(pool.winnerName)+'</strong> ('+maskPhone(pool.winnerPhone)+')'+(pool.winnerSlots?' with <strong>'+pool.winnerSlots+' slot'+(pool.winnerSlots!==1?'s':'')+'</strong>':'')+(pool.winnerId===currentUser.id?' — That\'s you! 🎉':'')+'. ':'')+'Better luck next time! Join another active pool.</div>';
           }
           var countdown='';
           if(!isEnded&&pool.endsAt){
@@ -13050,9 +13104,33 @@ function checkDailyStreakBonus(member){
         var sold=Number(pool.slotsSold)||0;
         var pct=pool.totalSlots>0?Math.min(100,Math.round((sold/pool.totalSlots)*100)):0;
         var statusLabel=pool.isActive?'<span class="s-active">Active</span>':'<span class="s-suspended">Closed</span>';
-        var winnerHtml=pool.winnerId
-          ?'<div style="background:#fef3c7;border:1px solid var(--gold-dark);border-radius:8px;padding:8px 12px;margin-top:8px;font-size:12.5px"><strong>&#x1F3C6; Winner (Most Slots):</strong> '+pool.winnerName+' ('+pool.winnerPhone+')'+(pool.winnerSlots?' — <strong>'+pool.winnerSlots+' slots</strong>':'')+' — GHS '+Number(pool.prizeAmount).toFixed(2)+' awarded</div>'
-          :'';
+        var winnerHtml='';
+        if(pool.winnerId){
+          var wPct=pool.totalSlots>0?Math.round((pool.winnerSlots/pool.totalSlots)*100):0;
+          var wClosed=pool.closedAt?'<div style="font-size:11px;color:#92400e;margin-top:4px">&#x1F4C5; Pool closed: '+fmtPoolDate(pool.closedAt)+'</div>':'';
+          winnerHtml='<div style="background:linear-gradient(135deg,#fef3c7,#fffbeb);border:2px solid var(--gold-dark);border-radius:10px;padding:14px 16px;margin-top:12px">'
+            +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">'
+            +'<span style="font-size:20px">&#x1F3C6;</span>'
+            +'<span style="font-size:14px;font-weight:800;color:var(--gold-dark);letter-spacing:.3px">Pool Winner</span>'
+            +'<span style="background:var(--gold-dark);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;margin-left:auto">AWARDED</span>'
+            +'</div>'
+            +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">'
+            +'<div style="background:rgba(255,255,255,.7);border-radius:8px;padding:9px;text-align:center">'
+            +'<div style="font-size:13.5px;font-weight:700;color:#0d1117">'+pool.winnerName+'</div>'
+            +'<div style="font-size:10.5px;color:#92400e;margin-top:2px">Winner Name</div></div>'
+            +'<div style="background:rgba(255,255,255,.7);border-radius:8px;padding:9px;text-align:center">'
+            +'<div style="font-size:13px;font-weight:700;color:#0d1117;font-family:monospace">'+pool.winnerPhone+'</div>'
+            +'<div style="font-size:10.5px;color:#92400e;margin-top:2px">Phone Number</div></div>'
+            +'<div style="background:rgba(255,255,255,.7);border-radius:8px;padding:9px;text-align:center">'
+            +'<div style="font-size:13.5px;font-weight:700;color:var(--green)">GHS '+Number(pool.prizeAmount).toFixed(2)+'</div>'
+            +'<div style="font-size:10.5px;color:#92400e;margin-top:2px">Prize Awarded</div></div>'
+            +'</div>'
+            +'<div style="margin-top:8px;font-size:12px;color:#92400e;display:flex;align-items:center;gap:6px;flex-wrap:wrap">'
+            +'<span>&#x1F3AB; Slots held: <strong>'+(pool.winnerSlots||0)+'</strong> of '+pool.totalSlots+' ('+wPct+'%)</span>'
+            +wClosed
+            +'</div>'
+            +'</div>';
+        }
         html+='<div class="a-pool-card">'
           +'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px">'
           +'<div><div style="font-size:15px;font-weight:700;color:#0d1117;margin-bottom:4px">&#x1F3B1; '+pool.title+'</div>'
