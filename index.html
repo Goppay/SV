@@ -5036,7 +5036,7 @@ function openMemberDashboard(member){
   if(waitInterval) clearInterval(waitInterval);
   hide('paymentPage');
   show('memberDashboard');
-  document.body.style.overflow='auto';
+  document.body.style.overflow='hidden';
   var initials=(member.firstName.charAt(0)+(member.lastName||'').charAt(0)).toUpperCase();
   setText('dAv', initials);
   setText('dUname', member.firstName+' '+member.lastName);
@@ -6751,7 +6751,7 @@ function isSubAdmin(){return currentUser && currentUser.role==='subadmin';}
 
 function openAdminDashboard(){
   show('adminDashboard');
-  document.body.style.overflow='auto';
+  document.body.style.overflow='hidden';
   // Update admin nav label
   var logo=el('aNavLogo');
   if(logo){
