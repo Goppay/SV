@@ -12578,10 +12578,13 @@ function checkDailyStreakBonus(member){
       var sold=pool.slotsSold||0;
       var pct=totalSlots>0?Math.min(100,Math.round((sold/totalSlots)*100)):0;
       var statusBadge=isWinner
-        ?'<span style="background:#fef3c7;color:var(--gold-dark);border:1px solid var(--gold-dark);font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:20px">&#x1F3C6; You Won!</span>'
+        ?'<span style="background:#fef3c7;color:var(--gold-dark);border:1px solid var(--gold-dark);font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:20px">&#x1F3C6; Won</span>'
         :isClosed
-          ?'<span style="background:var(--red-pale);color:var(--red);font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:20px">&#x1F512; Closed</span>'
+          ?'<span style="background:var(--red-pale);color:var(--red);font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:20px">&#x1F512; Ended</span>'
           :'<span style="background:var(--green-pale);color:var(--green);font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:20px">&#x1F7E2; Active</span>';
+      var endedNote=(!isWinner&&isClosed)
+        ?'<div style="background:var(--red-pale);border:1px solid var(--red);border-radius:9px;padding:10px 14px;margin-top:10px;font-size:13px;color:var(--red)">&#x23F0; This pool has ended. Better luck next time! Join another active pool.</div>'
+        :'';
       var verifiedBadge=group.purchases.some(function(p){return p.webhookVerified;})
         ?'<span style="background:#e0f2fe;color:#0369a1;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:12px;margin-left:6px">&#x2714; Payment Verified</span>'
         :'<span style="background:#fef9c3;color:#854d0e;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:12px;margin-left:6px">&#x23F3; Pending Verification</span>';
@@ -12597,6 +12600,7 @@ function checkDailyStreakBonus(member){
         +'</div>'
         +(totalSlots>0?'<div style="margin-bottom:8px"><div style="font-size:11.5px;color:var(--text-muted);margin-bottom:4px">Pool fill: '+sold+'</div><div style="height:7px;background:#f3f4f6;border-radius:10px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:linear-gradient(90deg,var(--green),var(--green-light));border-radius:10px"></div></div></div>':'')
         +'<div style="font-size:11.5px;color:var(--text-muted);display:flex;align-items:center;flex-wrap:wrap;gap:4px">&#x1F4C5; Joined '+fmtPoolDate(group.purchasedAt)+verifiedBadge+'</div>'
+        +endedNote
         +'</div>';
     });
     list.innerHTML=html||'<p style="font-size:13.5px;color:var(--text-muted);text-align:center;padding:14px">No pool entries yet.</p>';
