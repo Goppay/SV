@@ -2557,10 +2557,19 @@ function hydrateFromJsonBin(){
   })).then(function(){
     // Single round-trip: pull the master bin once and write every store from it.
     return _gopFetchMaster(true).then(function(master){
+      // Content stores are additive — if local has MORE items than remote the
+      // admin's latest PUT hasn't landed in JSONBin yet. Keep local in that case
+      // so a user refresh immediately after an admin save doesn't roll it back.
+      var _contentStores={surveys:1,polls:1,videos:1,ads:1,pages:1};
       GOP_HYDRATE_STORES.forEach(function(store){
         if(!Object.prototype.hasOwnProperty.call(master,store)) return;
         var data = _normalizeStoreData(store, master[store]);
         if(data == null) return;
+        if(_contentStores[store] && Array.isArray(data)){
+          var _localRaw=null; try{_localRaw=localStorage.getItem('gop_'+store);}catch(e){}
+          var _localArr=null; try{_localArr=_localRaw?JSON.parse(_localRaw):null;}catch(e){}
+          if(Array.isArray(_localArr) && _localArr.length > data.length) return;
+        }
         try{ localStorage.setItem('gop_'+store, JSON.stringify(data)); }catch(e){}
       });
       window._gopHydrated = true;
@@ -5228,7 +5237,7 @@ function openMemberDashboard(member){
             var _snap=JSON.stringify(getPools())+JSON.stringify(getPoolEntries());
             if(_snap!==_lastPoolSnap){
               _lastPoolSnap=_snap;
-              if(el('poolListWrap')) renderMemberPools();
+              if(el('poolListWrap')) renderMemberPoolsLocal();
               if(el('mySlotsListWrap')) renderMySlots();
             }
           }catch(e){}
@@ -6795,6 +6804,8 @@ function openAdminDashboard(){
     renderAdminUpgradesFull();
     renderVisitsTab();
     renderScheduleTab();
+    try{ checkPoolExpiry(); }catch(e){}
+    renderAdminPoolsLocal();
   }
   // Expose globally so the Refresh button can trigger a full re-render from outside this scope
   window._adminRenderAll = renderAll;
@@ -6963,7 +6974,7 @@ function switchAdminTab(name, btn){
   if(name==='aslots'){
     syncPoolEntriesFromFirebase(function(){ renderAdminSlots(); });
   }
-  if(name==='activity') renderActivityFeed();
+  if(name==='activity'){ syncActivityFromFirebase(function(){ renderActivityFeed(); }); }
 }
 
 // ── ADMIN: ACTIVITY FEED ──────────────────────────────
@@ -12492,12 +12503,13 @@ function checkDailyStreakBonus(member){
       var soldOut=(p.slotsSold||0)>=p.totalSlots;
       if(days<=0||soldOut){ resolvePool(p); changed=true; }
     });
-    if(changed) renderMemberPools();
+    if(changed) renderMemberPoolsLocal();
   }
 
   // ── MEMBER POOL RENDER ───────────────────────────────────────
   var _poolJoinTarget=null; // currently open pool in join modal
 
+  // Full render: fetches fresh from JSONBin then paints. Used on tab open / explicit reload.
   function renderMemberPools(){
     var wrap=el('poolListWrap');
     if(!wrap) return;
@@ -12514,24 +12526,31 @@ function checkDailyStreakBonus(member){
         var re=Array.isArray(master['pool_entries'])?master['pool_entries'].filter(Boolean):null;
         if(re&&re.length) try{localStorage.setItem('gop_pool_entries',JSON.stringify(re));}catch(e){}
       }catch(e){}
-      var pools=getPools();
-      var entries=getPoolEntries();
-      var memberId=currentUser?currentUser.id:null;
-      var myEntries=memberId?entries.filter(function(e){return e.memberId===memberId;}):[]; 
-      renderPoolCards(pools, myEntries, wrap);
-      renderMyPoolEntries(myEntries);
-      renderPastWinnersTable();
-      checkPoolExpiry();
+      _renderMemberPoolsFromLocalStorage();
     }).catch(function(){
-      // Fallback to whatever is in localStorage
-      var pools=getPools();
-      var entries=getPoolEntries();
-      var memberId=currentUser?currentUser.id:null;
-      var myEntries=memberId?entries.filter(function(e){return e.memberId===memberId;}):[]; 
-      renderPoolCards(pools, myEntries, wrap);
-      renderMyPoolEntries(myEntries);
-      renderPastWinnersTable();
+      _renderMemberPoolsFromLocalStorage();
     });
+  }
+
+  // Silent render: reads from localStorage only — no Loading flash, no network call.
+  // Used by the background 30s sync and checkPoolExpiry so users never see a flicker.
+  function renderMemberPoolsLocal(){
+    var wrap=el('poolListWrap');
+    if(!wrap) return;
+    _renderMemberPoolsFromLocalStorage();
+  }
+
+  // Shared inner render used by both renderMemberPools and renderMemberPoolsLocal
+  function _renderMemberPoolsFromLocalStorage(){
+    var wrap=el('poolListWrap');
+    if(!wrap) return;
+    var pools=getPools();
+    var entries=getPoolEntries();
+    var memberId=currentUser?currentUser.id:null;
+    var myEntries=memberId?entries.filter(function(e){return e.memberId===memberId;}):[]; 
+    renderPoolCards(pools, myEntries, wrap);
+    renderMyPoolEntries(myEntries);
+    renderPastWinnersTable();
   }
 
   function renderPoolCards(pools, myEntries, wrap){
@@ -13168,14 +13187,32 @@ function checkDailyStreakBonus(member){
     var pi=pools.findIndex(function(p){return p.id===poolId;});
     if(pi<0) return;
     var wasActive=pools[pi].isActive;
-    pools[pi].isActive=!pools[pi].isActive;
-    localStorage.setItem('gop_pools',JSON.stringify(pools));
-    syncPoolsToFirebase();
-    // If admin is closing the pool and no winner has been picked yet, resolve it now
-    if(wasActive && !pools[pi].winnerId){
-      resolvePool(pools[pi]);
+
+    if(!wasActive){
+      // ── REOPEN: reset as a fresh pool ──
+      pools[pi].isActive=true;
+      pools[pi].winnerId=null;
+      pools[pi].winnerName=null;
+      pools[pi].winnerPhone=null;
+      pools[pi].winnerSlots=null;
+      pools[pi].closedAt=null;
+      pools[pi].slotsSold=0;
+      pools[pi].endsAt=new Date(Date.now()+30*24*60*60*1000).toISOString();
+      localStorage.setItem('gop_pools',JSON.stringify(pools));
+      // Clear all entries for this pool so members can join fresh
+      var freshEntries=getPoolEntries().filter(function(e){return e.poolId!==poolId;});
+      localStorage.setItem('gop_pool_entries',JSON.stringify(freshEntries));
+      try{jbPut('pool_entries',freshEntries);}catch(e){}
+      syncPoolsToFirebase();
+    } else {
+      // ── CLOSE ──
+      pools[pi].isActive=false;
+      localStorage.setItem('gop_pools',JSON.stringify(pools));
+      syncPoolsToFirebase();
+      if(!pools[pi].winnerId){ resolvePool(pools[pi]); }
     }
-    renderAdminPools();
+    // Render from localStorage immediately — no Firebase re-fetch, no Loading flash
+    renderAdminPoolsLocal();
   }
 
   function adminDeletePool(poolId){
