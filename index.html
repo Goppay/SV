@@ -3251,9 +3251,10 @@ function logActivity(type, actor, message, meta){
     saveActivity(local);
     // 2. Fetch-first remote push: read the current remote activity array,
     //    append only the new entry (deduped by id), then write back immediately.
-    //    This prevents a stale local copy from overwriting entries logged on
-    //    other devices since this page was loaded.
-    _gopFetchMaster(false).then(function(m){
+    //    Use force=true so we never write back a master that is older than
+    //    5 seconds — prevents overwriting promo codes or other admin changes
+    //    that happened after this device's page load.
+    _gopFetchMaster(true).then(function(m){
       var remoteAct;
       if(Array.isArray(m.activity)) remoteAct=m.activity.filter(Boolean);
       else if(m.activity&&typeof m.activity==='object') remoteAct=Object.values(m.activity).filter(Boolean);
@@ -13540,6 +13541,10 @@ function checkDailyStreakBonus(member){
   function syncPromoCodesToFirebase(){try{jbPut('promo_codes',getPromoCodes());}catch(e){}}
   function syncPromoCodesFromFirebase(cb){
     try{
+      // Reset the freshness timestamp so _gopFetchMaster(true) always goes to
+      // the network here — we must never serve a cached master when validating
+      // a promo code, because the admin may have just created it.
+      _gopMasterTs=0;
       _gopFetchMaster(true).then(function(master){
         var d=(master&&Array.isArray(master['promo_codes']))?master['promo_codes'].filter(Boolean):null;
         if(d) try{localStorage.setItem('gop_promo_codes',JSON.stringify(d));}catch(e){}
