@@ -12866,15 +12866,21 @@ function checkDailyStreakBonus(member){
     var startTotal=Number(pool.slotPrice);
     el('poolJoinTotal').textContent='Total: GHS '+startTotal.toFixed(2);
     var errEl=el('poolJoinError'); if(errEl) errEl.style.display='none';
-    // Auto-fill payment details from user profile — look up full member record
-    var _mFull=(function(){try{var ms=getMembers();return ms.find(function(m){return m.id===currentUser.id;})||currentUser;}catch(e){return currentUser;}})();
-    var fullName=((_mFull.firstName||'')+' '+(_mFull.lastName||'')).trim()||_mFull.name||currentUser.name||'—';
-    var email=_mFull.email||currentUser.email||(((_mFull.phone||currentUser.phone||'unknown')+'@goppay.gh'));
-    var phone=_mFull.phone||currentUser.phone||'—';
-    var nameEl=el('poolPayerName'); if(nameEl) nameEl.textContent=fullName;
-    var emailEl=el('poolPayerEmail'); if(emailEl) emailEl.textContent=email;
-    var phoneEl=el('poolPayerPhone'); if(phoneEl) phoneEl.textContent=phone;
-    var amtEl=el('poolPayerAmount'); if(amtEl) amtEl.textContent='GHS '+startTotal.toFixed(2);
+    // Auto-fill payment details — read directly from localStorage for freshest data
+    var _cu=window.currentUser||currentUser||{};
+    var _allM=(function(){try{return JSON.parse(localStorage.getItem('gop_members')||'[]');}catch(e){return [];}})();
+    var _mRec=_allM.find(function(m){return (m.id&&m.id===_cu.id)||(m.phone&&m.phone===_cu.phone);})||_cu||{};
+    var fullName=((_mRec.firstName||'')+' '+(_mRec.lastName||'')).trim()||_mRec.name||_cu.name||'—';
+    var email=_mRec.email||_cu.email||((_mRec.phone||_cu.phone||'unknown')+'@goppay.gh');
+    var phone=_mRec.phone||_cu.phone||'—';
+    var _nEl=document.getElementById('poolPayerName');
+    var _eEl=document.getElementById('poolPayerEmail');
+    var _pEl=document.getElementById('poolPayerPhone');
+    var _aEl=document.getElementById('poolPayerAmount');
+    if(_nEl) _nEl.textContent=fullName;
+    if(_eEl) _eEl.textContent=email;
+    if(_pEl) _pEl.textContent=phone;
+    if(_aEl) _aEl.textContent='GHS '+startTotal.toFixed(2);
     el2.style.display='flex';
     document.body.style.overflow='hidden';
   }
