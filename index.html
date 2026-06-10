@@ -7181,6 +7181,7 @@ function switchAdminTab(name, btn){
   if(name==='activity'){
     var aBody=document.getElementById('activityBody');
     if(aBody) aBody.innerHTML='<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:18px;font-size:13px">&#x23F3; Loading activity&hellip;</td></tr>';
+    _gopMaster=null; // bust cache so jbGet fetches genuinely fresh data from the bin
     syncActivityFromFirebase(renderActivityFeed);
   }
 }
