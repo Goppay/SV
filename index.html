@@ -2141,6 +2141,7 @@ iframe[src*="badge"]{
           </div>
         </div>
       </div>
+    </div>
     <!-- ADMIN SLOTS TAB -->
     <div class="a-section" id="atab-aslots">
       <div class="a-card">
@@ -3014,35 +3015,7 @@ function syncIssuesFromFirebase(cb){ fbPull('issues', getIssues, saveIssues, tru
 // votes, page follows, withdrawals, payments etc. that happened on ANY device,
 // not just the one where the admin is currently signed in. Merged by id so
 // duplicate entries from concurrent devices collapse correctly.
-// NOTE: unlike generic fbPull, this respects an empty remote array as an
-// explicit clear signal — so "Clear log" propagates across devices.
-function syncActivityFromFirebase(cb){
-  jbGet('activity', function(data){
-    // null means the key is absent from the bin — leave local unchanged.
-    if(data===null||data===undefined){if(cb)cb();return;}
-    var remote;
-    if(Array.isArray(data)) remote=data.filter(Boolean);
-    else if(typeof data==='object') remote=Object.values(data).filter(Boolean);
-    else {if(cb)cb();return;}
-    // Empty remote = admin cleared the log. Propagate the clear locally.
-    if(!remote.length){
-      if(getActivity().length){saveActivity([]);}
-      if(cb)cb();return;
-    }
-    // Merge remote into local by id (append-only union across devices).
-    var local=getActivity();
-    var idMap={};
-    local.forEach(function(x,i){if(x&&x.id) idMap[x.id]=i;});
-    var changed=false;
-    remote.forEach(function(r){
-      if(!r||!r.id) return;
-      if(idMap[r.id]===undefined){idMap[r.id]=local.length;local.push(r);changed=true;}
-      else{var li=idMap[r.id];if(JSON.stringify(local[li])!==JSON.stringify(r)){local[li]=r;changed=true;}}
-    });
-    if(changed) saveActivity(local);
-    if(cb)cb();
-  });
-}
+function syncActivityFromFirebase(cb){ fbPull('activity', getActivity, saveActivity, true, cb); }
 
 function syncScheduleToFirebase(){ jbPut('schedule', getSchedule()); }
 function syncScheduleFromFirebase(cb){
@@ -3230,44 +3203,23 @@ function getWithdrawals(){return ld('gop_withdrawals',[]);}
 function saveWithdrawals(w){sv('gop_withdrawals',w); try{jbPut('withdrawals',w);}catch(e){}}
 // ── ACTIVITY FEED ─────────────────────────────────────
 function getActivity(){return ld('gop_activity',[]);}
-// saveActivity writes to localStorage only. Remote pushes are handled by
-// logActivity (fetch-first append) and the clear button (explicit jbPut).
-function saveActivity(a){sv('gop_activity',a);}
+function saveActivity(a){sv('gop_activity',a); try{jbPut('activity',a);}catch(e){}}
 function logActivity(type, actor, message, meta){
   try{
-    var entry={
+    var arr=getActivity();
+    arr.push({
       id:'AC'+Date.now()+'_'+Math.random().toString(36).slice(2,7),
       ts:new Date().toISOString(),
       type:type||'event',
       actor:actor||'system',
       message:message||'',
       meta:meta||null
-    };
-    // 1. Save to localStorage immediately so the UI can render without waiting.
-    var local=getActivity();
-    local.push(entry);
-    if(local.length>1000) local=local.slice(-1000);
-    saveActivity(local);
-    // 2. Fetch-first remote push: read the current remote activity array,
-    //    append only the new entry (deduped by id), then write back immediately.
-    //    Use force=true so we never write back a master that is older than
-    //    5 seconds — prevents overwriting promo codes or other admin changes
-    //    that happened after this device's page load.
-    _gopFetchMaster(true).then(function(m){
-      var remoteAct;
-      if(Array.isArray(m.activity)) remoteAct=m.activity.filter(Boolean);
-      else if(m.activity&&typeof m.activity==='object') remoteAct=Object.values(m.activity).filter(Boolean);
-      else remoteAct=[];
-      var seen={};
-      remoteAct.forEach(function(e){if(e&&e.id) seen[e.id]=true;});
-      if(!seen[entry.id]) remoteAct.push(entry);
-      if(remoteAct.length>1000) remoteAct=remoteAct.slice(-1000);
-      m.activity=remoteAct;
-      _gopMaster=m;
-      _gopWriteMaster(true);
-    }).catch(function(){});
-    // 3. Live-update the admin Activity tab if it is currently open.
-    try{if(document.getElementById('atab-activity')&&document.getElementById('atab-activity').classList.contains('active')) renderActivityFeed();}catch(e){}
+    });
+    // Cap at 1000 most-recent entries to avoid bloat.
+    if(arr.length>1000) arr=arr.slice(-1000);
+    saveActivity(arr);
+    try{ if(typeof jbPut==='function') jbPut('activity', arr); }catch(e){}
+    try{ if(document.getElementById('atab-activity')&&document.getElementById('atab-activity').classList.contains('active')) renderActivityFeed(); }catch(e){}
   }catch(e){}
 }
 function getAnn(){
@@ -4466,20 +4418,6 @@ document.addEventListener('DOMContentLoaded', function(){
 
     _showUpgradeVerifyBanner(true, _spinnerHtml+' Confirming your upgrade payment &mdash; please wait&hellip;');
 
-    function _cancelUpgradeFromBanner(){
-      try{
-        var _reqs=getUpgradeReqs();
-        var _ci=_reqs.findIndex(function(r){return r.id===ugPend.reqId;});
-        if(_ci>=0){_reqs[_ci].status='cancelled'; saveUpgradeReqs(_reqs); syncUpgradesToFirebase();}
-        localStorage.removeItem('gop_pending_upgrade');
-      }catch(e){}
-      _showUpgradeVerifyBanner(false);
-      try{
-        var uMsgEl=document.getElementById('upgradeMsg');
-        if(uMsgEl){uMsgEl.style.display='block';uMsgEl.style.background='var(--red-pale,#fef2f2)';uMsgEl.style.border='1px solid var(--red,#dc2626)';uMsgEl.style.color='var(--red,#dc2626)';uMsgEl.innerHTML='&#x26A0; Upgrade request cancelled. You can start a new upgrade whenever you are ready.';}
-      }catch(e){}
-    }
-
     function _showCancelOption(){
       _showUpgradeVerifyBanner(true,
         '&#x26A0; Payment could not be confirmed yet. '
@@ -4487,7 +4425,7 @@ document.addEventListener('DOMContentLoaded', function(){
       setTimeout(function(){
         var cLink=document.getElementById('upgradeVerifyCancel');
         if(cLink) cLink.addEventListener('click',function(e){
-          e.preventDefault(); _cancelUpgradeFromBanner();
+          e.preventDefault(); _showUpgradeVerifyBanner(false); cancelUpgradeAttempt(ugPend.reqId);
         });
       },100);
     }
@@ -6342,7 +6280,7 @@ function submitWithdrawal(){
     memberName:currentUser.firstName+' '+currentUser.lastName,
     phone:currentUser.phone, amount:amount, fee:fee,
     amountAfterFee:amountAfterFee, isFree:(!isFreeAcct&&isFirst),
-    method:method, account:account, date:today(), createdAt:new Date().toISOString(), phase:'Processing', reference:wRef
+    method:method, account:account, date:today(), phase:'Processing', reference:wRef
   };
   ws.push(w); saveWithdrawals(ws); syncWithdrawalsToFirebase();
   try{ logActivity('withdrawal_request', currentUser.firstName+' '+currentUser.lastName, 'requested withdrawal of GHS '+amount.toFixed(2)+' via '+method+' (net GHS '+amountAfterFee.toFixed(2)+', '+feeLabel+')', {wid:wId, memberId:currentUser.id, amount:amount}); }catch(e){}
@@ -6645,93 +6583,49 @@ function reverseWithdrawal(wId){
 function renderTransactionsList(member){
   var el2=el('transactionsListWrap');
   if(!el2) return;
-  // Format ISO timestamp → {date:'DD/MM/YYYY', time:'HH:MM'}
-  function fmtDT(iso){
-    if(!iso) return null;
-    try{
-      var d=new Date(iso);
-      if(isNaN(d.getTime())) return null;
-      var dd=String(d.getDate()).padStart(2,'0');
-      var mm=String(d.getMonth()+1).padStart(2,'0');
-      var yy=d.getFullYear();
-      var hh=String(d.getHours()).padStart(2,'0');
-      var mi=String(d.getMinutes()).padStart(2,'0');
-      return {date:dd+'/'+mm+'/'+yy, time:hh+':'+mi};
-    }catch(e){return null;}
-  }
   var allSurveys=getSurveys(), allPolls=getPolls(), allVideos=getVideos(), allPages=getPages();
   var rows=[];
-  // Registration payment
-  if(member.paymentSubmittedAt||member.joinedDate){
-    var regDT=fmtDT(member.paymentSubmittedAt);
-    rows.push({icon:'&#x1F4B3;',type:'Payment',typeBg:'#fff7ed',typeTxt:'#c2410c',desc:'Registration fee ('+member.tier+' tier)',amt:member.fee||0,sign:'-',dt:regDT,dateOnly:member.joinedDate||'—',status:'Paid',stBg:'#dcfce7',stTxt:'#16a34a',txId:member.id});
-  }
   // Completed surveys
   (member.completedSurveys||[]).forEach(function(sid){
     var s=allSurveys.find(function(x){return x.id===sid;});
     var amt=s?(s.type==='gh-affairs'?s.earn:getSurveyEarn(member.tier)):getSurveyEarn(member.tier);
-    var resp=member.surveyResponses&&member.surveyResponses[sid];
-    rows.push({icon:'&#x1F4CB;',type:'Survey',typeBg:'#f0fdf4',typeTxt:'#16a34a',desc:s?s.title:sid,amt:amt,sign:'+',dt:resp?fmtDT(resp.date):null,dateOnly:'—',status:'Earned',stBg:'#f0fdf4',stTxt:'#16a34a',txId:sid});
+    rows.push({icon:'&#x1F4CB;',type:'Survey',typeBg:'#f0fdf4',typeTxt:'#16a34a',desc:s?s.title:sid,amt:amt,sign:'+',date:'—',status:'Earned',stBg:'#f0fdf4',stTxt:'#16a34a'});
   });
   // Answered polls
   (member.answeredPolls||[]).forEach(function(pid){
     var p=allPolls.find(function(x){return x.id===pid;});
-    var resp=member.pollResponses&&member.pollResponses[pid];
-    rows.push({icon:'&#x26A1;',type:'Poll',typeBg:'#eff6ff',typeTxt:'#2563eb',desc:p?p.title:pid,amt:getPollEarn(member.tier),sign:'+',dt:resp?fmtDT(resp.date):null,dateOnly:'—',status:'Earned',stBg:'#f0fdf4',stTxt:'#16a34a',txId:pid});
+    rows.push({icon:'&#x26A1;',type:'Poll',typeBg:'#eff6ff',typeTxt:'#2563eb',desc:p?p.title:pid,amt:getPollEarn(member.tier),sign:'+',date:'—',status:'Earned',stBg:'#f0fdf4',stTxt:'#16a34a'});
   });
   // Watched videos
   (member.completedVideos||[]).forEach(function(vid){
     var v=allVideos.find(function(x){return x.id===vid;});
-    rows.push({icon:'&#x25B6;',type:'Video',typeBg:'#fef3c7',typeTxt:'#d97706',desc:v?v.title:vid,amt:getVideoEarn(member.tier),sign:'+',dt:null,dateOnly:'—',status:'Earned',stBg:'#f0fdf4',stTxt:'#16a34a',txId:vid});
+    rows.push({icon:'&#x25B6;',type:'Video',typeBg:'#fef3c7',typeTxt:'#d97706',desc:v?v.title:vid,amt:getVideoEarn(member.tier),sign:'+',date:'—',status:'Earned',stBg:'#f0fdf4',stTxt:'#16a34a'});
   });
   // Followed pages
   (member.completedPages||[]).forEach(function(pgid){
     var pg=allPages.find(function(x){return x.id===pgid;});
-    rows.push({icon:'&#x1F4F1;',type:'Page',typeBg:'#f5f3ff',typeTxt:'#7c3aed',desc:pg?pg.title:pgid,amt:getPageEarn(member.tier),sign:'+',dt:null,dateOnly:'—',status:'Earned',stBg:'#f0fdf4',stTxt:'#16a34a',txId:pgid});
+    rows.push({icon:'&#x1F4F1;',type:'Page',typeBg:'#f5f3ff',typeTxt:'#7c3aed',desc:pg?pg.title:pgid,amt:getPageEarn(member.tier),sign:'+',date:'—',status:'Earned',stBg:'#f0fdf4',stTxt:'#16a34a'});
   });
-  // Upgrade payments
-  try{
-    getUpgradeReqs().filter(function(u){return u.memberId===member.id;}).forEach(function(u){
-      var upgISO=u.createdAt||(u.id&&u.id.startsWith('U')?new Date(parseInt(u.id.slice(1))).toISOString():null);
-      var stColor=u.status==='approved'?'#16a34a':u.status==='denied'?'#dc2626':'#d97706';
-      var stBg=u.status==='approved'?'#dcfce7':u.status==='denied'?'#fef2f2':'#fff7ed';
-      rows.push({icon:'&#x2B06;',type:'Upgrade',typeBg:'#eff6ff',typeTxt:'#1d4ed8',desc:(u.currentTier||'?')+' \u2192 '+(u.targetTier||'?')+' upgrade',amt:u.fee||0,sign:'-',dt:fmtDT(upgISO),dateOnly:u.date||'—',status:u.status?u.status.charAt(0).toUpperCase()+u.status.slice(1):'Pending',stBg:stBg,stTxt:stColor,txId:u.paystackRef||u.id||'—'});
-    });
-  }catch(e){}
-  // Pool slot purchases
-  try{
-    getPoolEntries().filter(function(pe){return pe.memberId===member.id;}).forEach(function(pe){
-      var slots=pe.slotsCount||1;
-      rows.push({icon:'&#x1F3B1;',type:'Pool',typeBg:'#fdf4ff',typeTxt:'#7e22ce',desc:(pe.poolTitle||'Pool')+' \u00B7 '+slots+' slot'+(slots!==1?'s':''),amt:Number(pe.amountPaid)||0,sign:'-',dt:fmtDT(pe.purchasedAt),dateOnly:'—',status:'Paid',stBg:'#dcfce7',stTxt:'#16a34a',txId:pe.paystackRef||pe.id||'—'});
-    });
-  }catch(e){}
-  // Withdrawals — prepend so they appear first
+  // Withdrawals
   var phaseColor={'Complete':'#22c55e','Processing':'#3b82f6','Pending':'#f59e0b','Reversed':'#ef4444'};
   var withdrawals=getWithdrawals().filter(function(w){return w.memberId===member.id;}).slice().reverse();
   withdrawals.forEach(function(w){
     var col=phaseColor[w.phase]||'#9ca3af';
     var received=w.amountAfterFee!=null?w.amountAfterFee:parseFloat(w.amount);
-    rows.unshift({icon:'&#x1F4B8;',type:'Withdrawal',typeBg:'#fef2f2',typeTxt:'#dc2626',desc:(w.method||'')+(w.account?' → '+w.account:''),amt:received,sign:'-',dt:fmtDT(w.createdAt),dateOnly:w.date||'—',status:w.phase,stBg:col+'22',stTxt:col,txId:w.reference||w.id||'—'});
+    rows.unshift({icon:'&#x1F4B8;',type:'Withdrawal',typeBg:'#fef2f2',typeTxt:'#dc2626',desc:(w.method||'')+(w.account?' → '+w.account:''),amt:received,sign:'-',date:w.date||'—',status:w.phase,stBg:col+'22',stTxt:col});
   });
   if(!rows.length){
     el2.innerHTML='<p style="font-size:13.5px;color:var(--text-muted);text-align:center;padding:24px">No activity yet. Complete surveys, polls and videos to start earning!</p>';
     return;
   }
-  var html='<div style="overflow-x:auto"><table class="atable"><thead><tr><th>#</th><th>Ref / ID</th><th>Type</th><th>Description</th><th>Amount</th><th>Date &amp; Time</th><th>Status</th></tr></thead><tbody>';
+  var html='<div style="overflow-x:auto"><table class="atable"><thead><tr><th>#</th><th>Type</th><th>Description</th><th>Amount</th><th>Date</th><th>Status</th></tr></thead><tbody>';
   rows.forEach(function(r,i){
-    var dateCell;
-    if(r.dt){
-      dateCell=r.dt.date+'<br><span style="font-size:11px;color:#9ca3af">'+r.dt.time+'</span>';
-    } else {
-      dateCell='<span style="color:#9ca3af">'+r.dateOnly+'</span>';
-    }
     html+='<tr>';
     html+='<td style="color:#9ca3af;font-size:12px">'+(i+1)+'</td>';
-    html+='<td style="font-size:10.5px;color:#6b7280;font-family:monospace;max-width:120px;word-break:break-all">'+(r.txId||'—')+'</td>';
     html+='<td><span style="font-size:11.5px;background:'+r.typeBg+';color:'+r.typeTxt+';padding:2px 8px;border-radius:6px;font-weight:600">'+r.icon+' '+r.type+'</span></td>';
     html+='<td style="font-size:12.5px;max-width:200px;word-break:break-word">'+r.desc+'</td>';
     html+='<td style="font-weight:700;color:'+(r.sign==='+' ? 'var(--green)' : '#dc2626')+'">'+(r.sign==='+'?'+':'-')+'GHS '+parseFloat(r.amt).toFixed(2)+'</td>';
-    html+='<td style="font-size:12px;color:#6b7280;white-space:nowrap">'+dateCell+'</td>';
+    html+='<td style="font-size:12px;color:#6b7280">'+r.date+'</td>';
     html+='<td><span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;background:'+r.stBg+';color:'+r.stTxt+'">'+r.status+'</span></td>';
     html+='</tr>';
   });
@@ -7226,12 +7120,7 @@ function switchAdminTab(name, btn){
   if(name==='aslots'){
     syncPoolEntriesFromFirebase(function(){ renderAdminSlots(); });
   }
-  if(name==='activity'){
-    var aBody=document.getElementById('activityBody');
-    if(aBody) aBody.innerHTML='<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:18px;font-size:13px">&#x23F3; Loading activity&hellip;</td></tr>';
-    _gopMaster=null; // bust cache so jbGet fetches genuinely fresh data from the bin
-    syncActivityFromFirebase(renderActivityFeed);
-  }
+  if(name==='activity') renderActivityFeed();
 }
 
 // ── ADMIN: ACTIVITY FEED ──────────────────────────────
@@ -7289,15 +7178,12 @@ document.addEventListener('DOMContentLoaded',function(){
   var f=document.getElementById('activityFilter'); if(f) f.addEventListener('change',renderActivityFeed);
   var s=document.getElementById('activitySearch'); if(s) s.addEventListener('input',renderActivityFeed);
   var r=document.getElementById('activityRefreshBtn'); if(r) r.addEventListener('click',function(){
-    var aBody=document.getElementById('activityBody');
-    if(aBody) aBody.innerHTML='<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:18px;font-size:13px">&#x23F3; Refreshing&hellip;</td></tr>';
-    _gopMaster=null; // force a genuine network fetch, bypassing the in-memory cache
-    syncActivityFromFirebase(renderActivityFeed);
+    if(typeof hydrateFromJsonBin==='function'){ hydrateFromJsonBin().then(renderActivityFeed); } else renderActivityFeed();
   });
   var c=document.getElementById('activityClearBtn'); if(c) c.addEventListener('click',function(){
     if(!confirm('Permanently clear the activity log? Past actions cannot be recovered.')) return;
-    saveActivity([]); // clears localStorage
-    try{jbPut('activity',[]);}catch(e){} // push empty array to remote immediately
+    saveActivity([]);
+    try{ if(typeof jbPut==='function') jbPut('activity', []); }catch(e){}
     renderActivityFeed();
   });
 });
@@ -10635,8 +10521,7 @@ function submitUpgradeRequest(){
     notes:notes,
     status:'pending',
     paystackRef:'',
-    date:today(),
-    createdAt:new Date().toISOString()
+    date:today()
   };
   reqs.push(req); saveUpgradeReqs(reqs); syncUpgradesToFirebase();
 
@@ -12774,17 +12659,7 @@ function checkDailyStreakBonus(member){
       var soldOut=(p.slotsSold||0)>=p.totalSlots;
       if(days<=0||soldOut){ resolvePool(p); changed=true; }
     });
-    if(changed){
-      // Re-render pool UI using current localStorage data only —
-      // do NOT trigger another Firebase fetch (which can race and wipe myEntries).
-      var wrap=el('poolListWrap');
-      var freshPools=getPools();
-      var freshEntries=getPoolEntries();
-      var memberId=currentUser?currentUser.id:null;
-      var myEntries=memberId?freshEntries.filter(function(e){return e.memberId===memberId;}):[]; 
-      if(wrap) renderPoolCards(freshPools, myEntries, wrap);
-      renderMyPoolEntries(myEntries);
-    }
+    if(changed) renderMemberPools();
   }
 
   // ── MEMBER POOL RENDER ───────────────────────────────────────
@@ -12890,7 +12765,6 @@ function checkDailyStreakBonus(member){
     card.style.display='block';
     // Group by poolId and sum slots
     var pools=getPools();
-    var allPoolEntries=getPoolEntries(); // used to compute real slotsSold per pool
     var byPool={};
     entries.forEach(function(e){
       if(!byPool[e.poolId]) byPool[e.poolId]={poolTitle:e.poolTitle,poolId:e.poolId,slotsCount:0,amountPaid:0,purchases:[],paystackRef:e.paystackRef,purchasedAt:e.purchasedAt};
@@ -12904,8 +12778,7 @@ function checkDailyStreakBonus(member){
       var isWinner=pool.winnerId&&pool.winnerId===(currentUser&&currentUser.id);
       var isClosed=!pool.isActive||pool.winnerId||pool.closedAt;
       var totalSlots=pool.totalSlots||0;
-      // Compute real sold count from actual entries (pool.slotsSold may be stale)
-      var sold=allPoolEntries.reduce(function(s,e){return s+(e&&e.poolId===group.poolId?Number(e.slotsCount)||0:0);},0);
+      var sold=pool.slotsSold||0;
       var pct=totalSlots>0?Math.min(100,Math.round((sold/totalSlots)*100)):0;
       var statusBadge=isWinner
         ?'<span style="background:#fef3c7;color:var(--gold-dark);border:1px solid var(--gold-dark);font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:20px">&#x1F3C6; You Won!</span>'
@@ -12972,18 +12845,16 @@ function checkDailyStreakBonus(member){
           var mySlots=group.slotsCount;
           var prize=Number(pool.prizeAmount||0);
           var isWinner=pool.winnerId&&pool.winnerId===memberId;
-          // Compute real sold count from all entries for this pool (pool.slotsSold may be stale)
-          var realSold=entries.reduce(function(s,e){return s+(e&&e.poolId===group.poolId?Number(e.slotsCount)||0:0);},0);
-          var isEnded=!pool.isActive||pool.winnerId||poolDaysRemaining(pool.endsAt)<=0||realSold>=totalSlots;
+          var isEnded=!pool.isActive||pool.winnerId||poolDaysRemaining(pool.endsAt)<=0||(Number(pool.slotsSold)||0)>=totalSlots;
           // --- Status label ---
           var statusHtml, statusNote='';
           if(!isEnded){
             // Pool still open
             statusHtml='<span style="background:var(--green-pale);color:var(--green);font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px;display:inline-flex;align-items:center;gap:5px">&#x23F3; Pending &mdash; Pool Open</span>';
-            var rem=totalSlots-realSold;
-            var pct2=totalSlots>0?Math.min(100,Math.round((realSold/totalSlots)*100)):0;
+            var rem=totalSlots-(Number(pool.slotsSold)||0);
+            var pct2=totalSlots>0?Math.min(100,Math.round(((Number(pool.slotsSold)||0)/totalSlots)*100)):0;
             var myPct=totalSlots>0?Math.round((mySlots/totalSlots)*100):0;
-            statusNote='<div style="margin:10px 0 4px;font-size:12px;color:var(--text-muted)">Pool fill: <strong>'+realSold+'</strong> / '+totalSlots+' slots sold · '+rem+' remaining</div>'
+            statusNote='<div style="margin:10px 0 4px;font-size:12px;color:var(--text-muted)">Pool fill: <strong>'+(Number(pool.slotsSold)||0)+'</strong> / '+totalSlots+' slots sold · '+rem+' remaining</div>'
               +'<div style="height:7px;background:#f3f4f6;border-radius:10px;overflow:hidden;margin-bottom:4px"><div style="height:100%;width:'+pct2+'%;background:linear-gradient(90deg,var(--green),var(--green-light));border-radius:10px"></div></div>'
 ;
           } else if(isWinner){
@@ -13537,13 +13408,9 @@ function checkDailyStreakBonus(member){
   // ── PROMO CODES ──────────────────────────────────────────────────────────────
   function getPromoCodes(){try{return JSON.parse(localStorage.getItem('gop_promo_codes')||'[]');}catch(e){return [];}}
   function savePromoCodes(arr){try{localStorage.setItem('gop_promo_codes',JSON.stringify(arr));}catch(e){} syncPromoCodesToFirebase();}
-  function syncPromoCodesToFirebase(){try{jbPut('promo_codes',getPromoCodes(),true);}catch(e){}}
+  function syncPromoCodesToFirebase(){try{jbPut('promo_codes',getPromoCodes());}catch(e){}}
   function syncPromoCodesFromFirebase(cb){
     try{
-      // Reset the freshness timestamp so _gopFetchMaster(true) always goes to
-      // the network here — we must never serve a cached master when validating
-      // a promo code, because the admin may have just created it.
-      _gopMasterTs=0;
       _gopFetchMaster(true).then(function(master){
         var d=(master&&Array.isArray(master['promo_codes']))?master['promo_codes'].filter(Boolean):null;
         if(d) try{localStorage.setItem('gop_promo_codes',JSON.stringify(d));}catch(e){}
@@ -13599,25 +13466,12 @@ function checkDailyStreakBonus(member){
     var existing=getPromoCodes();
     if(existing.find(function(c){return c.code===code;})){showSt('&#x26A0; A code with that name already exists.',false);return;}
     var nc={id:'PC'+Date.now(),code:code,reward:reward,usageLimit:limit,usedCount:0,usedBy:[],expiresAt:expiry,description:desc,isActive:true,createdAt:new Date().toISOString()};
-    function _doSave(){
-      // Re-read from localStorage (updated by fresh fetch above) so we never
-      // overwrite codes another admin session may have created concurrently.
-      var latest=getPromoCodes();
-      if(!latest.find(function(c){return c.code===nc.code;})) latest.push(nc);
-      savePromoCodes(latest);
-      showSt('&#x2705; Promo code <strong>'+code+'</strong> created successfully!',true);
-      if(el('pcCode'))el('pcCode').value='';if(el('pcReward'))el('pcReward').value='';
-      if(el('pcLimit'))el('pcLimit').value='0';if(el('pcExpiry'))el('pcExpiry').value='';if(el('pcDesc'))el('pcDesc').value='';
-      renderAdminPromos();
-    }
-    // Fetch fresh master first — this populates _gopMaster so the subsequent
-    // jbPut (inside savePromoCodes) can write immediately without its own fetch.
-    _gopMaster=null;
-    _gopFetchMaster(true).then(function(master){
-      var remote=(master&&Array.isArray(master['promo_codes']))?master['promo_codes'].filter(Boolean):null;
-      if(remote) try{localStorage.setItem('gop_promo_codes',JSON.stringify(remote));}catch(e){}
-      _doSave();
-    }).catch(function(){ _doSave(); });
+    existing.push(nc);
+    savePromoCodes(existing);
+    showSt('&#x2705; Promo code <strong>'+code+'</strong> created successfully!',true);
+    if(el('pcCode'))el('pcCode').value='';if(el('pcReward'))el('pcReward').value='';
+    if(el('pcLimit'))el('pcLimit').value='0';if(el('pcExpiry'))el('pcExpiry').value='';if(el('pcDesc'))el('pcDesc').value='';
+    renderAdminPromos();
   }
 
   function togglePromoCode(id){
