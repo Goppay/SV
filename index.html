@@ -6280,7 +6280,7 @@ function submitWithdrawal(){
     memberName:currentUser.firstName+' '+currentUser.lastName,
     phone:currentUser.phone, amount:amount, fee:fee,
     amountAfterFee:amountAfterFee, isFree:(!isFreeAcct&&isFirst),
-    method:method, account:account, date:today(), phase:'Processing', reference:wRef
+    method:method, account:account, date:today(), createdAt:new Date().toISOString(), phase:'Processing', reference:wRef
   };
   ws.push(w); saveWithdrawals(ws); syncWithdrawalsToFirebase();
   try{ logActivity('withdrawal_request', currentUser.firstName+' '+currentUser.lastName, 'requested withdrawal of GHS '+amount.toFixed(2)+' via '+method+' (net GHS '+amountAfterFee.toFixed(2)+', '+feeLabel+')', {wid:wId, memberId:currentUser.id, amount:amount}); }catch(e){}
@@ -6583,49 +6583,92 @@ function reverseWithdrawal(wId){
 function renderTransactionsList(member){
   var el2=el('transactionsListWrap');
   if(!el2) return;
+  // Format ISO timestamp → {date:'DD/MM/YYYY', time:'HH:MM'}
+  function fmtDT(iso){
+    if(!iso) return null;
+    try{
+      var d=new Date(iso);
+      if(isNaN(d.getTime())) return null;
+      var dd=String(d.getDate()).padStart(2,'0');
+      var mm=String(d.getMonth()+1).padStart(2,'0');
+      var yy=d.getFullYear();
+      var hh=String(d.getHours()).padStart(2,'0');
+      var mi=String(d.getMinutes()).padStart(2,'0');
+      return {date:dd+'/'+mm+'/'+yy, time:hh+':'+mi};
+    }catch(e){return null;}
+  }
   var allSurveys=getSurveys(), allPolls=getPolls(), allVideos=getVideos(), allPages=getPages();
   var rows=[];
+  // Registration payment
+  if(member.paymentSubmittedAt||member.joinedDate){
+    var regDT=fmtDT(member.paymentSubmittedAt);
+    rows.push({icon:'&#x1F4B3;',type:'Payment',typeBg:'#fff7ed',typeTxt:'#c2410c',desc:'Registration fee ('+member.tier+' tier)',amt:member.fee||0,sign:'-',dt:regDT,dateOnly:member.joinedDate||'—',status:'Paid',stBg:'#dcfce7',stTxt:'#16a34a'});
+  }
   // Completed surveys
   (member.completedSurveys||[]).forEach(function(sid){
     var s=allSurveys.find(function(x){return x.id===sid;});
     var amt=s?(s.type==='gh-affairs'?s.earn:getSurveyEarn(member.tier)):getSurveyEarn(member.tier);
-    rows.push({icon:'&#x1F4CB;',type:'Survey',typeBg:'#f0fdf4',typeTxt:'#16a34a',desc:s?s.title:sid,amt:amt,sign:'+',date:'—',status:'Earned',stBg:'#f0fdf4',stTxt:'#16a34a'});
+    var resp=member.surveyResponses&&member.surveyResponses[sid];
+    rows.push({icon:'&#x1F4CB;',type:'Survey',typeBg:'#f0fdf4',typeTxt:'#16a34a',desc:s?s.title:sid,amt:amt,sign:'+',dt:resp?fmtDT(resp.date):null,dateOnly:'—',status:'Earned',stBg:'#f0fdf4',stTxt:'#16a34a'});
   });
   // Answered polls
   (member.answeredPolls||[]).forEach(function(pid){
     var p=allPolls.find(function(x){return x.id===pid;});
-    rows.push({icon:'&#x26A1;',type:'Poll',typeBg:'#eff6ff',typeTxt:'#2563eb',desc:p?p.title:pid,amt:getPollEarn(member.tier),sign:'+',date:'—',status:'Earned',stBg:'#f0fdf4',stTxt:'#16a34a'});
+    var resp=member.pollResponses&&member.pollResponses[pid];
+    rows.push({icon:'&#x26A1;',type:'Poll',typeBg:'#eff6ff',typeTxt:'#2563eb',desc:p?p.title:pid,amt:getPollEarn(member.tier),sign:'+',dt:resp?fmtDT(resp.date):null,dateOnly:'—',status:'Earned',stBg:'#f0fdf4',stTxt:'#16a34a'});
   });
   // Watched videos
   (member.completedVideos||[]).forEach(function(vid){
     var v=allVideos.find(function(x){return x.id===vid;});
-    rows.push({icon:'&#x25B6;',type:'Video',typeBg:'#fef3c7',typeTxt:'#d97706',desc:v?v.title:vid,amt:getVideoEarn(member.tier),sign:'+',date:'—',status:'Earned',stBg:'#f0fdf4',stTxt:'#16a34a'});
+    rows.push({icon:'&#x25B6;',type:'Video',typeBg:'#fef3c7',typeTxt:'#d97706',desc:v?v.title:vid,amt:getVideoEarn(member.tier),sign:'+',dt:null,dateOnly:'—',status:'Earned',stBg:'#f0fdf4',stTxt:'#16a34a'});
   });
   // Followed pages
   (member.completedPages||[]).forEach(function(pgid){
     var pg=allPages.find(function(x){return x.id===pgid;});
-    rows.push({icon:'&#x1F4F1;',type:'Page',typeBg:'#f5f3ff',typeTxt:'#7c3aed',desc:pg?pg.title:pgid,amt:getPageEarn(member.tier),sign:'+',date:'—',status:'Earned',stBg:'#f0fdf4',stTxt:'#16a34a'});
+    rows.push({icon:'&#x1F4F1;',type:'Page',typeBg:'#f5f3ff',typeTxt:'#7c3aed',desc:pg?pg.title:pgid,amt:getPageEarn(member.tier),sign:'+',dt:null,dateOnly:'—',status:'Earned',stBg:'#f0fdf4',stTxt:'#16a34a'});
   });
-  // Withdrawals
+  // Upgrade payments
+  try{
+    getUpgradeReqs().filter(function(u){return u.memberId===member.id;}).forEach(function(u){
+      var upgISO=u.createdAt||(u.id&&u.id.startsWith('U')?new Date(parseInt(u.id.slice(1))).toISOString():null);
+      var stColor=u.status==='approved'?'#16a34a':u.status==='denied'?'#dc2626':'#d97706';
+      var stBg=u.status==='approved'?'#dcfce7':u.status==='denied'?'#fef2f2':'#fff7ed';
+      rows.push({icon:'&#x2B06;',type:'Upgrade',typeBg:'#eff6ff',typeTxt:'#1d4ed8',desc:(u.currentTier||'?')+' \u2192 '+(u.targetTier||'?')+' upgrade',amt:u.fee||0,sign:'-',dt:fmtDT(upgISO),dateOnly:u.date||'—',status:u.status?u.status.charAt(0).toUpperCase()+u.status.slice(1):'Pending',stBg:stBg,stTxt:stColor});
+    });
+  }catch(e){}
+  // Pool slot purchases
+  try{
+    getPoolEntries().filter(function(pe){return pe.memberId===member.id;}).forEach(function(pe){
+      var slots=pe.slotsCount||1;
+      rows.push({icon:'&#x1F3B1;',type:'Pool',typeBg:'#fdf4ff',typeTxt:'#7e22ce',desc:(pe.poolTitle||'Pool')+' \u00B7 '+slots+' slot'+(slots!==1?'s':''),amt:Number(pe.amountPaid)||0,sign:'-',dt:fmtDT(pe.purchasedAt),dateOnly:'—',status:'Paid',stBg:'#dcfce7',stTxt:'#16a34a'});
+    });
+  }catch(e){}
+  // Withdrawals — prepend so they appear first
   var phaseColor={'Complete':'#22c55e','Processing':'#3b82f6','Pending':'#f59e0b','Reversed':'#ef4444'};
   var withdrawals=getWithdrawals().filter(function(w){return w.memberId===member.id;}).slice().reverse();
   withdrawals.forEach(function(w){
     var col=phaseColor[w.phase]||'#9ca3af';
     var received=w.amountAfterFee!=null?w.amountAfterFee:parseFloat(w.amount);
-    rows.unshift({icon:'&#x1F4B8;',type:'Withdrawal',typeBg:'#fef2f2',typeTxt:'#dc2626',desc:(w.method||'')+(w.account?' → '+w.account:''),amt:received,sign:'-',date:w.date||'—',status:w.phase,stBg:col+'22',stTxt:col});
+    rows.unshift({icon:'&#x1F4B8;',type:'Withdrawal',typeBg:'#fef2f2',typeTxt:'#dc2626',desc:(w.method||'')+(w.account?' → '+w.account:''),amt:received,sign:'-',dt:fmtDT(w.createdAt),dateOnly:w.date||'—',status:w.phase,stBg:col+'22',stTxt:col});
   });
   if(!rows.length){
     el2.innerHTML='<p style="font-size:13.5px;color:var(--text-muted);text-align:center;padding:24px">No activity yet. Complete surveys, polls and videos to start earning!</p>';
     return;
   }
-  var html='<div style="overflow-x:auto"><table class="atable"><thead><tr><th>#</th><th>Type</th><th>Description</th><th>Amount</th><th>Date</th><th>Status</th></tr></thead><tbody>';
+  var html='<div style="overflow-x:auto"><table class="atable"><thead><tr><th>#</th><th>Type</th><th>Description</th><th>Amount</th><th>Date &amp; Time</th><th>Status</th></tr></thead><tbody>';
   rows.forEach(function(r,i){
+    var dateCell;
+    if(r.dt){
+      dateCell=r.dt.date+'<br><span style="font-size:11px;color:#9ca3af">'+r.dt.time+'</span>';
+    } else {
+      dateCell='<span style="color:#9ca3af">'+r.dateOnly+'</span>';
+    }
     html+='<tr>';
     html+='<td style="color:#9ca3af;font-size:12px">'+(i+1)+'</td>';
     html+='<td><span style="font-size:11.5px;background:'+r.typeBg+';color:'+r.typeTxt+';padding:2px 8px;border-radius:6px;font-weight:600">'+r.icon+' '+r.type+'</span></td>';
     html+='<td style="font-size:12.5px;max-width:200px;word-break:break-word">'+r.desc+'</td>';
     html+='<td style="font-weight:700;color:'+(r.sign==='+' ? 'var(--green)' : '#dc2626')+'">'+(r.sign==='+'?'+':'-')+'GHS '+parseFloat(r.amt).toFixed(2)+'</td>';
-    html+='<td style="font-size:12px;color:#6b7280">'+r.date+'</td>';
+    html+='<td style="font-size:12px;color:#6b7280;white-space:nowrap">'+dateCell+'</td>';
     html+='<td><span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;background:'+r.stBg+';color:'+r.stTxt+'">'+r.status+'</span></td>';
     html+='</tr>';
   });
@@ -10521,7 +10564,8 @@ function submitUpgradeRequest(){
     notes:notes,
     status:'pending',
     paystackRef:'',
-    date:today()
+    date:today(),
+    createdAt:new Date().toISOString()
   };
   reqs.push(req); saveUpgradeReqs(reqs); syncUpgradesToFirebase();
 
