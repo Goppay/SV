@@ -2415,6 +2415,18 @@ iframe[src*="badge"]{
         </div>
       </div>
 
+      <!-- ── UPDATE APP CARD ── -->
+      <div class="a-card">
+        <div class="a-card-title">&#x1F4E6; Update App</div>
+        <p style="font-size:13px;color:#6b7280;margin-bottom:14px">Upload a new version of the app file. Your cloud database stays untouched — only the app code is replaced. The updated file will download automatically so you can re-publish it.</p>
+        <div id="updateAppZone" style="border:2px dashed #d1d5db;border-radius:10px;padding:28px 20px;text-align:center;cursor:pointer;transition:border-color .2s;background:#fafafa" onclick="document.getElementById('updateAppFile').click()" ondragover="event.preventDefault();this.style.borderColor='#16a34a'" ondragleave="this.style.borderColor='#d1d5db'" ondrop="handleUpdateAppDrop(event)">
+          <div style="font-size:32px;margin-bottom:8px">&#x1F4C4;</div>
+          <div style="font-size:14px;font-weight:600;color:#374151">Click to choose file or drag &amp; drop</div>
+          <div style="font-size:12px;color:#9ca3af;margin-top:4px">Select the new <strong>.html</strong> app file</div>
+        </div>
+        <input type="file" id="updateAppFile" accept=".html" style="display:none" onchange="handleUpdateAppFile(this)">
+        <div id="updateAppStatus" style="margin-top:12px;font-size:13px"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -5319,22 +5331,8 @@ function openMemberDashboard(member){
     try{ renderMyPromoHistory(); }catch(e){}
   });
 
-  // Pull fresh member record from Firebase first (picks up cross-device changes such
-  // as promo balance additions, admin edits, tier upgrades) then push back so the
-  // admin always sees the latest activity. Using a read-then-write here prevents
-  // a stale local record from overwriting a newer Firebase balance.
-  syncMembersFromBackend(function(){
-    var fresh=getMembers().find(function(x){return x.id===(currentUser||member).id;});
-    if(fresh){
-      currentUser=fresh;
-      saveSession();
-      try{setText('dmBal','GHS '+Number(fresh.balance||0).toFixed(2));}catch(e){}
-      try{setText('dmMonth','GHS '+Number(fresh.monthEarned||0).toFixed(2));}catch(e){}
-      try{setText('dmTier',fresh.tier);}catch(e){}
-      try{renderNotifications(fresh);}catch(e){}
-    }
-    syncMemberToBackend(currentUser||member);
-  });
+  // Silently push this member's latest record to Firebase so admin sees them
+  syncMemberToBackend(member);
 
   // Show Ghana Affairs survey popup for new users who haven't done it yet
   if(!member.ghSurveyDone){
@@ -13422,15 +13420,13 @@ function checkDailyStreakBonus(member){
   function renderAdminPromos(){
     var wrap=el('adminPromoList');
     if(!wrap) return;
-    _gopMaster=null; // bust cache so we always get the freshest redemption counts
     syncPromoCodesFromFirebase(function(){
       var codes=getPromoCodes();
       if(!codes.length){wrap.innerHTML='<p class="empty-row">No promo codes created yet.</p>';return;}
       var html='<div style="overflow-x:auto"><table class="atable"><thead><tr><th>#</th><th>Code</th><th>Reward (GHS)</th><th>Usage</th><th>Expiry</th><th>Description</th><th>Status</th><th>Actions</th></tr></thead><tbody>';
       codes.forEach(function(c,i){
-        var actualUsed=Array.isArray(c.usedBy)?c.usedBy.length:(c.usedCount||0);
         var isExpired=c.expiresAt&&new Date(c.expiresAt)<new Date();
-        var isLimitReached=c.usageLimit>0&&actualUsed>=c.usageLimit;
+        var isLimitReached=c.usageLimit>0&&(c.usedCount||0)>=c.usageLimit;
         var statusBadge=!c.isActive?'<span style="color:var(--red);font-weight:700">Disabled</span>'
           :isExpired?'<span style="color:var(--orange);font-weight:700">Expired</span>'
           :isLimitReached?'<span style="color:var(--orange);font-weight:700">Limit Reached</span>'
@@ -13439,7 +13435,7 @@ function checkDailyStreakBonus(member){
           +'<td>'+(i+1)+'</td>'
           +'<td><strong style="font-family:monospace;font-size:13px;letter-spacing:1px">'+c.code+'</strong></td>'
           +'<td>GHS '+Number(c.reward).toFixed(2)+'</td>'
-          +'<td>'+actualUsed+(c.usageLimit>0?' / '+c.usageLimit:' (unlimited)')+'</td>'
+          +'<td>'+(c.usedCount||0)+(c.usageLimit>0?' / '+c.usageLimit:' (unlimited)')+'</td>'
           +'<td>'+(c.expiresAt||'—')+'</td>'
           +'<td style="max-width:160px;word-break:break-word">'+(c.description||'—')+'</td>'
           +'<td>'+statusBadge+'</td>'
@@ -13475,36 +13471,17 @@ function checkDailyStreakBonus(member){
   }
 
   function togglePromoCode(id){
-    // Fetch fresh master first so the subsequent write carries up-to-date
-    // member balances and never rolls back a redemption.
-    _gopMaster=null;
-    _gopFetchMaster(true).then(function(){
-      var codes=getPromoCodes();var i=codes.findIndex(function(c){return c.id===id;});
-      if(i<0) return;
-      codes[i].isActive=!codes[i].isActive;
-      savePromoCodes(codes);
-      renderAdminPromos();
-    }).catch(function(){
-      var codes=getPromoCodes();var i=codes.findIndex(function(c){return c.id===id;});
-      if(i<0) return;
-      codes[i].isActive=!codes[i].isActive;
-      savePromoCodes(codes);
-      renderAdminPromos();
-    });
+    var codes=getPromoCodes();var i=codes.findIndex(function(c){return c.id===id;});
+    if(i<0) return;
+    codes[i].isActive=!codes[i].isActive;
+    savePromoCodes(codes);
+    renderAdminPromos();
   }
 
   function deletePromoCode(id){
     if(!confirm('Delete this promo code? Members will no longer be able to use it. This cannot be undone.')) return;
-    // Fetch fresh master first so the subsequent write carries up-to-date
-    // member balances and never rolls back a redemption.
-    _gopMaster=null;
-    _gopFetchMaster(true).then(function(){
-      savePromoCodes(getPromoCodes().filter(function(c){return c.id!==id;}));
-      renderAdminPromos();
-    }).catch(function(){
-      savePromoCodes(getPromoCodes().filter(function(c){return c.id!==id;}));
-      renderAdminPromos();
-    });
+    savePromoCodes(getPromoCodes().filter(function(c){return c.id!==id;}));
+    renderAdminPromos();
   }
 
   function applyPromoCode(){
@@ -13522,9 +13499,8 @@ function checkDailyStreakBonus(member){
       var c=codes[ci];
       if(!c.isActive){showPromoMsg('&#x274C; This promo code has been disabled.',false);restoreBtn();return;}
       if(c.expiresAt&&new Date(c.expiresAt)<new Date()){showPromoMsg('&#x274C; This promo code has expired.',false);restoreBtn();return;}
+      if(c.usageLimit>0&&(c.usedCount||0)>=c.usageLimit){showPromoMsg('&#x274C; This promo code has reached its usage limit.',false);restoreBtn();return;}
       var usedBy=Array.isArray(c.usedBy)?c.usedBy:[];
-      var actualUsed=usedBy.length||(c.usedCount||0);
-      if(c.usageLimit>0&&actualUsed>=c.usageLimit){showPromoMsg('&#x274C; This promo code has reached its usage limit.',false);restoreBtn();return;}
       if(usedBy.indexOf(currentUser.id)>=0){showPromoMsg('&#x26A0; You have already used this promo code.',false);restoreBtn();return;}
       var members=getMembers();
       var mi=members.findIndex(function(m){return m.id===currentUser.id;});
