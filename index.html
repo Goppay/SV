@@ -1209,6 +1209,7 @@ iframe[src*="badge"]{
         <button class="d-tab" data-tab="report" onclick="switchDashTabMenu(this,'&#x1F6A8; Report Issue')">&#x1F6A8; Report Issue</button>
         <button class="d-tab" data-tab="transactions" onclick="switchDashTabMenu(this,'&#x1F4C3; Transactions')">&#x1F4C3; Transactions</button>
         <button class="d-tab" data-tab="settings" onclick="switchDashTabMenu(this,'&#x2699; Settings')">&#x2699; Settings</button>
+        <button class="d-tab" data-tab="redeem" onclick="switchDashTabMenu(this,'&#x1F3AB; Redeem Code')">&#x1F3AB; Redeem Code</button>
       </div>
     </div>
     <div class="d-tabs" style="display:none"></div>
@@ -1597,6 +1598,27 @@ iframe[src*="badge"]{
         </div>
       </div>
     </div>
+    <!-- REDEEM CODE TAB -->
+    <div class="d-tab-sec" id="tab-redeem">
+      <div class="d-card">
+        <div class="d-card-title">&#x1F3AB; Redeem Promo Code</div>
+        <p style="font-size:13.5px;color:var(--text-muted);margin-bottom:18px;line-height:1.6">Enter a promo code below to instantly add GHS to your account balance. Each code can only be used once per member.</p>
+        <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+          <div class="fg" style="flex:1;min-width:200px;margin:0">
+            <label>Promo Code</label>
+            <input type="text" id="redeemCodeInput" placeholder="e.g. WELCOME50" style="text-transform:uppercase;letter-spacing:1px;font-weight:600"/>
+          </div>
+          <button class="sbtn" id="redeemCodeBtn" style="width:auto;padding:11px 28px;margin-top:0;white-space:nowrap">&#x1F3AB; Redeem Code</button>
+        </div>
+        <div id="redeemCodeMsg" style="display:none;margin-top:12px;padding:11px 14px;border-radius:9px;font-size:13.5px;font-weight:500"></div>
+      </div>
+      <div class="d-card" style="margin-top:0">
+        <div style="font-size:13px;color:var(--text-muted);line-height:1.6;padding:4px 0">
+          <strong style="color:var(--text)">How promo codes work:</strong><br>
+          Enter a valid promo code provided by GhanaOpinionPay. The GHS value will be instantly added to your balance. Codes are limited in use and may have an expiry date — use them as soon as you receive them!
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1660,6 +1682,7 @@ iframe[src*="badge"]{
         <button class="a-tab" data-atab="atransactions">&#x1F4C3; Transactions</button>
         <button class="a-tab" data-atab="activity">&#x1F4DC; Activity</button>
         <button class="a-tab" data-atab="asettings">&#x2699; Settings</button>
+        <button class="a-tab" data-atab="promocodes">&#x1F3AB; Promo Codes</button>
       </div>
     </div>
     <div class="a-section active" id="atab-payments">
@@ -2374,6 +2397,47 @@ iframe[src*="badge"]{
         </div>
         <input type="file" id="updateAppFile" accept=".html" style="display:none" onchange="handleUpdateAppFile(this)">
         <div id="updateAppStatus" style="margin-top:12px;font-size:13px"></div>
+      </div>
+    </div>
+  </div>
+  <!-- ADMIN PROMO CODES TAB -->
+  <div class="a-section" id="atab-promocodes">
+    <div class="a-card">
+      <div class="a-card-title">&#x1F3AB; Create Promo Code</div>
+      <div class="add-form" id="promoCodeCreateForm">
+        <div class="add-form-title">New Promo Code</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+          <div class="fg" style="margin:0">
+            <label>Code (uppercase, no spaces)</label>
+            <input type="text" id="pcCode" placeholder="e.g. WELCOME50" style="text-transform:uppercase;font-family:monospace;font-weight:700;letter-spacing:1px"/>
+          </div>
+          <div class="fg" style="margin:0">
+            <label>GHS Amount</label>
+            <input type="number" id="pcAmount" placeholder="e.g. 5.00" min="0.1" step="0.01"/>
+          </div>
+          <div class="fg" style="margin:0">
+            <label>Max Uses (total)</label>
+            <input type="number" id="pcMaxUses" placeholder="e.g. 100" min="1" step="1"/>
+          </div>
+          <div class="fg" style="margin:0">
+            <label>Expiry Date</label>
+            <input type="date" id="pcExpiry"/>
+          </div>
+        </div>
+        <div id="pcCreateMsg" style="display:none;margin-bottom:10px;padding:9px 13px;border-radius:8px;font-size:13px;font-weight:500"></div>
+        <button class="add-btn" id="createPromoCodeBtn">&#x2B50; Create Code</button>
+      </div>
+    </div>
+    <div class="a-card">
+      <div class="a-card-title">
+        <span>&#x1F4CB; All Promo Codes</span>
+        <button class="abtn" id="refreshPromoCodesBtn">&#x21BB; Refresh</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="atable">
+          <thead><tr><th>#</th><th>Code</th><th>Amount (GHS)</th><th>Uses / Limit</th><th>Expiry</th><th>Status</th><th>Action</th></tr></thead>
+          <tbody id="adminPromoCodesBody"><tr><td colspan="7" class="empty-row">No promo codes yet.</td></tr></tbody>
+        </table>
       </div>
     </div>
   </div>
@@ -3890,6 +3954,7 @@ document.addEventListener('DOMContentLoaded', function(){
         if(tab.dataset.atab==='pools'){ setTimeout(function(){renderAdminPools();renderAdminPoolEntries();},50); }
         if(tab.dataset.atab==='aslots'){ setTimeout(renderAdminSlots,50); }
         if(tab.dataset.atab==='atransactions'){ setTimeout(renderAdminTransactions,50); }
+        if(tab.dataset.atab==='promocodes'){ setTimeout(renderAdminPromoCodes,50); }
       });
     });
     // Admin buttons
@@ -3898,6 +3963,13 @@ document.addEventListener('DOMContentLoaded', function(){
     var rpeb=el('refreshPoolEntriesBtn'); if(rpeb) rpeb.addEventListener('click',renderAdminPoolEntries);
     var asrb=el('aSlotRefreshBtn'); if(asrb) asrb.addEventListener('click',renderAdminSlots);
     var aSlotSrch=el('aSlotSearch'); if(aSlotSrch) aSlotSrch.addEventListener('input',renderAdminSlots);
+    // Promo codes admin
+    var pcBtn=el('createPromoCodeBtn'); if(pcBtn) pcBtn.addEventListener('click',createPromoCode);
+    var rpco=el('refreshPromoCodesBtn'); if(rpco) rpco.addEventListener('click',renderAdminPromoCodes);
+    // Redeem code (user)
+    var rcBtn=el('redeemCodeBtn'); if(rcBtn) rcBtn.addEventListener('click',redeemPromoCode);
+    var rcInput=el('redeemCodeInput');
+    if(rcInput) rcInput.addEventListener('keydown',function(e){if(e.key==='Enter') redeemPromoCode();});
   
   // Track site visit
   trackSiteVisit();
@@ -6938,6 +7010,7 @@ function switchAdminTab(name, btn){
   if(name==='duplicates') renderDuplicatesTable();
   if(name==='ads') renderAdminAds();
   if(name==='issues') renderAdminIssues();
+  if(name==='promocodes') renderAdminPromoCodes();
   if(name==='asettings'){
     renderSubAdminList();
     var cc=el('currentSubAdminCount'); if(cc) cc.textContent=getSubAdmins().length;
@@ -10399,7 +10472,6 @@ function submitUpgradeRequest(){
   var url='https://paystack.shop/pay/'+slug
     +'?email='+encodeURIComponent(currentUser.email)
     +'&name='+encodeURIComponent(currentUser.firstName+' '+currentUser.lastName)
-    +'&amount='+(fee*100)
     +'&callback_url='+encodeURIComponent(upgradeCallbackUrl);
 
   var btn=el('submitUpgradeBtn');
@@ -12868,8 +12940,7 @@ function checkDailyStreakBonus(member){
     });
     var poolCallbackUrl=window.location.href.split('?')[0]+'?pool_callback=1';
     var url='https://paystack.shop/pay/'+POOL_PAYSTACK_SLUG
-      +'?amount='+total
-      +'&email='+encodeURIComponent(currentUser.email||memberPhone+'@goppay.gh')
+      +'?email='+encodeURIComponent(currentUser.email||memberPhone+'@goppay.gh')
       +'&metadata='+encodeURIComponent(meta)
       +'&callback_url='+encodeURIComponent(poolCallbackUrl);
     var pw=Math.min(520,window.innerWidth-20); var ph=Math.min(680,window.innerHeight-20);
@@ -13413,7 +13484,6 @@ function confirmPayment(){
   var url='https://paystack.shop/pay/'+slug
     +'?email='+encodeURIComponent(reg.email)
     +'&name='+encodeURIComponent(reg.firstName+' '+reg.lastName)
-    +'&amount='+(tier.fee*100)
     +'&callback_url='+encodeURIComponent(regCallbackUrl);
 
   // Open in popup window
@@ -14288,6 +14358,125 @@ function syncSmsLogFromFirebase(callback){
     });
   }catch(e){if(callback)callback();}
 }
+// ── PROMO CODES ─────────────────────────────────────────────────────────────
+function getPromoCodes(){
+  try{var r=localStorage.getItem('gop_promo_codes');return r?JSON.parse(r):[];}catch(e){return [];}
+}
+function savePromoCodes(codes){
+  try{localStorage.setItem('gop_promo_codes',JSON.stringify(codes));}catch(e){}
+}
+
+function renderAdminPromoCodes(){
+  var codes=getPromoCodes();
+  var tbody=document.getElementById('adminPromoCodesBody');
+  if(!tbody) return;
+  if(!codes.length){tbody.innerHTML='<tr><td colspan="7" class="empty-row">No promo codes yet.</td></tr>';return;}
+  var today=new Date(); today.setHours(0,0,0,0);
+  tbody.innerHTML=codes.map(function(c,i){
+    var expired=c.expiry&&new Date(c.expiry)<today;
+    var limitReached=c.uses>=c.maxUses;
+    var status=expired?'<span class="s-suspended">Expired</span>':limitReached?'<span class="s-suspended">Limit Reached</span>':'<span class="s-active">Active</span>';
+    var expLabel=c.expiry?c.expiry:'No expiry';
+    return '<tr>'
+      +'<td>'+(i+1)+'</td>'
+      +'<td><strong style="font-family:monospace;letter-spacing:1px">'+c.code+'</strong></td>'
+      +'<td>GHS '+Number(c.amount).toFixed(2)+'</td>'
+      +'<td>'+c.uses+' / '+c.maxUses+'</td>'
+      +'<td>'+expLabel+'</td>'
+      +'<td>'+status+'</td>'
+      +'<td><button class="abtn danger" onclick="deletePromoCode(\''+c.id+'\')">&#x1F5D1; Delete</button></td>'
+      +'</tr>';
+  }).join('');
+}
+
+function createPromoCode(){
+  var code=(document.getElementById('pcCode')||{value:''}).value.trim().toUpperCase().replace(/\s+/g,'');
+  var amount=parseFloat((document.getElementById('pcAmount')||{value:''}).value);
+  var maxUses=parseInt((document.getElementById('pcMaxUses')||{value:''}).value);
+  var expiry=(document.getElementById('pcExpiry')||{value:''}).value;
+  var msgEl=document.getElementById('pcCreateMsg');
+  function showMsg(type,txt){if(!msgEl)return;msgEl.style.display='block';msgEl.style.background=type==='error'?'#fdeaec':'#d1fae5';msgEl.style.border='1px solid '+(type==='error'?'#CE1126':'#059669');msgEl.style.color=type==='error'?'#CE1126':'#065f46';msgEl.innerHTML=txt;}
+  if(!code||code.length<3){showMsg('error','Code must be at least 3 characters.');return;}
+  if(isNaN(amount)||amount<=0){showMsg('error','Please enter a valid GHS amount.');return;}
+  if(isNaN(maxUses)||maxUses<1){showMsg('error','Please enter a valid usage limit.');return;}
+  var codes=getPromoCodes();
+  if(codes.find(function(c){return c.code===code;})){showMsg('error','A code with that name already exists.');return;}
+  var newCode={id:'PC'+Date.now(),code:code,amount:amount,maxUses:maxUses,uses:0,usedBy:[],expiry:expiry||'',createdAt:new Date().toISOString()};
+  codes.push(newCode); savePromoCodes(codes);
+  // Sync to Firebase if available
+  try{jbPut('promo_codes',codes,true);}catch(e){}
+  showMsg('success','&#x2705; Code <strong>'+code+'</strong> created successfully!');
+  document.getElementById('pcCode').value='';
+  document.getElementById('pcAmount').value='';
+  document.getElementById('pcMaxUses').value='';
+  document.getElementById('pcExpiry').value='';
+  renderAdminPromoCodes();
+}
+
+function deletePromoCode(id){
+  if(!confirm('Delete this promo code? This cannot be undone.')) return;
+  var codes=getPromoCodes().filter(function(c){return c.id!==id;});
+  savePromoCodes(codes);
+  try{jbPut('promo_codes',codes,true);}catch(e){}
+  renderAdminPromoCodes();
+}
+
+function redeemPromoCode(){
+  if(!currentUser||isAdminUser()) return;
+  var input=document.getElementById('redeemCodeInput');
+  var msgEl=document.getElementById('redeemCodeMsg');
+  var code=(input?input.value:'').trim().toUpperCase();
+  function showMsg(type,txt){
+    if(!msgEl) return;
+    msgEl.style.display='block';
+    msgEl.style.background=type==='error'?'var(--red-pale)':type==='warn'?'var(--gold-pale)':'var(--green-pale)';
+    msgEl.style.border='1px solid '+(type==='error'?'var(--red)':type==='warn'?'var(--gold-dark)':'var(--green)');
+    msgEl.style.color=type==='error'?'var(--red)':type==='warn'?'var(--gold-dark)':'var(--green)';
+    msgEl.innerHTML=txt;
+  }
+  if(!code){showMsg('error','Please enter a promo code.');return;}
+  var codes=getPromoCodes();
+  var found=codes.find(function(c){return c.code===code;});
+  if(!found){showMsg('error','&#x274C; Invalid code. Please check and try again.');return;}
+  // Check expiry
+  if(found.expiry){
+    var expDate=new Date(found.expiry); expDate.setHours(23,59,59,999);
+    if(new Date()>expDate){showMsg('warn','&#x23F0; This code has expired and is no longer valid.');return;}
+  }
+  // Check usage limit
+  if(found.uses>=found.maxUses){showMsg('warn','&#x1F6AB; This code has reached its maximum usage limit.');return;}
+  // Check if this user already used it
+  var usedBy=found.usedBy||[];
+  if(usedBy.indexOf(currentUser.id)>=0){showMsg('error','&#x1F6AB; You have already redeemed this code. Each code can only be used once per member.');return;}
+  // Apply the code
+  var amount=Number(found.amount)||0;
+  var members=getMembers();
+  var idx=members.findIndex(function(m){return m.id===currentUser.id;});
+  if(idx<0){showMsg('error','Member not found. Please log in again.');return;}
+  members[idx].balance=(Number(members[idx].balance)||0)+amount;
+  members[idx].monthEarned=(Number(members[idx].monthEarned)||0)+amount;
+  members[idx].notifications=members[idx].notifications||[];
+  members[idx].notifications.push(mkNotif('&#x1F3AB; Promo code <strong>'+code+'</strong> redeemed! <strong>GHS '+amount.toFixed(2)+'</strong> has been added to your balance.'));
+  // Log transaction
+  try{
+    var txns=getTransactions?getTransactions():[];
+    txns.unshift({id:'TX'+Date.now(),memberId:currentUser.id,memberName:currentUser.firstName+' '+currentUser.lastName,type:'promo_code',description:'Promo code redeemed: '+code,amount:amount,date:new Date().toISOString()});
+    if(typeof saveTransactions==='function') saveTransactions(txns);
+  }catch(e){}
+  saveMembers(members); currentUser=members[idx]; saveSession();
+  // Mark code as used
+  found.usedBy=usedBy; found.usedBy.push(currentUser.id); found.uses=(found.uses||0)+1;
+  var idx2=codes.findIndex(function(c){return c.id===found.id;}); if(idx2>=0) codes[idx2]=found;
+  savePromoCodes(codes);
+  try{jbPut('promo_codes',codes,true);}catch(e){}
+  // Update balance display
+  try{setText('dmBal','GHS '+(currentUser.balance||0).toFixed(2));}catch(e){}
+  try{renderNotifications(currentUser);}catch(e){}
+  try{logActivity('promo_code',currentUser.firstName+' '+currentUser.lastName,'Redeemed promo code '+code+' for GHS '+amount.toFixed(2),{memberId:currentUser.id});}catch(e){}
+  showMsg('success','&#x1F389; <strong>GHS '+amount.toFixed(2)+'</strong> has been added to your balance! Code: <strong>'+code+'</strong>');
+  if(input) input.value='';
+}
+
 // ── UPDATE APP ──────────────────────────────────────────────────────────────
 function handleUpdateAppDrop(e){
   e.preventDefault();
