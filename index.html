@@ -2312,6 +2312,18 @@ iframe[src*="badge"]{
         <div id="tierFeesStatus" style="margin-top:9px;font-size:13px;color:var(--green)"></div>
       </div>
       <div class="a-card">
+        <div class="a-card-title">&#x1F4B8; Minimum Withdrawal Amounts Per Tier <span style="font-size:12px;font-weight:400;color:#9ca3af">(Super Admin only)</span></div>
+        <p style="font-size:13px;color:#6b7280;margin-bottom:14px;line-height:1.6">Set the minimum balance required for a withdrawal request per tier. Changes apply immediately to all new withdrawal attempts.</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+          <div class="fg" style="margin:0"><label>&#x1F193; Free Tier (GHS)</label><input type="number" id="minWFree" min="1" step="1" placeholder="10"/></div>
+          <div class="fg" style="margin:0"><label>&#x1F949; Bronze Tier (GHS)</label><input type="number" id="minWBronze" min="1" step="1" placeholder="30"/></div>
+          <div class="fg" style="margin:0"><label>&#x1F948; Silver Tier (GHS)</label><input type="number" id="minWSilver" min="1" step="1" placeholder="75"/></div>
+          <div class="fg" style="margin:0"><label>&#x1F947; Gold Tier (GHS)</label><input type="number" id="minWGold" min="1" step="1" placeholder="100"/></div>
+        </div>
+        <button class="add-btn" id="saveMinWBtn">&#x1F4BE; Save Withdrawal Minimums</button>
+        <div id="minWStatus" style="margin-top:9px;font-size:13px;color:var(--green)"></div>
+      </div>
+      <div class="a-card">
         <div class="a-card-title">&#x00A9; Copyright Year <span style="font-size:12px;font-weight:400;color:#9ca3af">(Super Admin only)</span></div>
         <p style="font-size:13px;color:#6b7280;margin-bottom:14px;line-height:1.6">Update the copyright year shown in the site footer and any other copyright notices.</p>
         <div class="fg"><label>Copyright Year</label><input type="number" id="copyrightYearInput" min="2020" max="2099" step="1" placeholder="e.g. 2026" style="max-width:180px"/></div>
@@ -3074,6 +3086,7 @@ function syncMemberStatusToBackend(member){
 
 var TIER_DAILY  = {Free:1, Bronze:3, Silver:6, Gold:10};
 var TIER_MINW   = {Free:10, Bronze:30, Silver:75, Gold:100};
+(function(){['Free','Bronze','Silver','Gold'].forEach(function(t){var v=parseInt(localStorage.getItem('gop_minw_'+t.toLowerCase()),10);if(!isNaN(v)&&v>=1)TIER_MINW[t]=v;});})();
 var TIER_POLLS  = {Free:0, Bronze:1, Silver:2, Gold:3};
 var TIER_ADS    = {Free:1, Bronze:5, Silver:10, Gold:15};
 var TIER_VIDEOS = {Free:1, Bronze:10, Silver:10, Gold:10};
@@ -3696,6 +3709,27 @@ document.addEventListener('DOMContentLoaded', function(){
     if(s) s.textContent='Saved! Bronze: GHS '+fees.Bronze+' · Silver: GHS '+fees.Silver+' · Gold: GHS '+fees.Gold;
     adminAlert('Tier registration fees updated. Homepage, registration page, and upgrade tab will now show the new prices.');
   });
+  // Save withdrawal minimums per tier
+  bindClick('saveMinWBtn', function(){
+    if(!isSuperAdmin()) return;
+    var ok=true;
+    ['Free','Bronze','Silver','Gold'].forEach(function(t){
+      var v=parseInt(val('minW'+t),10);
+      if(isNaN(v)||v<1) ok=false;
+    });
+    if(!ok){adminAlert('All minimum amounts must be at least GHS 1.');return;}
+    var mins={};
+    ['Free','Bronze','Silver','Gold'].forEach(function(t){
+      var v=parseInt(val('minW'+t),10);
+      mins[t]=v;
+      localStorage.setItem('gop_minw_'+t.toLowerCase(),v);
+      TIER_MINW[t]=v;
+    });
+    try{ jbPut('settings_tierMinW',mins); }catch(e){}
+    var s=el('minWStatus');
+    if(s) s.textContent='Saved! Free: GHS '+mins.Free+' · Bronze: GHS '+mins.Bronze+' · Silver: GHS '+mins.Silver+' · Gold: GHS '+mins.Gold;
+    adminAlert('Withdrawal minimums updated — new limits apply immediately to all members.');
+  });
   // Save copyright year
   bindClick('saveCopyrightYearBtn', function(){
     if(!isSuperAdmin()) return;
@@ -3880,6 +3914,14 @@ document.addEventListener('DOMContentLoaded', function(){
         if(tab.dataset.atab==='pools'){ setTimeout(function(){renderAdminPools();renderAdminPoolEntries();},50); }
         if(tab.dataset.atab==='aslots'){ setTimeout(renderAdminSlots,50); }
         if(tab.dataset.atab==='atransactions'){ setTimeout(renderAdminTransactions,50); }
+        if(tab.dataset.atab==='asettings'){
+          setTimeout(function(){
+            var fw=['Free','Bronze','Silver','Gold'];
+            fw.forEach(function(t){var inp=el('minW'+t);if(inp&&!inp.value)inp.value=TIER_MINW[t];});
+            var fb=['Bronze','Silver','Gold'];
+            fb.forEach(function(t){var inp=el('tierFee'+t);if(inp&&!inp.value)inp.value=getTierFee(t);});
+          },50);
+        }
       });
     });
     // Admin buttons
@@ -12824,10 +12866,11 @@ function checkDailyStreakBonus(member){
     var startTotal=Number(pool.slotPrice);
     el('poolJoinTotal').textContent='Total: GHS '+startTotal.toFixed(2);
     var errEl=el('poolJoinError'); if(errEl) errEl.style.display='none';
-    // Auto-fill payment details from user profile
-    var fullName=((currentUser.firstName||'')+' '+(currentUser.lastName||'')).trim()||currentUser.name||'—';
-    var email=currentUser.email||((currentUser.phone||'unknown')+'@goppay.gh');
-    var phone=currentUser.phone||'—';
+    // Auto-fill payment details from user profile — look up full member record
+    var _mFull=(function(){try{var ms=getMembers();return ms.find(function(m){return m.id===currentUser.id;})||currentUser;}catch(e){return currentUser;}})();
+    var fullName=((_mFull.firstName||'')+' '+(_mFull.lastName||'')).trim()||_mFull.name||currentUser.name||'—';
+    var email=_mFull.email||currentUser.email||(((_mFull.phone||currentUser.phone||'unknown')+'@goppay.gh'));
+    var phone=_mFull.phone||currentUser.phone||'—';
     var nameEl=el('poolPayerName'); if(nameEl) nameEl.textContent=fullName;
     var emailEl=el('poolPayerEmail'); if(emailEl) emailEl.textContent=email;
     var phoneEl=el('poolPayerPhone'); if(phoneEl) phoneEl.textContent=phone;
