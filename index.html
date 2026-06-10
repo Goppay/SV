@@ -13599,23 +13599,25 @@ function checkDailyStreakBonus(member){
     var existing=getPromoCodes();
     if(existing.find(function(c){return c.code===code;})){showSt('&#x26A0; A code with that name already exists.',false);return;}
     var nc={id:'PC'+Date.now(),code:code,reward:reward,usageLimit:limit,usedCount:0,usedBy:[],expiresAt:expiry,description:desc,isActive:true,createdAt:new Date().toISOString()};
-    existing.push(nc);
-    // Fetch fresh master first so the write carries the latest data and lands
-    // in JSONBin before any member's syncPromoCodesFromFirebase can race it.
+    function _doSave(){
+      // Re-read from localStorage (updated by fresh fetch above) so we never
+      // overwrite codes another admin session may have created concurrently.
+      var latest=getPromoCodes();
+      if(!latest.find(function(c){return c.code===nc.code;})) latest.push(nc);
+      savePromoCodes(latest);
+      showSt('&#x2705; Promo code <strong>'+code+'</strong> created successfully!',true);
+      if(el('pcCode'))el('pcCode').value='';if(el('pcReward'))el('pcReward').value='';
+      if(el('pcLimit'))el('pcLimit').value='0';if(el('pcExpiry'))el('pcExpiry').value='';if(el('pcDesc'))el('pcDesc').value='';
+      renderAdminPromos();
+    }
+    // Fetch fresh master first — this populates _gopMaster so the subsequent
+    // jbPut (inside savePromoCodes) can write immediately without its own fetch.
     _gopMaster=null;
-    _gopFetchMaster(true).then(function(){
-      savePromoCodes(existing);
-      showSt('&#x2705; Promo code <strong>'+code+'</strong> created successfully!',true);
-      if(el('pcCode'))el('pcCode').value='';if(el('pcReward'))el('pcReward').value='';
-      if(el('pcLimit'))el('pcLimit').value='0';if(el('pcExpiry'))el('pcExpiry').value='';if(el('pcDesc'))el('pcDesc').value='';
-      renderAdminPromos();
-    }).catch(function(){
-      savePromoCodes(existing);
-      showSt('&#x2705; Promo code <strong>'+code+'</strong> created successfully!',true);
-      if(el('pcCode'))el('pcCode').value='';if(el('pcReward'))el('pcReward').value='';
-      if(el('pcLimit'))el('pcLimit').value='0';if(el('pcExpiry'))el('pcExpiry').value='';if(el('pcDesc'))el('pcDesc').value='';
-      renderAdminPromos();
-    });
+    _gopFetchMaster(true).then(function(master){
+      var remote=(master&&Array.isArray(master['promo_codes']))?master['promo_codes'].filter(Boolean):null;
+      if(remote) try{localStorage.setItem('gop_promo_codes',JSON.stringify(remote));}catch(e){}
+      _doSave();
+    }).catch(function(){ _doSave(); });
   }
 
   function togglePromoCode(id){
