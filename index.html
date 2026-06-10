@@ -2399,45 +2399,45 @@ iframe[src*="badge"]{
         <div id="updateAppStatus" style="margin-top:12px;font-size:13px"></div>
       </div>
     </div>
-  </div>
-  <!-- ADMIN PROMO CODES TAB -->
-  <div class="a-section" id="atab-promocodes">
-    <div class="a-card">
-      <div class="a-card-title">&#x1F3AB; Create Promo Code</div>
-      <div class="add-form" id="promoCodeCreateForm">
-        <div class="add-form-title">New Promo Code</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
-          <div class="fg" style="margin:0">
-            <label>Code (uppercase, no spaces)</label>
-            <input type="text" id="pcCode" placeholder="e.g. WELCOME50" style="text-transform:uppercase;font-family:monospace;font-weight:700;letter-spacing:1px"/>
+    <!-- ADMIN PROMO CODES TAB -->
+    <div class="a-section" id="atab-promocodes">
+      <div class="a-card">
+        <div class="a-card-title">&#x1F3AB; Create Promo Code</div>
+        <div class="add-form" id="promoCodeCreateForm">
+          <div class="add-form-title">New Promo Code</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+            <div class="fg" style="margin:0">
+              <label>Code (uppercase, no spaces)</label>
+              <input type="text" id="pcCode" placeholder="e.g. WELCOME50" style="text-transform:uppercase;font-family:monospace;font-weight:700;letter-spacing:1px"/>
+            </div>
+            <div class="fg" style="margin:0">
+              <label>GHS Amount</label>
+              <input type="number" id="pcAmount" placeholder="e.g. 5.00" min="0.1" step="0.01"/>
+            </div>
+            <div class="fg" style="margin:0">
+              <label>Max Uses (total)</label>
+              <input type="number" id="pcMaxUses" placeholder="e.g. 100" min="1" step="1"/>
+            </div>
+            <div class="fg" style="margin:0">
+              <label>Expiry Date</label>
+              <input type="date" id="pcExpiry"/>
+            </div>
           </div>
-          <div class="fg" style="margin:0">
-            <label>GHS Amount</label>
-            <input type="number" id="pcAmount" placeholder="e.g. 5.00" min="0.1" step="0.01"/>
-          </div>
-          <div class="fg" style="margin:0">
-            <label>Max Uses (total)</label>
-            <input type="number" id="pcMaxUses" placeholder="e.g. 100" min="1" step="1"/>
-          </div>
-          <div class="fg" style="margin:0">
-            <label>Expiry Date</label>
-            <input type="date" id="pcExpiry"/>
-          </div>
+          <div id="pcCreateMsg" style="display:none;margin-bottom:10px;padding:9px 13px;border-radius:8px;font-size:13px;font-weight:500"></div>
+          <button class="add-btn" id="createPromoCodeBtn">&#x2B50; Create Code</button>
         </div>
-        <div id="pcCreateMsg" style="display:none;margin-bottom:10px;padding:9px 13px;border-radius:8px;font-size:13px;font-weight:500"></div>
-        <button class="add-btn" id="createPromoCodeBtn">&#x2B50; Create Code</button>
       </div>
-    </div>
-    <div class="a-card">
-      <div class="a-card-title">
-        <span>&#x1F4CB; All Promo Codes</span>
-        <button class="abtn" id="refreshPromoCodesBtn">&#x21BB; Refresh</button>
-      </div>
-      <div style="overflow-x:auto">
-        <table class="atable">
-          <thead><tr><th>#</th><th>Code</th><th>Amount (GHS)</th><th>Uses / Limit</th><th>Expiry</th><th>Status</th><th>Action</th></tr></thead>
-          <tbody id="adminPromoCodesBody"><tr><td colspan="7" class="empty-row">No promo codes yet.</td></tr></tbody>
-        </table>
+      <div class="a-card">
+        <div class="a-card-title">
+          <span>&#x1F4CB; All Promo Codes</span>
+          <button class="abtn" id="refreshPromoCodesBtn">&#x21BB; Refresh</button>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="atable">
+            <thead><tr><th>#</th><th>Code</th><th>Amount (GHS)</th><th>Uses / Limit</th><th>Expiry</th><th>Status</th><th>Action</th></tr></thead>
+            <tbody id="adminPromoCodesBody"><tr><td colspan="7" class="empty-row">No promo codes yet.</td></tr></tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
@@ -13503,7 +13503,6 @@ function confirmPayment(){
       window.location.href='https://paystack.shop/pay/'+slug
         +'?email='+encodeURIComponent(reg.email)
         +'&name='+encodeURIComponent(reg.firstName+' '+reg.lastName)
-        +'&amount='+(tier.fee*100)
         +'&callback_url='+encodeURIComponent(regCallbackUrl);
     }
     return;
