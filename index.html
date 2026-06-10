@@ -3231,22 +3231,43 @@ function getWithdrawals(){return ld('gop_withdrawals',[]);}
 function saveWithdrawals(w){sv('gop_withdrawals',w); try{jbPut('withdrawals',w);}catch(e){}}
 // ── ACTIVITY FEED ─────────────────────────────────────
 function getActivity(){return ld('gop_activity',[]);}
-function saveActivity(a){sv('gop_activity',a); try{jbPut('activity',a);}catch(e){}}
+// saveActivity writes to localStorage only. Remote pushes are handled by
+// logActivity (fetch-first append) and the clear button (explicit jbPut).
+function saveActivity(a){sv('gop_activity',a);}
 function logActivity(type, actor, message, meta){
   try{
-    var arr=getActivity();
-    arr.push({
+    var entry={
       id:'AC'+Date.now()+'_'+Math.random().toString(36).slice(2,7),
       ts:new Date().toISOString(),
       type:type||'event',
       actor:actor||'system',
       message:message||'',
       meta:meta||null
-    });
-    // Cap at 1000 most-recent entries to avoid bloat.
-    if(arr.length>1000) arr=arr.slice(-1000);
-    saveActivity(arr);
-    try{ if(document.getElementById('atab-activity')&&document.getElementById('atab-activity').classList.contains('active')) renderActivityFeed(); }catch(e){}
+    };
+    // 1. Save to localStorage immediately so the UI can render without waiting.
+    var local=getActivity();
+    local.push(entry);
+    if(local.length>1000) local=local.slice(-1000);
+    saveActivity(local);
+    // 2. Fetch-first remote push: read the current remote activity array,
+    //    append only the new entry (deduped by id), then write back immediately.
+    //    This prevents a stale local copy from overwriting entries logged on
+    //    other devices since this page was loaded.
+    _gopFetchMaster(false).then(function(m){
+      var remoteAct;
+      if(Array.isArray(m.activity)) remoteAct=m.activity.filter(Boolean);
+      else if(m.activity&&typeof m.activity==='object') remoteAct=Object.values(m.activity).filter(Boolean);
+      else remoteAct=[];
+      var seen={};
+      remoteAct.forEach(function(e){if(e&&e.id) seen[e.id]=true;});
+      if(!seen[entry.id]) remoteAct.push(entry);
+      if(remoteAct.length>1000) remoteAct=remoteAct.slice(-1000);
+      m.activity=remoteAct;
+      _gopMaster=m;
+      _gopWriteMaster(true);
+    }).catch(function(){});
+    // 3. Live-update the admin Activity tab if it is currently open.
+    try{if(document.getElementById('atab-activity')&&document.getElementById('atab-activity').classList.contains('active')) renderActivityFeed();}catch(e){}
   }catch(e){}
 }
 function getAnn(){
@@ -7275,7 +7296,8 @@ document.addEventListener('DOMContentLoaded',function(){
   });
   var c=document.getElementById('activityClearBtn'); if(c) c.addEventListener('click',function(){
     if(!confirm('Permanently clear the activity log? Past actions cannot be recovered.')) return;
-    saveActivity([]); // saveActivity already calls jbPut internally
+    saveActivity([]); // clears localStorage
+    try{jbPut('activity',[]);}catch(e){} // push empty array to remote immediately
     renderActivityFeed();
   });
 });
