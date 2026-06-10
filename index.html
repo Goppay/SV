@@ -1209,6 +1209,7 @@ iframe[src*="badge"]{
         <button class="d-tab" data-tab="report" onclick="switchDashTabMenu(this,'&#x1F6A8; Report Issue')">&#x1F6A8; Report Issue</button>
         <button class="d-tab" data-tab="transactions" onclick="switchDashTabMenu(this,'&#x1F4C3; Transactions')">&#x1F4C3; Transactions</button>
         <button class="d-tab" data-tab="settings" onclick="switchDashTabMenu(this,'&#x2699; Settings')">&#x2699; Settings</button>
+        <button class="d-tab" data-tab="promo" onclick="switchDashTabMenu(this,'&#x1F3AB; Promo Code')">&#x1F3AB; Promo</button>
       </div>
     </div>
     <div class="d-tabs" style="display:none"></div>
@@ -1597,6 +1598,24 @@ iframe[src*="badge"]{
       </div>
     </div>
   </div>
+  <div class="d-tab-sec" id="tab-promo">
+    <div class="d-card">
+      <div class="d-card-title">&#x1F3AB; Promo Code</div>
+      <p style="font-size:13.5px;color:var(--text-muted);margin-bottom:16px;line-height:1.6">Have a promo code? Enter it below to claim your reward instantly. Each code can only be used once per account.</p>
+      <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+        <div class="fg" style="flex:1;min-width:160px;margin:0">
+          <label>Promo Code</label>
+          <input type="text" id="promoCodeInput" placeholder="e.g. WELCOME50" style="text-transform:uppercase;font-family:monospace;letter-spacing:1.5px" maxlength="30" oninput="this.value=this.value.toUpperCase()"/>
+        </div>
+        <button class="sbtn" style="margin:0;flex-shrink:0" id="applyPromoBtn">&#x1F3AB; Apply Code</button>
+      </div>
+      <div id="promoMsg" style="display:none;margin-top:12px;padding:10px 13px;border-radius:9px;font-size:13.5px;font-weight:500"></div>
+    </div>
+    <div class="d-card" id="myPromoHistoryCard" style="display:none">
+      <div class="d-card-title">&#x1F4CB; My Redeemed Codes</div>
+      <div id="myPromoHistoryList"></div>
+    </div>
+  </div>
 </div>
 
 <!-- ADMIN DASHBOARD -->
@@ -1657,6 +1676,7 @@ iframe[src*="badge"]{
         <button class="a-tab" data-atab="pools">&#x1F3B1; Pools</button>
         <button class="a-tab" data-atab="aslots">&#x1F3AB; Slots</button>
         <button class="a-tab" data-atab="atransactions">&#x1F4C3; Transactions</button>
+        <button class="a-tab" data-atab="apromo">&#x1F3AB; Promo Codes</button>
         <button class="a-tab" data-atab="activity">&#x1F4DC; Activity</button>
         <button class="a-tab" data-atab="asettings">&#x2699; Settings</button>
       </div>
@@ -2164,6 +2184,27 @@ iframe[src*="badge"]{
             <tbody id="adminTransactionsBody"><tr><td colspan="12" class="empty-row">Loading...</td></tr></tbody>
           </table>
         </div>
+      </div>
+    </div>
+    <div class="a-section" id="atab-apromo">
+      <div class="a-card">
+        <div class="a-card-title"><span>&#x1F3AB; Create Promo Code</span></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+          <div class="fg" style="margin:0"><label>Code (e.g. WELCOME50)</label><input type="text" id="pcCode" placeholder="WELCOME50" style="text-transform:uppercase;font-family:monospace;letter-spacing:1.5px" maxlength="30" oninput="this.value=this.value.toUpperCase()"/></div>
+          <div class="fg" style="margin:0"><label>Reward Amount (GHS)</label><input type="number" id="pcReward" placeholder="e.g. 5.00" min="0.01" step="0.01"/></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+          <div class="fg" style="margin:0"><label>Usage Limit (0 = unlimited)</label><input type="number" id="pcLimit" placeholder="e.g. 100" min="0" value="0"/></div>
+          <div class="fg" style="margin:0"><label>Expiry Date (leave blank = no expiry)</label><input type="date" id="pcExpiry"/></div>
+        </div>
+        <div class="fg" style="margin-bottom:14px"><label>Description / Internal Label</label><input type="text" id="pcDesc" placeholder="e.g. Welcome bonus for new members"/></div>
+        <div id="pcCreateStatus" style="display:none;margin-bottom:12px;padding:10px 13px;border-radius:9px;font-size:13px"></div>
+        <button class="add-btn" id="createPromoBtn" style="background:var(--green)">&#x1F3AB; Create Promo Code</button>
+      </div>
+      <div class="a-card">
+        <div class="a-card-title"><span>&#x1F4CB; All Promo Codes</span><button class="abtn" id="refreshPromoBtn">&#x21BB; Refresh</button></div>
+        <p style="font-size:13px;color:#6b7280;margin-bottom:14px;line-height:1.6">Promo codes members can enter in their dashboard to claim a GHS reward. Each code is usable <strong>once per member</strong>. Expired or disabled codes cannot be redeemed.</p>
+        <div id="adminPromoList"><p class="empty-row">No promo codes created yet.</p></div>
       </div>
     </div>
     <div class="a-section" id="atab-activity">
@@ -3906,6 +3947,7 @@ document.addEventListener('DOMContentLoaded', function(){
           setTimeout(renderMemberPools, 50);
         }
         if(tab.dataset.tab==='slots') setTimeout(renderMySlots, 50);
+        if(tab.dataset.tab==='promo') setTimeout(function(){ syncPromoCodesFromFirebase(renderMyPromoHistory); }, 50);
       });
     });
     // Admin pool tab load
@@ -3914,6 +3956,7 @@ document.addEventListener('DOMContentLoaded', function(){
         if(tab.dataset.atab==='pools'){ setTimeout(function(){renderAdminPools();renderAdminPoolEntries();},50); }
         if(tab.dataset.atab==='aslots'){ setTimeout(renderAdminSlots,50); }
         if(tab.dataset.atab==='atransactions'){ setTimeout(renderAdminTransactions,50); }
+        if(tab.dataset.atab==='apromo'){ setTimeout(renderAdminPromos,50); }
         if(tab.dataset.atab==='asettings'){
           setTimeout(function(){
             var fw=['Free','Bronze','Silver','Gold'];
@@ -3930,6 +3973,9 @@ document.addEventListener('DOMContentLoaded', function(){
     var rpeb=el('refreshPoolEntriesBtn'); if(rpeb) rpeb.addEventListener('click',renderAdminPoolEntries);
     var asrb=el('aSlotRefreshBtn'); if(asrb) asrb.addEventListener('click',renderAdminSlots);
     var aSlotSrch=el('aSlotSearch'); if(aSlotSrch) aSlotSrch.addEventListener('input',renderAdminSlots);
+    var cprb=el('createPromoBtn'); if(cprb) cprb.addEventListener('click',createPromoCode);
+    var rprb=el('refreshPromoBtn'); if(rprb) rprb.addEventListener('click',renderAdminPromos);
+    var applyPB=el('applyPromoBtn'); if(applyPB) applyPB.addEventListener('click',applyPromoCode);
   
   // Track site visit
   trackSiteVisit();
@@ -4348,7 +4394,14 @@ document.addEventListener('DOMContentLoaded', function(){
     var hasRef=urlParams.get('trxref')||urlParams.get('reference')||urlParams.get('ref')||urlParams.get('pool_callback');
     if(hasRef) return; // same-tab redirect — checkPaystackReturn handles it
     var raw=null;try{raw=localStorage.getItem('gop_pending_pool_payment');}catch(e){}
-    if(raw){var p=null;try{p=JSON.parse(raw);}catch(e){}if(p&&p.poolId) startPoolPaymentConfirmation();}
+    if(raw){var p=null;try{p=JSON.parse(raw);}catch(e){}if(p&&p.poolId){
+      // Only auto-resume if the pending payment was started within the last 15 minutes
+      // OR if we already have a paystackRef (user paid but verification was interrupted).
+      // Older stale pendings without a ref mean the user abandoned before paying — discard them.
+      var _pAge=p.startedAt?(Date.now()-new Date(p.startedAt).getTime()):Infinity;
+      if(p.paystackRef||_pAge<900000) startPoolPaymentConfirmation();
+      else try{localStorage.removeItem('gop_pending_pool_payment');}catch(e){}
+    }}
   })();
 
   // After returning from Paystack (or on page reload with a pending upgrade),
@@ -5273,6 +5326,10 @@ function openMemberDashboard(member){
     renderDashPages(currentUser||member);
     renderMemberPages(currentUser||member);
   });
+  // Pull promo codes so member can redeem them cross-device
+  syncPromoCodesFromFirebase(function(){
+    try{ renderMyPromoHistory(); }catch(e){}
+  });
 
   // Silently push this member's latest record to Firebase so admin sees them
   syncMemberToBackend(member);
@@ -5327,6 +5384,10 @@ function openMemberDashboard(member){
           try{ if(el('poolListWrap')) renderMemberPools(); }catch(e){}
           try{ if(el('mySlotsListWrap')) renderMySlots(); }catch(e){}
         });
+      });
+      // Keep promo codes fresh — new admin codes appear within 30 s
+      syncPromoCodesFromFirebase(function(){
+        try{ renderMyPromoHistory(); }catch(e){}
       });
     }catch(e){}
   }, 30000);
@@ -12427,10 +12488,17 @@ function checkDailyStreakBonus(member){
 
   function syncPoolsFromFirebase(cb){
     // Force a fresh fetch (bypass cache) so pools are always up-to-date cross-device.
+    // Merge remote + local: remote wins for known pool IDs; local-only pools are preserved
+    // so in-progress admin changes aren't lost if remote is temporarily stale.
     try{
       _gopFetchMaster(true).then(function(master){
         var d=(master&&Array.isArray(master['pools']))?master['pools'].filter(Boolean):null;
-        if(d&&d.length) try{localStorage.setItem('gop_pools',JSON.stringify(d));}catch(e){}
+        if(d){
+          var _lp=getPools();var _merged=d.slice();var _dIds={};
+          _merged.forEach(function(p){if(p&&p.id)_dIds[p.id]=true;});
+          _lp.forEach(function(p){if(p&&p.id&&!_dIds[p.id])_merged.push(p);});
+          try{localStorage.setItem('gop_pools',JSON.stringify(_merged));}catch(e){}
+        }
         if(cb) try{cb();}catch(e){}
       }).catch(function(){if(cb) try{cb();}catch(e){}});
     }catch(e){if(cb) try{cb();}catch(e){}}
@@ -12440,10 +12508,17 @@ function checkDailyStreakBonus(member){
   }
   function syncPoolEntriesFromFirebase(cb){
     // Force a fresh fetch so slot purchases show cross-device immediately.
+    // Merge remote + local: remote is authoritative; any local-only entries not yet
+    // pushed (e.g. during an offline/race window) are appended so nothing is lost.
     try{
       _gopFetchMaster(true).then(function(master){
         var d=(master&&Array.isArray(master['pool_entries']))?master['pool_entries'].filter(Boolean):null;
-        if(d&&d.length) try{localStorage.setItem('gop_pool_entries',JSON.stringify(d));}catch(e){}
+        if(d){
+          var _le=getPoolEntries();var _merged=d.slice();var _dRefs={};var _dIds={};
+          _merged.forEach(function(e){if(e&&e.paystackRef)_dRefs[e.paystackRef]=true;if(e&&e.id)_dIds[e.id]=true;});
+          _le.forEach(function(e){if(e&&(!e.paystackRef||!_dRefs[e.paystackRef])&&(!e.id||!_dIds[e.id]))_merged.push(e);});
+          try{localStorage.setItem('gop_pool_entries',JSON.stringify(_merged));}catch(e){}
+        }
         if(cb) try{cb();}catch(e){}
       }).catch(function(){if(cb) try{cb();}catch(e){}});
     }catch(e){if(cb) try{cb();}catch(e){}}
@@ -12600,9 +12675,9 @@ function checkDailyStreakBonus(member){
     _gopFetchMaster(true).then(function(master){
       try{
         var rp=Array.isArray(master['pools'])?master['pools'].filter(Boolean):null;
-        if(rp&&rp.length) try{localStorage.setItem('gop_pools',JSON.stringify(rp));}catch(e){}
+        if(rp){var _lpx=getPools();var _mpx=rp.slice();var _rpIds={};_mpx.forEach(function(p){if(p&&p.id)_rpIds[p.id]=true;});_lpx.forEach(function(p){if(p&&p.id&&!_rpIds[p.id])_mpx.push(p);});try{localStorage.setItem('gop_pools',JSON.stringify(_mpx));}catch(e){}}
         var re=Array.isArray(master['pool_entries'])?master['pool_entries'].filter(Boolean):null;
-        if(re&&re.length) try{localStorage.setItem('gop_pool_entries',JSON.stringify(re));}catch(e){}
+        if(re){var _lex=getPoolEntries();var _mex=re.slice();var _reRefs={};var _reIds={};_mex.forEach(function(e){if(e&&e.paystackRef)_reRefs[e.paystackRef]=true;if(e&&e.id)_reIds[e.id]=true;});_lex.forEach(function(e){if(e&&(!e.paystackRef||!_reRefs[e.paystackRef])&&(!e.id||!_reIds[e.id]))_mex.push(e);});try{localStorage.setItem('gop_pool_entries',JSON.stringify(_mex));}catch(e){}}
       }catch(e){}
       var pools=getPools();
       var entries=getPoolEntries();
@@ -12905,7 +12980,8 @@ function checkDailyStreakBonus(member){
     try{localStorage.setItem('gop_pending_pool_payment',JSON.stringify({
       poolId:pool.id, poolTitle:pool.title,
       slotsCount:qty, amountPaid:total, slotPrice:pool.slotPrice,
-      memberId:currentUser.id, memberName:memberName, memberPhone:memberPhone
+      memberId:currentUser.id, memberName:memberName, memberPhone:memberPhone,
+      startedAt:new Date().toISOString()
     }));}catch(e){}
     closePoolJoinModal();
     // Open Paystack payment page — pass full metadata so webhook can record entry
@@ -13002,10 +13078,11 @@ function checkDailyStreakBonus(member){
       if(_activePoolPoll){
         clearInterval(_activePoolPoll); _activePoolPoll=null;
       }
-      // Last-chance check: entry may have landed in Firebase by now
+      // Last-chance check: entry may have landed in Firebase by now.
+      // Use startedAt filter so old entries don't trigger false success.
       syncPoolEntriesFromFirebase(function(){
         var entries=getPoolEntries();
-        var found=entries.find(function(e){return e.poolId===pending.poolId&&e.memberId===pending.memberId;});
+        var found=entries.find(function(e){return e.poolId===pending.poolId&&e.memberId===pending.memberId&&(!pending.startedAt||!e.purchasedAt||(e.purchasedAt>=pending.startedAt));});
         if(found){
           try{localStorage.removeItem('gop_pending_pool_payment');}catch(e){}
           showPoolConfirmBanner(false);
@@ -13055,9 +13132,11 @@ function checkDailyStreakBonus(member){
       if(_pv2){ _resolve(Number(_pv2.slotsCount)||1, _pv2.poolTitle, _pv2.trxref||_pv2.paystackRef||ref); return; }
 
       // Check Firebase for an entry that landed via webhook
+      // Only match entries created AFTER this pending payment started — prevents old
+      // entries from a previous purchase triggering a false-positive verification.
       syncPoolEntriesFromFirebase(function(){
         var entries=getPoolEntries();
-        var found=entries.find(function(e){return e.poolId===pending.poolId&&e.memberId===pending.memberId;});
+        var found=entries.find(function(e){return e.poolId===pending.poolId&&e.memberId===pending.memberId&&(!pending.startedAt||!e.purchasedAt||(e.purchasedAt>=pending.startedAt));});
         if(found){ _resolve(found.slotsCount||Number(pending.slotsCount)||1, found.poolTitle||pending.poolTitle, found.paystackRef); return; }
 
         // If we have a reference, try direct backend verify
@@ -13323,6 +13402,159 @@ function checkDailyStreakBonus(member){
     statusEl.textContent=msg;
     setTimeout(function(){statusEl.style.display='none';},6000);
   }
+
+  // ── PROMO CODES ──────────────────────────────────────────────────────────────
+  function getPromoCodes(){try{return JSON.parse(localStorage.getItem('gop_promo_codes')||'[]');}catch(e){return [];}}
+  function savePromoCodes(arr){try{localStorage.setItem('gop_promo_codes',JSON.stringify(arr));}catch(e){} syncPromoCodesToFirebase();}
+  function syncPromoCodesToFirebase(){try{jbPut('promo_codes',getPromoCodes());}catch(e){}}
+  function syncPromoCodesFromFirebase(cb){
+    try{
+      _gopFetchMaster(true).then(function(master){
+        var d=(master&&Array.isArray(master['promo_codes']))?master['promo_codes'].filter(Boolean):null;
+        if(d) try{localStorage.setItem('gop_promo_codes',JSON.stringify(d));}catch(e){}
+        if(cb) try{cb();}catch(e){}
+      }).catch(function(){if(cb) try{cb();}catch(e){}});
+    }catch(e){if(cb) try{cb();}catch(e){}}
+  }
+
+  function renderAdminPromos(){
+    var wrap=el('adminPromoList');
+    if(!wrap) return;
+    syncPromoCodesFromFirebase(function(){
+      var codes=getPromoCodes();
+      if(!codes.length){wrap.innerHTML='<p class="empty-row">No promo codes created yet.</p>';return;}
+      var html='<div style="overflow-x:auto"><table class="atable"><thead><tr><th>#</th><th>Code</th><th>Reward (GHS)</th><th>Usage</th><th>Expiry</th><th>Description</th><th>Status</th><th>Actions</th></tr></thead><tbody>';
+      codes.forEach(function(c,i){
+        var isExpired=c.expiresAt&&new Date(c.expiresAt)<new Date();
+        var isLimitReached=c.usageLimit>0&&(c.usedCount||0)>=c.usageLimit;
+        var statusBadge=!c.isActive?'<span style="color:var(--red);font-weight:700">Disabled</span>'
+          :isExpired?'<span style="color:var(--orange);font-weight:700">Expired</span>'
+          :isLimitReached?'<span style="color:var(--orange);font-weight:700">Limit Reached</span>'
+          :'<span style="color:var(--green);font-weight:700">Active</span>';
+        html+='<tr>'
+          +'<td>'+(i+1)+'</td>'
+          +'<td><strong style="font-family:monospace;font-size:13px;letter-spacing:1px">'+c.code+'</strong></td>'
+          +'<td>GHS '+Number(c.reward).toFixed(2)+'</td>'
+          +'<td>'+(c.usedCount||0)+(c.usageLimit>0?' / '+c.usageLimit:' (unlimited)')+'</td>'
+          +'<td>'+(c.expiresAt||'—')+'</td>'
+          +'<td style="max-width:160px;word-break:break-word">'+(c.description||'—')+'</td>'
+          +'<td>'+statusBadge+'</td>'
+          +'<td style="white-space:nowrap">'
+          +'<button class="abtn" style="font-size:11px;padding:4px 9px;background:'+(c.isActive?'var(--orange)':'var(--green)')+';color:#fff;border-color:transparent" onclick="togglePromoCode(\''+c.id+'\')">'+(!c.isActive?'Enable':'Disable')+'</button> '
+          +'<button class="abtn" style="font-size:11px;padding:4px 9px;background:var(--red);color:#fff;border-color:transparent" onclick="deletePromoCode(\''+c.id+'\')">Delete</button>'
+          +'</td></tr>';
+      });
+      html+='</tbody></table></div>';
+      wrap.innerHTML=html;
+    });
+  }
+
+  function createPromoCode(){
+    var code=(el('pcCode')||{value:''}).value.trim().toUpperCase();
+    var reward=parseFloat((el('pcReward')||{value:''}).value);
+    var limit=parseInt((el('pcLimit')||{value:'0'}).value)||0;
+    var expiry=(el('pcExpiry')||{value:''}).value||'';
+    var desc=(el('pcDesc')||{value:''}).value||'';
+    var status=el('pcCreateStatus');
+    function showSt(msg,ok){if(status){status.style.display='block';status.style.background=ok?'var(--green-pale)':'var(--red-pale)';status.style.border='1px solid '+(ok?'var(--green)':'var(--red)');status.style.color=ok?'var(--green)':'var(--red)';status.innerHTML=msg;setTimeout(function(){status.style.display='none';},7000);}}
+    if(!code){showSt('&#x26A0; Please enter a promo code.',false);return;}
+    if(isNaN(reward)||reward<=0){showSt('&#x26A0; Please enter a valid reward amount (GHS).',false);return;}
+    var existing=getPromoCodes();
+    if(existing.find(function(c){return c.code===code;})){showSt('&#x26A0; A code with that name already exists.',false);return;}
+    var nc={id:'PC'+Date.now(),code:code,reward:reward,usageLimit:limit,usedCount:0,usedBy:[],expiresAt:expiry,description:desc,isActive:true,createdAt:new Date().toISOString()};
+    existing.push(nc);
+    savePromoCodes(existing);
+    showSt('&#x2705; Promo code <strong>'+code+'</strong> created successfully!',true);
+    if(el('pcCode'))el('pcCode').value='';if(el('pcReward'))el('pcReward').value='';
+    if(el('pcLimit'))el('pcLimit').value='0';if(el('pcExpiry'))el('pcExpiry').value='';if(el('pcDesc'))el('pcDesc').value='';
+    renderAdminPromos();
+  }
+
+  function togglePromoCode(id){
+    var codes=getPromoCodes();var i=codes.findIndex(function(c){return c.id===id;});
+    if(i<0) return;
+    codes[i].isActive=!codes[i].isActive;
+    savePromoCodes(codes);
+    renderAdminPromos();
+  }
+
+  function deletePromoCode(id){
+    if(!confirm('Delete this promo code? Members will no longer be able to use it. This cannot be undone.')) return;
+    savePromoCodes(getPromoCodes().filter(function(c){return c.id!==id;}));
+    renderAdminPromos();
+  }
+
+  function applyPromoCode(){
+    if(!currentUser||isAdminUser()) return;
+    var raw=(el('promoCodeInput')||{value:''}).value;
+    if(!raw||!raw.trim()){showPromoMsg('&#x26A0; Please enter a promo code.',false);return;}
+    var code=raw.trim().toUpperCase();
+    var applyBtn=el('applyPromoBtn');
+    if(applyBtn){applyBtn.disabled=true;applyBtn.textContent='Checking\u2026';}
+    function restoreBtn(){if(applyBtn){applyBtn.disabled=false;applyBtn.innerHTML='&#x1F3AB; Apply Code';}}
+    syncPromoCodesFromFirebase(function(){
+      var codes=getPromoCodes();
+      var ci=codes.findIndex(function(c){return c.code===code;});
+      if(ci<0){showPromoMsg('&#x274C; Invalid promo code. Please check and try again.',false);restoreBtn();return;}
+      var c=codes[ci];
+      if(!c.isActive){showPromoMsg('&#x274C; This promo code has been disabled.',false);restoreBtn();return;}
+      if(c.expiresAt&&new Date(c.expiresAt)<new Date()){showPromoMsg('&#x274C; This promo code has expired.',false);restoreBtn();return;}
+      if(c.usageLimit>0&&(c.usedCount||0)>=c.usageLimit){showPromoMsg('&#x274C; This promo code has reached its usage limit.',false);restoreBtn();return;}
+      var usedBy=Array.isArray(c.usedBy)?c.usedBy:[];
+      if(usedBy.indexOf(currentUser.id)>=0){showPromoMsg('&#x26A0; You have already used this promo code.',false);restoreBtn();return;}
+      var members=getMembers();
+      var mi=members.findIndex(function(m){return m.id===currentUser.id;});
+      if(mi<0){showPromoMsg('&#x26A0; Member not found. Please reload and try again.',false);restoreBtn();return;}
+      members[mi].balance=(Number(members[mi].balance)||0)+Number(c.reward);
+      members[mi].monthEarned=(Number(members[mi].monthEarned)||0)+Number(c.reward);
+      members[mi].notifications=members[mi].notifications||[];
+      members[mi].notifications.push(mkNotif('&#x1F3AB; <strong>Promo code redeemed!</strong> You claimed <strong>GHS '+Number(c.reward).toFixed(2)+'</strong> using code <strong>'+code+'</strong>.'));
+      currentUser=members[mi];
+      saveMembers(members);
+      saveSession();
+      codes[ci].usedCount=(codes[ci].usedCount||0)+1;
+      usedBy.push(currentUser.id);
+      codes[ci].usedBy=usedBy;
+      savePromoCodes(codes);
+      if(el('promoCodeInput'))el('promoCodeInput').value='';
+      showPromoMsg('&#x1F389; Success! <strong>GHS '+Number(c.reward).toFixed(2)+'</strong> has been added to your balance.',true);
+      try{setText('dmBal','GHS '+Number(currentUser.balance||0).toFixed(2));}catch(e){}
+      try{renderNotifications(currentUser);}catch(e){}
+      restoreBtn();
+      renderMyPromoHistory();
+    });
+  }
+
+  function showPromoMsg(msg,ok){
+    var m=el('promoMsg');
+    if(!m) return;
+    m.style.display='block';
+    m.style.background=ok?'var(--green-pale)':'var(--red-pale)';
+    m.style.border='1px solid '+(ok?'var(--green)':'var(--red)');
+    m.style.color=ok?'var(--green)':'var(--red)';
+    m.innerHTML=msg;
+  }
+
+  function renderMyPromoHistory(){
+    if(!currentUser||isAdminUser()) return;
+    var codes=getPromoCodes();
+    var myRedeemed=codes.filter(function(c){return Array.isArray(c.usedBy)&&c.usedBy.indexOf(currentUser.id)>=0;});
+    var card=el('myPromoHistoryCard');var list=el('myPromoHistoryList');
+    if(!card||!list) return;
+    if(!myRedeemed.length){card.style.display='none';return;}
+    card.style.display='block';
+    var html='';
+    myRedeemed.forEach(function(c){
+      html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--warm-gray);border-radius:9px;margin-bottom:8px">'
+        +'<div><span style="font-family:monospace;font-weight:700;font-size:13px;letter-spacing:1px">'+c.code+'</span>'
+        +(c.description?'<br><span style="font-size:11.5px;color:var(--text-muted)">'+c.description+'</span>':'')
+        +'</div>'
+        +'<div style="font-size:15px;font-weight:700;color:var(--green)">+GHS '+Number(c.reward).toFixed(2)+'</div>'
+        +'</div>';
+    });
+    list.innerHTML=html;
+  }
+  // ── END PROMO CODES ──────────────────────────────────────────────────────────
 
 </script>
 <!-- Paystack popup window approach -->
