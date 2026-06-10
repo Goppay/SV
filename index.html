@@ -4418,6 +4418,20 @@ document.addEventListener('DOMContentLoaded', function(){
 
     _showUpgradeVerifyBanner(true, _spinnerHtml+' Confirming your upgrade payment &mdash; please wait&hellip;');
 
+    function _cancelUpgradeFromBanner(){
+      try{
+        var _reqs=getUpgradeReqs();
+        var _ci=_reqs.findIndex(function(r){return r.id===ugPend.reqId;});
+        if(_ci>=0){_reqs[_ci].status='cancelled'; saveUpgradeReqs(_reqs); syncUpgradesToFirebase();}
+        localStorage.removeItem('gop_pending_upgrade');
+      }catch(e){}
+      _showUpgradeVerifyBanner(false);
+      try{
+        var uMsgEl=document.getElementById('upgradeMsg');
+        if(uMsgEl){uMsgEl.style.display='block';uMsgEl.style.background='var(--red-pale,#fef2f2)';uMsgEl.style.border='1px solid var(--red,#dc2626)';uMsgEl.style.color='var(--red,#dc2626)';uMsgEl.innerHTML='&#x26A0; Upgrade request cancelled. You can start a new upgrade whenever you are ready.';}
+      }catch(e){}
+    }
+
     function _showCancelOption(){
       _showUpgradeVerifyBanner(true,
         '&#x26A0; Payment could not be confirmed yet. '
@@ -4425,7 +4439,7 @@ document.addEventListener('DOMContentLoaded', function(){
       setTimeout(function(){
         var cLink=document.getElementById('upgradeVerifyCancel');
         if(cLink) cLink.addEventListener('click',function(e){
-          e.preventDefault(); _showUpgradeVerifyBanner(false); cancelUpgradeAttempt(ugPend.reqId);
+          e.preventDefault(); _cancelUpgradeFromBanner();
         });
       },100);
     }
