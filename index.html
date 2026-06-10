@@ -4374,7 +4374,7 @@ document.addEventListener('DOMContentLoaded', function(){
       if(!b&&visible){
         b=document.createElement('div');
         b.id='upgradeVerifyBanner';
-        b.style.cssText='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:900;background:#0d1117;color:#fff;padding:14px 22px;border-radius:12px;font-size:13.5px;font-weight:600;display:flex;align-items:center;gap:12px;box-shadow:0 4px 24px rgba(0,0,0,.25);max-width:92vw;flex-wrap:wrap;justify-content:center;text-align:center';
+        b.style.cssText='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:900;background:#1d4ed8;color:#fff;padding:14px 22px;border-radius:12px;font-size:13.5px;font-weight:600;display:flex;align-items:center;gap:12px;box-shadow:0 4px 24px rgba(29,78,216,.35);max-width:92vw;flex-wrap:wrap;justify-content:center;text-align:center';
         document.body.appendChild(b);
       }
       if(!b) return;
@@ -10510,7 +10510,7 @@ function submitUpgradeRequest(){
     +'&callback_url='+encodeURIComponent(upgradeCallbackUrl);
 
   var btn=el('submitUpgradeBtn');
-  if(btn){btn.disabled=true;btn.innerHTML='&#x23F3; Opening Paystack...';}
+  if(btn){btn.disabled=true;btn.innerHTML='&#x1F4B3; Pay &amp; Upgrade via Paystack &#x2192;';}
 
   // Navigate directly — popup is silently blocked on most browsers,
   // causing the button to freeze in "Opening Paystack…" forever.
@@ -12874,7 +12874,7 @@ function checkDailyStreakBonus(member){
   //   1. gop_pool_popup_verified already set (postMessage beat the close event) → instant success
   //   2. pending has a real paystackRef → verify directly with backend
   //   3. no ref yet → wait for Firebase webhook entry (backend webhook flow)
-  // The hard-cancel popup only fires if none of the above resolve within 5 minutes.
+  // The hard-cancel popup only fires if none of the above resolve within 1 minute.
   var _activePoolPoll=null; // track active poll so we never double-start
 
   function startPoolPaymentConfirmation(){
@@ -12905,7 +12905,7 @@ function checkDailyStreakBonus(member){
 
     var ref=pending.paystackRef||pending.reference||'';
     var attempts=0;
-    var MAX_WAIT_MS=300000; // 5 minutes absolute maximum
+    var MAX_WAIT_MS=60000; // 1 minute absolute maximum
     var _giveUpTimer=setTimeout(function(){
       // Only show cancel if we truly never got confirmation
       if(_activePoolPoll){
