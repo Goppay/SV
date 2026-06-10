@@ -3015,7 +3015,35 @@ function syncIssuesFromFirebase(cb){ fbPull('issues', getIssues, saveIssues, tru
 // votes, page follows, withdrawals, payments etc. that happened on ANY device,
 // not just the one where the admin is currently signed in. Merged by id so
 // duplicate entries from concurrent devices collapse correctly.
-function syncActivityFromFirebase(cb){ fbPull('activity', getActivity, saveActivity, true, cb); }
+// NOTE: unlike generic fbPull, this respects an empty remote array as an
+// explicit clear signal — so "Clear log" propagates across devices.
+function syncActivityFromFirebase(cb){
+  jbGet('activity', function(data){
+    // null means the key is absent from the bin — leave local unchanged.
+    if(data===null||data===undefined){if(cb)cb();return;}
+    var remote;
+    if(Array.isArray(data)) remote=data.filter(Boolean);
+    else if(typeof data==='object') remote=Object.values(data).filter(Boolean);
+    else {if(cb)cb();return;}
+    // Empty remote = admin cleared the log. Propagate the clear locally.
+    if(!remote.length){
+      if(getActivity().length){saveActivity([]);}
+      if(cb)cb();return;
+    }
+    // Merge remote into local by id (append-only union across devices).
+    var local=getActivity();
+    var idMap={};
+    local.forEach(function(x,i){if(x&&x.id) idMap[x.id]=i;});
+    var changed=false;
+    remote.forEach(function(r){
+      if(!r||!r.id) return;
+      if(idMap[r.id]===undefined){idMap[r.id]=local.length;local.push(r);changed=true;}
+      else{var li=idMap[r.id];if(JSON.stringify(local[li])!==JSON.stringify(r)){local[li]=r;changed=true;}}
+    });
+    if(changed) saveActivity(local);
+    if(cb)cb();
+  });
+}
 
 function syncScheduleToFirebase(){ jbPut('schedule', getSchedule()); }
 function syncScheduleFromFirebase(cb){
@@ -3218,7 +3246,6 @@ function logActivity(type, actor, message, meta){
     // Cap at 1000 most-recent entries to avoid bloat.
     if(arr.length>1000) arr=arr.slice(-1000);
     saveActivity(arr);
-    try{ if(typeof jbPut==='function') jbPut('activity', arr); }catch(e){}
     try{ if(document.getElementById('atab-activity')&&document.getElementById('atab-activity').classList.contains('active')) renderActivityFeed(); }catch(e){}
   }catch(e){}
 }
@@ -7241,12 +7268,14 @@ document.addEventListener('DOMContentLoaded',function(){
   var f=document.getElementById('activityFilter'); if(f) f.addEventListener('change',renderActivityFeed);
   var s=document.getElementById('activitySearch'); if(s) s.addEventListener('input',renderActivityFeed);
   var r=document.getElementById('activityRefreshBtn'); if(r) r.addEventListener('click',function(){
-    if(typeof hydrateFromJsonBin==='function'){ hydrateFromJsonBin().then(renderActivityFeed); } else renderActivityFeed();
+    var aBody=document.getElementById('activityBody');
+    if(aBody) aBody.innerHTML='<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:18px;font-size:13px">&#x23F3; Refreshing&hellip;</td></tr>';
+    _gopMaster=null; // force a genuine network fetch, bypassing the in-memory cache
+    syncActivityFromFirebase(renderActivityFeed);
   });
   var c=document.getElementById('activityClearBtn'); if(c) c.addEventListener('click',function(){
     if(!confirm('Permanently clear the activity log? Past actions cannot be recovered.')) return;
-    saveActivity([]);
-    try{ if(typeof jbPut==='function') jbPut('activity', []); }catch(e){}
+    saveActivity([]); // saveActivity already calls jbPut internally
     renderActivityFeed();
   });
 });
