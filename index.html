@@ -1209,7 +1209,6 @@ iframe[src*="badge"]{
         <button class="d-tab" data-tab="report" onclick="switchDashTabMenu(this,'&#x1F6A8; Report Issue')">&#x1F6A8; Report Issue</button>
         <button class="d-tab" data-tab="transactions" onclick="switchDashTabMenu(this,'&#x1F4C3; Transactions')">&#x1F4C3; Transactions</button>
         <button class="d-tab" data-tab="settings" onclick="switchDashTabMenu(this,'&#x2699; Settings')">&#x2699; Settings</button>
-        <button class="d-tab" data-tab="redeem" onclick="switchDashTabMenu(this,'&#x1F3AB; Redeem Code')">&#x1F3AB; Redeem Code</button>
       </div>
     </div>
     <div class="d-tabs" style="display:none"></div>
@@ -1598,27 +1597,6 @@ iframe[src*="badge"]{
         </div>
       </div>
     </div>
-    <!-- REDEEM CODE TAB -->
-    <div class="d-tab-sec" id="tab-redeem">
-      <div class="d-card">
-        <div class="d-card-title">&#x1F3AB; Redeem Promo Code</div>
-        <p style="font-size:13.5px;color:var(--text-muted);margin-bottom:18px;line-height:1.6">Enter a promo code below to instantly add GHS to your account balance. Each code can only be used once per member.</p>
-        <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
-          <div class="fg" style="flex:1;min-width:200px;margin:0">
-            <label>Promo Code</label>
-            <input type="text" id="redeemCodeInput" placeholder="e.g. WELCOME50" style="text-transform:uppercase;letter-spacing:1px;font-weight:600"/>
-          </div>
-          <button class="sbtn" id="redeemCodeBtn" style="width:auto;padding:11px 28px;margin-top:0;white-space:nowrap">&#x1F3AB; Redeem Code</button>
-        </div>
-        <div id="redeemCodeMsg" style="display:none;margin-top:12px;padding:11px 14px;border-radius:9px;font-size:13.5px;font-weight:500"></div>
-      </div>
-      <div class="d-card" style="margin-top:0">
-        <div style="font-size:13px;color:var(--text-muted);line-height:1.6;padding:4px 0">
-          <strong style="color:var(--text)">How promo codes work:</strong><br>
-          Enter a valid promo code provided by GhanaOpinionPay. The GHS value will be instantly added to your balance. Codes are limited in use and may have an expiry date — use them as soon as you receive them!
-        </div>
-      </div>
-    </div>
   </div>
 </div>
 
@@ -1682,7 +1660,6 @@ iframe[src*="badge"]{
         <button class="a-tab" data-atab="atransactions">&#x1F4C3; Transactions</button>
         <button class="a-tab" data-atab="activity">&#x1F4DC; Activity</button>
         <button class="a-tab" data-atab="asettings">&#x2699; Settings</button>
-        <button class="a-tab" data-atab="promocodes">&#x1F3AB; Promo Codes</button>
       </div>
     </div>
     <div class="a-section active" id="atab-payments">
@@ -2399,47 +2376,6 @@ iframe[src*="badge"]{
         <div id="updateAppStatus" style="margin-top:12px;font-size:13px"></div>
       </div>
     </div>
-    <!-- ADMIN PROMO CODES TAB -->
-    <div class="a-section" id="atab-promocodes">
-      <div class="a-card">
-        <div class="a-card-title">&#x1F3AB; Create Promo Code</div>
-        <div class="add-form" id="promoCodeCreateForm">
-          <div class="add-form-title">New Promo Code</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
-            <div class="fg" style="margin:0">
-              <label>Code (uppercase, no spaces)</label>
-              <input type="text" id="pcCode" placeholder="e.g. WELCOME50" style="text-transform:uppercase;font-family:monospace;font-weight:700;letter-spacing:1px"/>
-            </div>
-            <div class="fg" style="margin:0">
-              <label>GHS Amount</label>
-              <input type="number" id="pcAmount" placeholder="e.g. 5.00" min="0.1" step="0.01"/>
-            </div>
-            <div class="fg" style="margin:0">
-              <label>Max Uses (total)</label>
-              <input type="number" id="pcMaxUses" placeholder="e.g. 100" min="1" step="1"/>
-            </div>
-            <div class="fg" style="margin:0">
-              <label>Expiry Date</label>
-              <input type="date" id="pcExpiry"/>
-            </div>
-          </div>
-          <div id="pcCreateMsg" style="display:none;margin-bottom:10px;padding:9px 13px;border-radius:8px;font-size:13px;font-weight:500"></div>
-          <button class="add-btn" id="createPromoCodeBtn">&#x2B50; Create Code</button>
-        </div>
-      </div>
-      <div class="a-card">
-        <div class="a-card-title">
-          <span>&#x1F4CB; All Promo Codes</span>
-          <button class="abtn" id="refreshPromoCodesBtn">&#x21BB; Refresh</button>
-        </div>
-        <div style="overflow-x:auto">
-          <table class="atable">
-            <thead><tr><th>#</th><th>Code</th><th>Amount (GHS)</th><th>Uses / Limit</th><th>Expiry</th><th>Status</th><th>Action</th></tr></thead>
-            <tbody id="adminPromoCodesBody"><tr><td colspan="7" class="empty-row">No promo codes yet.</td></tr></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
   </div>
 </div>
 
@@ -3039,14 +2975,7 @@ function syncSubAdminsToFirebase(){ jbPut('subadmins', getSubAdmins()); }
 function syncSubAdminsFromFirebase(cb){ fbPull('subadmins', getSubAdmins, saveSubAdmins, true, cb); }
 
 function syncUpgradesToFirebase(){ jbPut('upgrades', getUpgradeReqs()); }
-// Timestamp set whenever admin approves/denies an upgrade.
-// Prevents the 10-second sync interval from pulling stale Firebase data
-// (the debounced jbPut may not have landed yet) and reverting the UI.
-var _upgradeProcessedAt=0;
-function syncUpgradesFromFirebase(cb){
-  if(Date.now()-_upgradeProcessedAt<5000){if(cb)cb();return;}
-  fbPull('upgrades', getUpgradeReqs, saveUpgradeReqs, true, cb);
-}
+function syncUpgradesFromFirebase(cb){ fbPull('upgrades', getUpgradeReqs, saveUpgradeReqs, true, cb); }
 
 function syncIssuesToFirebase(){ jbPut('issues', getIssues()); }
 function syncIssuesFromFirebase(cb){ fbPull('issues', getIssues, saveIssues, true, cb); }
@@ -3961,7 +3890,6 @@ document.addEventListener('DOMContentLoaded', function(){
         if(tab.dataset.atab==='pools'){ setTimeout(function(){renderAdminPools();renderAdminPoolEntries();},50); }
         if(tab.dataset.atab==='aslots'){ setTimeout(renderAdminSlots,50); }
         if(tab.dataset.atab==='atransactions'){ setTimeout(renderAdminTransactions,50); }
-        if(tab.dataset.atab==='promocodes'){ setTimeout(renderAdminPromoCodes,50); }
       });
     });
     // Admin buttons
@@ -3970,13 +3898,6 @@ document.addEventListener('DOMContentLoaded', function(){
     var rpeb=el('refreshPoolEntriesBtn'); if(rpeb) rpeb.addEventListener('click',renderAdminPoolEntries);
     var asrb=el('aSlotRefreshBtn'); if(asrb) asrb.addEventListener('click',renderAdminSlots);
     var aSlotSrch=el('aSlotSearch'); if(aSlotSrch) aSlotSrch.addEventListener('input',renderAdminSlots);
-    // Promo codes admin
-    var pcBtn=el('createPromoCodeBtn'); if(pcBtn) pcBtn.addEventListener('click',createPromoCode);
-    var rpco=el('refreshPromoCodesBtn'); if(rpco) rpco.addEventListener('click',renderAdminPromoCodes);
-    // Redeem code (user)
-    var rcBtn=el('redeemCodeBtn'); if(rcBtn) rcBtn.addEventListener('click',redeemPromoCode);
-    var rcInput=el('redeemCodeInput');
-    if(rcInput) rcInput.addEventListener('keydown',function(e){if(e.key==='Enter') redeemPromoCode();});
   
   // Track site visit
   trackSiteVisit();
@@ -6838,8 +6759,6 @@ function logout(){
   hide('paymentPage');
   hide('suspendedPage');
   hide('pendingDeletionPage');
-  // Hide the pool payment confirmation banner so it doesn't persist after logout
-  try{var _pcb=document.getElementById('poolConfirmBanner');if(_pcb)_pcb.style.display='none';}catch(e){}
   document.body.style.overflow='auto';
   window.scrollTo(0,0);
 }
@@ -7019,7 +6938,6 @@ function switchAdminTab(name, btn){
   if(name==='duplicates') renderDuplicatesTable();
   if(name==='ads') renderAdminAds();
   if(name==='issues') renderAdminIssues();
-  if(name==='promocodes') renderAdminPromoCodes();
   if(name==='asettings'){
     renderSubAdminList();
     var cc=el('currentSubAdminCount'); if(cc) cc.textContent=getSubAdmins().length;
@@ -10481,20 +10399,178 @@ function submitUpgradeRequest(){
   var url='https://paystack.shop/pay/'+slug
     +'?email='+encodeURIComponent(currentUser.email)
     +'&name='+encodeURIComponent(currentUser.firstName+' '+currentUser.lastName)
+    +'&amount='+(fee*100)
     +'&callback_url='+encodeURIComponent(upgradeCallbackUrl);
 
   var btn=el('submitUpgradeBtn');
   if(btn){btn.disabled=true;btn.innerHTML='&#x23F3; Opening Paystack...';}
 
-  // Navigate directly — popup is silently blocked on most browsers,
-  // causing the button to freeze in "Opening Paystack…" forever.
-  // The upgrade_callback handler already handles the return redirect.
-  window.location.href=url;
-}
+  var pw=600,ph=700;
+  var pleft=(screen.width/2)-(pw/2);
+  var ptop=(screen.height/2)-(ph/2);
+  var payWin=window.open(url,'PaystackUpgrade','width='+pw+',height='+ph+',top='+ptop+',left='+pleft+',scrollbars=yes');
 
-// cancelUpgradeAttempt is kept for any legacy references but the
-// popup-close path that used to call it is gone (we now redirect directly).
-function cancelUpgradeAttempt(){}
+  if(!payWin||payWin.closed){
+    // Popup blocked — redirect same tab
+    window.location.href=url;
+    return;
+  }
+
+  // Poll for popup close
+  function cancelUpgradeAttempt(){
+    if(btn){btn.disabled=false;btn.innerHTML='&#x1F4B3; Pay &amp; Upgrade via Paystack &#x2192;';}
+    // Remove pending upgrade request
+    try{
+      var allReqs2=getUpgradeReqs();
+      var ci=allReqs2.findIndex(function(r){return r.id===req.id;});
+      if(ci>=0){allReqs2[ci].status='cancelled'; saveUpgradeReqs(allReqs2); syncUpgradesToFirebase();}
+      localStorage.removeItem('gop_pending_upgrade');
+    }catch(e){}
+    if(el('upgradeFormWrap')) el('upgradeFormWrap').style.display='none';
+    showUMsg('error','&#x26A0; Payment cancelled. You can try again whenever you are ready.');
+  }
+
+  // Listen for postMessage from upgrade popup (most reliable cross-window signal)
+  var _upgradeMsgHandler=function(evt){
+    if(evt.origin!==window.location.origin) return;
+    if(!evt.data) return;
+
+    if(evt.data.type==='GOP_UPGRADE_VERIFIED'&&evt.data.reqId===req.id){
+      window.removeEventListener('message',_upgradeMsgHandler);
+      clearInterval(pollInterval);
+      if(btn){btn.disabled=false; btn.innerHTML='&#x1F4B3; Pay &amp; Upgrade via Paystack &#x2192;';}
+      try{localStorage.removeItem('gop_upgrade_popup_verified');}catch(e){}
+      try{localStorage.removeItem('gop_pending_upgrade');}catch(e){}
+      if(msgEl){msgEl.style.display='block';msgEl.style.background='var(--green-pale)';msgEl.style.border='1px solid var(--green)';msgEl.style.color='var(--green)';msgEl.innerHTML='&#x2705; Payment confirmed! Activating your upgrade&hellip;';}
+      autoApplyUpgrade(currentUser.id, targetTier, fee, req.id);
+      setVal('upgradeNotes','');
+      if(el('upgradeFormWrap')) el('upgradeFormWrap').style.display='none';
+      try{pushInstantNotif('&#x2B06; Your upgrade to <strong>'+targetTier+'</strong> has been confirmed and applied!');}catch(e){}
+      return;
+    }
+
+    if(evt.data.type==='GOP_UPGRADE_FAILED'&&evt.data.reqId===req.id){
+      window.removeEventListener('message',_upgradeMsgHandler);
+      clearInterval(pollInterval);
+      if(btn){btn.disabled=false; btn.innerHTML='&#x1F4B3; Pay &amp; Upgrade via Paystack &#x2192;';}
+      if(msgEl){
+        msgEl.style.display='block';
+        msgEl.style.background='var(--red-pale)';
+        msgEl.style.border='1px solid var(--red)';
+        msgEl.style.color='var(--red)';
+        msgEl.innerHTML='&#x274C; Payment could not be verified. Please try again. If money was deducted, contact <strong>Ghanaopinionpay@gmail.com</strong>.';
+      }
+      try{pushInstantNotif('&#x274C; <strong>Upgrade payment not verified.</strong> Your payment for the <strong>'+targetTier+'</strong> upgrade could not be confirmed. Please try again or contact support.');}catch(e){}
+      return;
+    }
+  };
+  window.addEventListener('message',_upgradeMsgHandler);
+
+  var pollInterval=setInterval(function(){
+    if(!payWin||payWin.closed){
+      clearInterval(pollInterval);
+      window.removeEventListener('message',_upgradeMsgHandler);
+      if(btn){btn.disabled=false; btn.innerHTML='&#x1F4B3; Pay &amp; Upgrade via Paystack &#x2192;';}
+
+      // Give opener.localStorage write a moment to settle before reading
+      setTimeout(function(){
+      // Fast path: popup already approved the upgrade (new instant-verification approach)
+      var _upv=null;
+      try{_upv=JSON.parse(localStorage.getItem('gop_upgrade_popup_verified')||'null');}catch(e){}
+      if(_upv&&_upv.reqId===req.id){
+        try{localStorage.removeItem('gop_upgrade_popup_verified');}catch(e){}
+        try{localStorage.removeItem('gop_pending_upgrade');}catch(e){}
+        if(msgEl){msgEl.style.display='block';msgEl.style.background='var(--green-pale)';msgEl.style.border='1px solid var(--green)';msgEl.style.color='var(--green)';msgEl.innerHTML='&#x2705; Payment confirmed! Activating your upgrade&hellip;';}
+        autoApplyUpgrade(currentUser.id, targetTier, fee, req.id);
+        setVal('upgradeNotes','');
+        if(el('upgradeFormWrap')) el('upgradeFormWrap').style.display='none';
+        return;
+      }
+
+      // Check if payment was verified by the callback handler (old flag-based fallback)
+      var verifiedRef=null;
+      var payFailed=false;
+      try{verifiedRef=localStorage.getItem('gop_upgrade_verified_'+req.id);}catch(e){}
+      try{payFailed=!!localStorage.getItem('gop_upgrade_failed_'+req.id);}catch(e){}
+      try{localStorage.removeItem('gop_upgrade_verified_'+req.id);}catch(e){}
+      try{localStorage.removeItem('gop_upgrade_failed_'+req.id);}catch(e){}
+
+      if(verifiedRef){
+        // Fallback: mark approved in parent and apply
+        if(msgEl){
+          msgEl.style.display='block';
+          msgEl.style.background='var(--green-pale)';
+          msgEl.style.border='1px solid var(--green)';
+          msgEl.style.color='var(--green)';
+          msgEl.innerHTML='&#x2705; Payment confirmed! Activating your upgrade&hellip;';
+        }
+        var allReqs=getUpgradeReqs();
+        var ri=allReqs.findIndex(function(r){return r.id===req.id;});
+        if(ri>=0){allReqs[ri].paystackRef=verifiedRef; allReqs[ri].status='approved'; allReqs[ri].approvedAt=new Date().toISOString(); saveUpgradeReqs(allReqs); syncUpgradesToFirebase();}
+        try{localStorage.removeItem('gop_pending_upgrade');}catch(e){}
+        autoApplyUpgrade(currentUser.id, targetTier, fee, req.id);
+        setVal('upgradeNotes','');
+        if(el('upgradeFormWrap')) el('upgradeFormWrap').style.display='none';
+
+      } else if(payFailed){
+        // Paystack returned but payment was not successful
+        if(msgEl){
+          msgEl.style.display='block';
+          msgEl.style.background='var(--red-pale)';
+          msgEl.style.border='1px solid var(--red)';
+          msgEl.style.color='var(--red)';
+          msgEl.innerHTML='&#x26A0; Payment could not be verified by Paystack. Your upgrade request remains <strong>pending</strong>. Contact support at Ghanaopinionpay@gmail.com if money was deducted from your account.<br><a href="#" id="upgradeCancelRetryLink" style="font-size:12px;color:var(--red);font-weight:600;margin-top:6px;display:inline-block">&#x2716; Cancel this request and retry</a>';
+        }
+        setTimeout(function(){
+          var cLink=el('upgradeCancelRetryLink');
+          if(cLink) cLink.addEventListener('click',function(e){e.preventDefault(); cancelUpgradeAttempt();});
+        },100);
+
+      } else {
+        // Popup closed without a Paystack callback — poll Firebase for webhook-confirmed approval
+        // (same pattern as pool payment auto-verification)
+        if(msgEl){
+          msgEl.style.display='block';
+          msgEl.style.background='#e0f2fe';
+          msgEl.style.border='1px solid #0ea5e9';
+          msgEl.style.color='#0369a1';
+          msgEl.innerHTML='&#x23F3; <strong>Verifying your payment&hellip;</strong> Please wait up to 60 seconds while we confirm with Paystack.';
+        }
+        var _ugAttempts=0;
+        var _ugTimer=setTimeout(function(){
+          clearInterval(_ugPoll);
+          if(msgEl){
+            msgEl.style.background='#e0f2fe';
+            msgEl.style.border='1px solid #0ea5e9';
+            msgEl.style.color='#0369a1';
+            msgEl.innerHTML='&#x23F3; Payment window closed. If you completed payment, your upgrade is <strong>pending admin verification</strong>. You will be notified once confirmed.<br><a href="#" id="upgradeCancelRetryLink" style="font-size:12px;color:var(--red);font-weight:600;margin-top:6px;display:inline-block">&#x2716; Didn\'t pay? Cancel this request</a>';
+          }
+          setTimeout(function(){var cLink=el('upgradeCancelRetryLink');if(cLink)cLink.addEventListener('click',function(e){e.preventDefault();cancelUpgradeAttempt();});},100);
+        },60000);
+        var _ugPoll=setInterval(function(){
+          _ugAttempts++;
+          syncUpgradesFromFirebase(function(){
+            var _reqs=getUpgradeReqs();
+            var _found=_reqs.find(function(r){return r.id===req.id&&r.status==='approved';});
+            if(_found){
+              clearTimeout(_ugTimer); clearInterval(_ugPoll);
+              try{localStorage.removeItem('gop_pending_upgrade');}catch(e){}
+              if(msgEl){msgEl.style.display='block';msgEl.style.background='var(--green-pale)';msgEl.style.border='1px solid var(--green)';msgEl.style.color='var(--green)';msgEl.innerHTML='&#x2705; Payment confirmed! Activating your upgrade&hellip;';}
+              if(btn){btn.disabled=false;btn.innerHTML='&#x1F4B3; Pay &amp; Upgrade via Paystack &#x2192;';}
+              autoApplyUpgrade(currentUser.id, targetTier, fee, req.id);
+              if(el('upgradeFormWrap')) el('upgradeFormWrap').style.display='none';
+            } else if(_ugAttempts>=20){
+              clearTimeout(_ugTimer); clearInterval(_ugPoll);
+              if(msgEl){msgEl.style.background='#e0f2fe';msgEl.style.border='1px solid #0ea5e9';msgEl.style.color='#0369a1';msgEl.innerHTML='&#x23F3; Payment window closed. If you completed payment, your upgrade is <strong>pending admin verification</strong>. You will be notified once confirmed.<br><a href="#" id="upgradeCancelRetryLink" style="font-size:12px;color:var(--red);font-weight:600;margin-top:6px;display:inline-block">&#x2716; Didn\'t pay? Cancel this request</a>';}
+              setTimeout(function(){var cLink=el('upgradeCancelRetryLink');if(cLink)cLink.addEventListener('click',function(e){e.preventDefault();cancelUpgradeAttempt();});},100);
+            }
+          });
+        },3000);
+      }
+      },600); // end setTimeout settle delay
+    }
+  },500);
+}
 
 function renderUpgradeHistory(member){
   var reqs=getUpgradeReqs().filter(function(r){return r.memberId===member.id;});
@@ -10585,7 +10661,6 @@ function processUpgrade(reqId, action, denyReason){
   if(idx<0) return;
   reqs[idx].status=action;
   if(denyReason) reqs[idx].denyReason=denyReason;
-  _upgradeProcessedAt=Date.now(); // block stale Firebase pull for 5 s
   saveUpgradeReqs(reqs); syncUpgradesToFirebase();
   var req=reqs[idx];
   try{ logActivity('upgrade_processed', (typeof getAdminName==='function'?getAdminName():'Admin'), action+' upgrade request to '+req.targetTier+' for '+(req.memberName||req.memberId)+(denyReason?' — '+denyReason:''), {reqId:reqId, memberId:req.memberId, action:action}); }catch(e){}
@@ -12793,12 +12868,46 @@ function checkDailyStreakBonus(member){
     });
     var poolCallbackUrl=window.location.href.split('?')[0]+'?pool_callback=1';
     var url='https://paystack.shop/pay/'+POOL_PAYSTACK_SLUG
-      +'?email='+encodeURIComponent(currentUser.email||memberPhone+'@goppay.gh')
+      +'?amount='+total
+      +'&email='+encodeURIComponent(currentUser.email||memberPhone+'@goppay.gh')
       +'&metadata='+encodeURIComponent(meta)
       +'&callback_url='+encodeURIComponent(poolCallbackUrl);
-    // Navigate directly — popup is silently blocked on most browsers.
-    // pool_callback=1 on return triggers startPoolPaymentConfirmation().
-    window.location.href=url;
+    var pw=Math.min(520,window.innerWidth-20); var ph=Math.min(680,window.innerHeight-20);
+    var ptop=Math.round((window.innerHeight-ph)/2); var pleft=Math.round((window.innerWidth-pw)/2);
+    var payWin=window.open(url,'PoolPaystack','width='+pw+',height='+ph+',top='+ptop+',left='+pleft+',scrollbars=yes');
+    if(!payWin) window.open(url,'_blank');
+
+    // Primary signal: postMessage from popup (most reliable — works even when
+    // opener.localStorage is blocked by browser security policies)
+    var _msgHandler=function(evt){
+      if(evt.origin!==window.location.origin) return;
+      if(!evt.data||evt.data.type!=='GOP_POOL_VERIFIED') return;
+      window.removeEventListener('message',_msgHandler);
+      clearInterval(_closeCheck);
+      // Stop any active poll immediately — payment already verified in popup
+      if(_activePoolPoll){clearInterval(_activePoolPoll); _activePoolPoll=null;}
+      try{localStorage.removeItem('gop_pending_pool_payment');}catch(e){}
+      try{localStorage.removeItem('gop_pool_popup_verified');}catch(e){}
+      showPoolConfirmBanner(false);
+      try{checkPoolExpiry();renderMemberPools();}catch(e){}
+      showPoolPaymentSuccessPopup(Number(evt.data.slotsCount)||1, evt.data.poolTitle||'pool');
+      try{pushInstantNotif('&#x1F3C6; Your slot purchase for <strong>'+(evt.data.poolTitle||'pool')+'</strong> was confirmed!');}catch(e){}
+    };
+    window.addEventListener('message',_msgHandler);
+
+    // Fallback: poll for popup close, then check opener.localStorage flag or Firebase
+    var _closeCheck=setInterval(function(){
+      try{
+        if(!payWin||payWin.closed){
+          clearInterval(_closeCheck);
+          // Give opener.localStorage write a moment to settle before reading
+          setTimeout(function(){
+            window.removeEventListener('message',_msgHandler);
+            startPoolPaymentConfirmation();
+          },600);
+        }
+      }catch(e){clearInterval(_closeCheck);}
+    },800);
   }
 
   // ── POOL PAYMENT CONFIRMATION ─────────────────────────────────────────────
@@ -13304,12 +13413,88 @@ function confirmPayment(){
   var url='https://paystack.shop/pay/'+slug
     +'?email='+encodeURIComponent(reg.email)
     +'&name='+encodeURIComponent(reg.firstName+' '+reg.lastName)
+    +'&amount='+(tier.fee*100)
     +'&callback_url='+encodeURIComponent(regCallbackUrl);
 
-  // Navigate directly — popup is silently blocked on most browsers,
-  // causing the button to freeze in "Opening Paystack…" forever.
-  // reg_callback=1 on return handles verification automatically.
-  window.location.href=url;
+  // Open in popup window
+  var w=600, h=700;
+  var left=(screen.width/2)-(w/2);
+  var top=(screen.height/2)-(h/2);
+  _paymentWindow=window.open(
+    url,'PaystackPayment',
+    'width='+w+',height='+h+',top='+top+',left='+left+',scrollbars=yes,resizable=yes'
+  );
+
+  if(!_paymentWindow||_paymentWindow.closed||typeof _paymentWindow.closed==='undefined'){
+    // Popup was blocked — redirect instead (callback_url includes reg_callback=1 for verification)
+    restoreBtn();
+    try{localStorage.setItem('gop_pending_payment', JSON.stringify({ref:ref, reg:reg, tier:tier}));}catch(e){}
+    if(confirm('Popup was blocked by your browser.\n\nClick OK to open Paystack in this tab instead.\n\nYou will be brought back after payment.')){
+      window.location.href='https://paystack.shop/pay/'+slug
+        +'?email='+encodeURIComponent(reg.email)
+        +'&name='+encodeURIComponent(reg.firstName+' '+reg.lastName)
+        +'&amount='+(tier.fee*100)
+        +'&callback_url='+encodeURIComponent(regCallbackUrl);
+    }
+    return;
+  }
+
+  // Poll for popup close — check localStorage flag set by reg_callback verification handler
+  if(_paymentCheckInterval) clearInterval(_paymentCheckInterval);
+  _paymentCheckInterval=setInterval(function(){
+    if(!_paymentWindow||_paymentWindow.closed){
+      clearInterval(_paymentCheckInterval);
+      restoreBtn();
+
+      // Fast path: popup already created the account (new instant-verification approach)
+      var _rpv=null;
+      try{_rpv=JSON.parse(localStorage.getItem('gop_reg_popup_verified')||'null');}catch(e){}
+      if(_rpv&&_rpv.phone){
+        try{localStorage.removeItem('gop_reg_popup_verified');}catch(e){}
+        try{localStorage.removeItem('gop_pending_payment');}catch(e){}
+        var _newM=getMembers().find(function(x){return x.phone===_rpv.phone;});
+        if(_newM){
+          currentUser=_newM; saveSession();
+          try{sessionStorage.setItem('gop_session_active','1');}catch(e){}
+          hide('paymentPage');
+          openMemberDashboard(_newM);
+        }
+        return;
+      }
+
+      var verifiedTrxref=null;
+      var regPayFailed=false;
+      try{verifiedTrxref=localStorage.getItem('gop_reg_verified_'+ref);}catch(e){}
+      try{regPayFailed=!!localStorage.getItem('gop_reg_failed_'+ref);}catch(e){}
+      try{localStorage.removeItem('gop_reg_verified_'+ref);}catch(e){}
+      try{localStorage.removeItem('gop_reg_failed_'+ref);}catch(e){}
+
+      if(verifiedTrxref){
+        // Fallback: old flag approach — create account in parent
+        try{localStorage.removeItem('gop_pending_payment');}catch(e){}
+        createMemberAccount(reg, tier, verifiedTrxref);
+      } else if(regPayFailed){
+        var ppMsg=el('ppMsg');
+        if(ppMsg){
+          ppMsg.style.display='block';
+          ppMsg.style.background='var(--red-pale)';
+          ppMsg.style.border='1px solid var(--red)';
+          ppMsg.style.color='var(--red)';
+          ppMsg.innerHTML='&#x26A0; Payment could not be verified by Paystack. Your account has <strong>not</strong> been created. If money was deducted, please contact support at Ghanaopinionpay@gmail.com with your payment reference.';
+        }
+      } else {
+        // Popup closed manually without completing payment
+        var ppMsg2=el('ppMsg');
+        if(ppMsg2){
+          ppMsg2.style.display='block';
+          ppMsg2.style.background='#e0f2fe';
+          ppMsg2.style.border='1px solid #0ea5e9';
+          ppMsg2.style.color='#0369a1';
+          ppMsg2.innerHTML='&#x23F3; Payment window closed. If you completed payment, please wait a moment or contact support at Ghanaopinionpay@gmail.com with your payment reference to have your account activated.';
+        }
+      }
+    }
+  },500);
 }
 
 function checkPaystackReturn(){
@@ -14103,125 +14288,6 @@ function syncSmsLogFromFirebase(callback){
     });
   }catch(e){if(callback)callback();}
 }
-// ── PROMO CODES ─────────────────────────────────────────────────────────────
-function getPromoCodes(){
-  try{var r=localStorage.getItem('gop_promo_codes');return r?JSON.parse(r):[];}catch(e){return [];}
-}
-function savePromoCodes(codes){
-  try{localStorage.setItem('gop_promo_codes',JSON.stringify(codes));}catch(e){}
-}
-
-function renderAdminPromoCodes(){
-  var codes=getPromoCodes();
-  var tbody=document.getElementById('adminPromoCodesBody');
-  if(!tbody) return;
-  if(!codes.length){tbody.innerHTML='<tr><td colspan="7" class="empty-row">No promo codes yet.</td></tr>';return;}
-  var today=new Date(); today.setHours(0,0,0,0);
-  tbody.innerHTML=codes.map(function(c,i){
-    var expired=c.expiry&&new Date(c.expiry)<today;
-    var limitReached=c.uses>=c.maxUses;
-    var status=expired?'<span class="s-suspended">Expired</span>':limitReached?'<span class="s-suspended">Limit Reached</span>':'<span class="s-active">Active</span>';
-    var expLabel=c.expiry?c.expiry:'No expiry';
-    return '<tr>'
-      +'<td>'+(i+1)+'</td>'
-      +'<td><strong style="font-family:monospace;letter-spacing:1px">'+c.code+'</strong></td>'
-      +'<td>GHS '+Number(c.amount).toFixed(2)+'</td>'
-      +'<td>'+c.uses+' / '+c.maxUses+'</td>'
-      +'<td>'+expLabel+'</td>'
-      +'<td>'+status+'</td>'
-      +'<td><button class="abtn danger" onclick="deletePromoCode(\''+c.id+'\')">&#x1F5D1; Delete</button></td>'
-      +'</tr>';
-  }).join('');
-}
-
-function createPromoCode(){
-  var code=(document.getElementById('pcCode')||{value:''}).value.trim().toUpperCase().replace(/\s+/g,'');
-  var amount=parseFloat((document.getElementById('pcAmount')||{value:''}).value);
-  var maxUses=parseInt((document.getElementById('pcMaxUses')||{value:''}).value);
-  var expiry=(document.getElementById('pcExpiry')||{value:''}).value;
-  var msgEl=document.getElementById('pcCreateMsg');
-  function showMsg(type,txt){if(!msgEl)return;msgEl.style.display='block';msgEl.style.background=type==='error'?'#fdeaec':'#d1fae5';msgEl.style.border='1px solid '+(type==='error'?'#CE1126':'#059669');msgEl.style.color=type==='error'?'#CE1126':'#065f46';msgEl.innerHTML=txt;}
-  if(!code||code.length<3){showMsg('error','Code must be at least 3 characters.');return;}
-  if(isNaN(amount)||amount<=0){showMsg('error','Please enter a valid GHS amount.');return;}
-  if(isNaN(maxUses)||maxUses<1){showMsg('error','Please enter a valid usage limit.');return;}
-  var codes=getPromoCodes();
-  if(codes.find(function(c){return c.code===code;})){showMsg('error','A code with that name already exists.');return;}
-  var newCode={id:'PC'+Date.now(),code:code,amount:amount,maxUses:maxUses,uses:0,usedBy:[],expiry:expiry||'',createdAt:new Date().toISOString()};
-  codes.push(newCode); savePromoCodes(codes);
-  // Sync to Firebase if available
-  try{jbPut('promo_codes',codes,true);}catch(e){}
-  showMsg('success','&#x2705; Code <strong>'+code+'</strong> created successfully!');
-  document.getElementById('pcCode').value='';
-  document.getElementById('pcAmount').value='';
-  document.getElementById('pcMaxUses').value='';
-  document.getElementById('pcExpiry').value='';
-  renderAdminPromoCodes();
-}
-
-function deletePromoCode(id){
-  if(!confirm('Delete this promo code? This cannot be undone.')) return;
-  var codes=getPromoCodes().filter(function(c){return c.id!==id;});
-  savePromoCodes(codes);
-  try{jbPut('promo_codes',codes,true);}catch(e){}
-  renderAdminPromoCodes();
-}
-
-function redeemPromoCode(){
-  if(!currentUser||isAdminUser()) return;
-  var input=document.getElementById('redeemCodeInput');
-  var msgEl=document.getElementById('redeemCodeMsg');
-  var code=(input?input.value:'').trim().toUpperCase();
-  function showMsg(type,txt){
-    if(!msgEl) return;
-    msgEl.style.display='block';
-    msgEl.style.background=type==='error'?'var(--red-pale)':type==='warn'?'var(--gold-pale)':'var(--green-pale)';
-    msgEl.style.border='1px solid '+(type==='error'?'var(--red)':type==='warn'?'var(--gold-dark)':'var(--green)');
-    msgEl.style.color=type==='error'?'var(--red)':type==='warn'?'var(--gold-dark)':'var(--green)';
-    msgEl.innerHTML=txt;
-  }
-  if(!code){showMsg('error','Please enter a promo code.');return;}
-  var codes=getPromoCodes();
-  var found=codes.find(function(c){return c.code===code;});
-  if(!found){showMsg('error','&#x274C; Invalid code. Please check and try again.');return;}
-  // Check expiry
-  if(found.expiry){
-    var expDate=new Date(found.expiry); expDate.setHours(23,59,59,999);
-    if(new Date()>expDate){showMsg('warn','&#x23F0; This code has expired and is no longer valid.');return;}
-  }
-  // Check usage limit
-  if(found.uses>=found.maxUses){showMsg('warn','&#x1F6AB; This code has reached its maximum usage limit.');return;}
-  // Check if this user already used it
-  var usedBy=found.usedBy||[];
-  if(usedBy.indexOf(currentUser.id)>=0){showMsg('error','&#x1F6AB; You have already redeemed this code. Each code can only be used once per member.');return;}
-  // Apply the code
-  var amount=Number(found.amount)||0;
-  var members=getMembers();
-  var idx=members.findIndex(function(m){return m.id===currentUser.id;});
-  if(idx<0){showMsg('error','Member not found. Please log in again.');return;}
-  members[idx].balance=(Number(members[idx].balance)||0)+amount;
-  members[idx].monthEarned=(Number(members[idx].monthEarned)||0)+amount;
-  members[idx].notifications=members[idx].notifications||[];
-  members[idx].notifications.push(mkNotif('&#x1F3AB; Promo code <strong>'+code+'</strong> redeemed! <strong>GHS '+amount.toFixed(2)+'</strong> has been added to your balance.'));
-  // Log transaction
-  try{
-    var txns=getTransactions?getTransactions():[];
-    txns.unshift({id:'TX'+Date.now(),memberId:currentUser.id,memberName:currentUser.firstName+' '+currentUser.lastName,type:'promo_code',description:'Promo code redeemed: '+code,amount:amount,date:new Date().toISOString()});
-    if(typeof saveTransactions==='function') saveTransactions(txns);
-  }catch(e){}
-  saveMembers(members); currentUser=members[idx]; saveSession();
-  // Mark code as used
-  found.usedBy=usedBy; found.usedBy.push(currentUser.id); found.uses=(found.uses||0)+1;
-  var idx2=codes.findIndex(function(c){return c.id===found.id;}); if(idx2>=0) codes[idx2]=found;
-  savePromoCodes(codes);
-  try{jbPut('promo_codes',codes,true);}catch(e){}
-  // Update balance display
-  try{setText('dmBal','GHS '+(currentUser.balance||0).toFixed(2));}catch(e){}
-  try{renderNotifications(currentUser);}catch(e){}
-  try{logActivity('promo_code',currentUser.firstName+' '+currentUser.lastName,'Redeemed promo code '+code+' for GHS '+amount.toFixed(2),{memberId:currentUser.id});}catch(e){}
-  showMsg('success','&#x1F389; <strong>GHS '+amount.toFixed(2)+'</strong> has been added to your balance! Code: <strong>'+code+'</strong>');
-  if(input) input.value='';
-}
-
 // ── UPDATE APP ──────────────────────────────────────────────────────────────
 function handleUpdateAppDrop(e){
   e.preventDefault();
