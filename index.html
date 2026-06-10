@@ -7178,7 +7178,11 @@ function switchAdminTab(name, btn){
   if(name==='aslots'){
     syncPoolEntriesFromFirebase(function(){ renderAdminSlots(); });
   }
-  if(name==='activity') renderActivityFeed();
+  if(name==='activity'){
+    var aBody=document.getElementById('activityBody');
+    if(aBody) aBody.innerHTML='<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:18px;font-size:13px">&#x23F3; Loading activity&hellip;</td></tr>';
+    syncActivityFromFirebase(renderActivityFeed);
+  }
 }
 
 // ── ADMIN: ACTIVITY FEED ──────────────────────────────
@@ -12718,7 +12722,17 @@ function checkDailyStreakBonus(member){
       var soldOut=(p.slotsSold||0)>=p.totalSlots;
       if(days<=0||soldOut){ resolvePool(p); changed=true; }
     });
-    if(changed) renderMemberPools();
+    if(changed){
+      // Re-render pool UI using current localStorage data only —
+      // do NOT trigger another Firebase fetch (which can race and wipe myEntries).
+      var wrap=el('poolListWrap');
+      var freshPools=getPools();
+      var freshEntries=getPoolEntries();
+      var memberId=currentUser?currentUser.id:null;
+      var myEntries=memberId?freshEntries.filter(function(e){return e.memberId===memberId;}):[]; 
+      if(wrap) renderPoolCards(freshPools, myEntries, wrap);
+      renderMyPoolEntries(myEntries);
+    }
   }
 
   // ── MEMBER POOL RENDER ───────────────────────────────────────
