@@ -2141,7 +2141,6 @@ iframe[src*="badge"]{
           </div>
         </div>
       </div>
-    </div>
     <!-- ADMIN SLOTS TAB -->
     <div class="a-section" id="atab-aslots">
       <div class="a-card">
@@ -13538,7 +13537,7 @@ function checkDailyStreakBonus(member){
   // ── PROMO CODES ──────────────────────────────────────────────────────────────
   function getPromoCodes(){try{return JSON.parse(localStorage.getItem('gop_promo_codes')||'[]');}catch(e){return [];}}
   function savePromoCodes(arr){try{localStorage.setItem('gop_promo_codes',JSON.stringify(arr));}catch(e){} syncPromoCodesToFirebase();}
-  function syncPromoCodesToFirebase(){try{jbPut('promo_codes',getPromoCodes());}catch(e){}}
+  function syncPromoCodesToFirebase(){try{jbPut('promo_codes',getPromoCodes(),true);}catch(e){}}
   function syncPromoCodesFromFirebase(cb){
     try{
       // Reset the freshness timestamp so _gopFetchMaster(true) always goes to
@@ -13601,11 +13600,22 @@ function checkDailyStreakBonus(member){
     if(existing.find(function(c){return c.code===code;})){showSt('&#x26A0; A code with that name already exists.',false);return;}
     var nc={id:'PC'+Date.now(),code:code,reward:reward,usageLimit:limit,usedCount:0,usedBy:[],expiresAt:expiry,description:desc,isActive:true,createdAt:new Date().toISOString()};
     existing.push(nc);
-    savePromoCodes(existing);
-    showSt('&#x2705; Promo code <strong>'+code+'</strong> created successfully!',true);
-    if(el('pcCode'))el('pcCode').value='';if(el('pcReward'))el('pcReward').value='';
-    if(el('pcLimit'))el('pcLimit').value='0';if(el('pcExpiry'))el('pcExpiry').value='';if(el('pcDesc'))el('pcDesc').value='';
-    renderAdminPromos();
+    // Fetch fresh master first so the write carries the latest data and lands
+    // in JSONBin before any member's syncPromoCodesFromFirebase can race it.
+    _gopMaster=null;
+    _gopFetchMaster(true).then(function(){
+      savePromoCodes(existing);
+      showSt('&#x2705; Promo code <strong>'+code+'</strong> created successfully!',true);
+      if(el('pcCode'))el('pcCode').value='';if(el('pcReward'))el('pcReward').value='';
+      if(el('pcLimit'))el('pcLimit').value='0';if(el('pcExpiry'))el('pcExpiry').value='';if(el('pcDesc'))el('pcDesc').value='';
+      renderAdminPromos();
+    }).catch(function(){
+      savePromoCodes(existing);
+      showSt('&#x2705; Promo code <strong>'+code+'</strong> created successfully!',true);
+      if(el('pcCode'))el('pcCode').value='';if(el('pcReward'))el('pcReward').value='';
+      if(el('pcLimit'))el('pcLimit').value='0';if(el('pcExpiry'))el('pcExpiry').value='';if(el('pcDesc'))el('pcDesc').value='';
+      renderAdminPromos();
+    });
   }
 
   function togglePromoCode(id){
