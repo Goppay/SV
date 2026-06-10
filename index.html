@@ -1526,7 +1526,28 @@ iframe[src*="badge"]{
             <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:6px">Number of Slots to Buy</label>
             <input type="number" id="poolJoinQty" min="1" value="1" style="width:100%;padding:11px 13px;border:1.5px solid #e5e7eb;border-radius:9px;font-size:14px;font-weight:700;outline:none;text-align:center" oninput="updatePoolJoinTotal()"/>
           </div>
-          <div style="background:var(--green-pale);border:1px solid var(--green);border-radius:9px;padding:10px 14px;margin-bottom:18px;font-size:14px;font-weight:700;color:var(--green);text-align:center" id="poolJoinTotal">Total: GHS 0.00</div>
+          <div style="background:var(--green-pale);border:1px solid var(--green);border-radius:9px;padding:10px 14px;margin-bottom:14px;font-size:14px;font-weight:700;color:var(--green);text-align:center" id="poolJoinTotal">Total: GHS 0.00</div>
+          <div id="poolPaystackDetails" style="background:#f9fafb;border:1.5px solid #e5e7eb;border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:13px">
+            <div style="font-weight:700;color:#374151;margin-bottom:9px;font-size:12.5px;text-transform:uppercase;letter-spacing:.5px">&#x1F464; Payment Details</div>
+            <div style="display:grid;gap:7px">
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <span style="color:#6b7280">Name</span>
+                <span id="poolPayerName" style="font-weight:600;color:#111827;text-align:right;max-width:62%"></span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <span style="color:#6b7280">Email</span>
+                <span id="poolPayerEmail" style="font-weight:600;color:#111827;text-align:right;max-width:62%;word-break:break-all"></span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <span style="color:#6b7280">Phone</span>
+                <span id="poolPayerPhone" style="font-weight:600;color:#111827"></span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;padding-top:7px;border-top:1px solid #e5e7eb;margin-top:1px">
+                <span style="color:#374151;font-weight:600">Amount</span>
+                <span id="poolPayerAmount" style="font-weight:700;color:var(--green);font-size:14px"></span>
+              </div>
+            </div>
+          </div>
           <div id="poolJoinError" style="display:none;background:var(--red-pale);border:1px solid var(--red);border-radius:8px;padding:9px 13px;margin-bottom:12px;font-size:13px;color:var(--red)"></div>
           <button onclick="proceedPoolPaystack()" id="poolJoinPayBtn" style="width:100%;background:var(--green);color:#fff;border:none;border-radius:10px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font-body)">&#x1F4B3; Proceed to Paystack Payment &#x2192;</button>
           <div style="font-size:11.5px;color:#9ca3af;text-align:center;margin-top:8px">&#x1F512; Secured by Paystack &mdash; card, MoMo &amp; bank accepted</div>
@@ -12778,8 +12799,17 @@ function checkDailyStreakBonus(member){
     el('poolJoinPrice').textContent='GHS '+Number(pool.slotPrice).toFixed(2);
     el('poolJoinRemaining').textContent=rem+' of '+pool.totalSlots;
     var qty=el('poolJoinQty'); if(qty){qty.value='1';qty.max=rem;}
-    el('poolJoinTotal').textContent='Total: GHS '+Number(pool.slotPrice).toFixed(2);
+    var startTotal=Number(pool.slotPrice);
+    el('poolJoinTotal').textContent='Total: GHS '+startTotal.toFixed(2);
     var errEl=el('poolJoinError'); if(errEl) errEl.style.display='none';
+    // Auto-fill payment details from user profile
+    var fullName=((currentUser.firstName||'')+' '+(currentUser.lastName||'')).trim()||currentUser.name||'—';
+    var email=currentUser.email||((currentUser.phone||'unknown')+'@goppay.gh');
+    var phone=currentUser.phone||'—';
+    var nameEl=el('poolPayerName'); if(nameEl) nameEl.textContent=fullName;
+    var emailEl=el('poolPayerEmail'); if(emailEl) emailEl.textContent=email;
+    var phoneEl=el('poolPayerPhone'); if(phoneEl) phoneEl.textContent=phone;
+    var amtEl=el('poolPayerAmount'); if(amtEl) amtEl.textContent='GHS '+startTotal.toFixed(2);
     el2.style.display='flex';
     document.body.style.overflow='hidden';
   }
@@ -12793,6 +12823,7 @@ function checkDailyStreakBonus(member){
     var qty=parseInt((el('poolJoinQty')||{}).value)||1;
     var total=qty*Number(_poolJoinTarget.slotPrice);
     var t=el('poolJoinTotal'); if(t) t.textContent='Total: GHS '+total.toFixed(2);
+    var amtEl=el('poolPayerAmount'); if(amtEl) amtEl.textContent='GHS '+total.toFixed(2);
   }
   function proceedPoolPaystack(){
     if(!_poolJoinTarget||!currentUser){closePoolJoinModal();return;}
@@ -12821,8 +12852,15 @@ function checkDailyStreakBonus(member){
       member_name:memberName, member_phone:memberPhone
     });
     var poolCallbackUrl=window.location.href.split('?')[0]+'?pool_callback=1';
+    var _email=currentUser.email||(memberPhone+'@goppay.gh');
+    var _firstName=currentUser.firstName||memberName.split(' ')[0]||'';
+    var _lastName=currentUser.lastName||memberName.split(' ').slice(1).join(' ')||'';
     var url='https://paystack.shop/pay/'+POOL_PAYSTACK_SLUG
-      +'?email='+encodeURIComponent(currentUser.email||memberPhone+'@goppay.gh')
+      +'?email='+encodeURIComponent(_email)
+      +'&first_name='+encodeURIComponent(_firstName)
+      +'&last_name='+encodeURIComponent(_lastName)
+      +'&phone='+encodeURIComponent(memberPhone)
+      +'&amount='+total
       +'&metadata='+encodeURIComponent(meta)
       +'&callback_url='+encodeURIComponent(poolCallbackUrl);
     // Navigate directly — popup is silently blocked on most browsers.
