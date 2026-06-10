@@ -463,6 +463,10 @@ iframe[src*="badge"]{
     if(_hasCallback||_hasSess){
       // Hide all homepage sections immediately — JS will show the right screen once ready
       document.documentElement.style.visibility='hidden';
+      // SAFETY NET: never leave the page permanently blank — restore after 6s no matter what
+      setTimeout(function(){
+        try{document.documentElement.style.visibility='';}catch(e){}
+      }, 6000);
     }
   }catch(e){}
 })();
@@ -1206,6 +1210,7 @@ iframe[src*="badge"]{
         <button class="d-tab" data-tab="upgrade" onclick="switchDashTabMenu(this,'&#x2B06; Upgrade')">&#x2B06; Upgrade</button>
         <button class="d-tab" data-tab="pool" onclick="switchDashTabMenu(this,'&#x1F3B1; Pool')">&#x1F3B1; Pool</button>
         <button class="d-tab" data-tab="slots" onclick="switchDashTabMenu(this,'&#x1F3AB; My Slots')">&#x1F3AB; My Slots</button>
+        <button class="d-tab" data-tab="redeem" onclick="switchDashTabMenu(this,'&#x1F381; Redeem Code')">&#x1F381; Redeem Code</button>
         <button class="d-tab" data-tab="report" onclick="switchDashTabMenu(this,'&#x1F6A8; Report Issue')">&#x1F6A8; Report Issue</button>
         <button class="d-tab" data-tab="transactions" onclick="switchDashTabMenu(this,'&#x1F4C3; Transactions')">&#x1F4C3; Transactions</button>
         <button class="d-tab" data-tab="settings" onclick="switchDashTabMenu(this,'&#x2699; Settings')">&#x2699; Settings</button>
@@ -1445,6 +1450,21 @@ iframe[src*="badge"]{
         <div id="upgradeHistoryList"></div>
       </div>
     </div>
+    <div class="d-tab-sec" id="tab-redeem">
+      <div class="d-card">
+        <div class="d-card-title">&#x1F381; Redeem a Promo Code</div>
+        <p style="font-size:13.5px;color:var(--text-muted);margin-bottom:18px;line-height:1.6">Enter a promo code below to instantly add GHS to your balance. Each code can only be used once per account.</p>
+        <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:16px">
+          <div class="fg" style="margin:0;flex:1;min-width:200px">
+            <label style="font-size:13px;font-weight:600;color:var(--text);display:block;margin-bottom:6px">Promo Code</label>
+            <input type="text" id="redeemCodeInput" placeholder="Enter code e.g. GOP2026" style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:15px;font-family:var(--font-body);letter-spacing:1px;text-transform:uppercase;outline:none"/>
+          </div>
+          <button id="redeemCodeBtn" style="padding:11px 26px;background:var(--green);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font-body);white-space:nowrap">&#x2714; Redeem</button>
+        </div>
+        <div id="redeemCodeStatus" style="display:none;border-radius:10px;padding:13px 16px;font-size:14px;font-weight:600;line-height:1.5"></div>
+        <div id="redeemHistoryWrap" style="margin-top:20px"></div>
+      </div>
+    </div>
     <div class="d-tab-sec" id="tab-report">
       <div class="d-card">
         <div class="d-card-title">&#x1F6A8; Report an Issue</div>
@@ -1659,6 +1679,7 @@ iframe[src*="badge"]{
         <button class="a-tab" data-atab="aslots">&#x1F3AB; Slots</button>
         <button class="a-tab" data-atab="atransactions">&#x1F4C3; Transactions</button>
         <button class="a-tab" data-atab="activity">&#x1F4DC; Activity</button>
+        <button class="a-tab" data-atab="promocodes">&#x1F3AB; Promo Codes</button>
         <button class="a-tab" data-atab="asettings">&#x2699; Settings</button>
       </div>
     </div>
@@ -2199,6 +2220,30 @@ iframe[src*="badge"]{
         </table></div>
       </div>
     </div>
+    <div class="a-section" id="atab-promocodes">
+      <div class="a-card">
+        <div class="a-card-title">&#x1F3AB; Create Promo Code</div>
+        <p style="font-size:13px;color:#6b7280;margin-bottom:14px;line-height:1.6">Create redeemable codes that add GHS to a member's balance. Each member can only use a code once.</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+          <div class="fg" style="margin:0"><label>Code (leave blank to auto-generate)</label><input type="text" id="pcCodeInput" placeholder="e.g. GOP2026" style="text-transform:uppercase"/></div>
+          <div class="fg" style="margin:0"><label>GHS Value</label><input type="number" id="pcAmountInput" placeholder="e.g. 5.00" min="0.10" step="0.01"/></div>
+          <div class="fg" style="margin:0"><label>Max Uses (0 = unlimited)</label><input type="number" id="pcMaxUsesInput" placeholder="e.g. 100" min="0" value="0"/></div>
+          <div class="fg" style="margin:0"><label>Expiry Date</label><input type="date" id="pcExpiryInput"/></div>
+        </div>
+        <button class="add-btn" id="createPromoCodeBtn" style="margin-top:4px">&#x2795; Create Code</button>
+        <div id="pcCreateStatus" style="margin-top:9px;font-size:13px"></div>
+      </div>
+      <div class="a-card" style="margin-top:14px">
+        <div class="a-card-title">
+          <span>&#x1F4CB; All Promo Codes</span>
+          <button class="abtn" id="pcRefreshBtn">&#x21BB; Refresh</button>
+        </div>
+        <div style="overflow-x:auto"><table class="atable">
+          <thead><tr><th>#</th><th>Code</th><th>Value (GHS)</th><th>Uses / Limit</th><th>Expiry</th><th>Status</th><th>Created</th><th>Actions</th></tr></thead>
+          <tbody id="adminPromoCodesBody"><tr><td colspan="8" class="empty-row">No promo codes yet.</td></tr></tbody>
+        </table></div>
+      </div>
+    </div>
     <div class="a-section" id="atab-asettings">
       <div class="a-card">
         <div class="a-card-title">&#x1F4E2; Broadcast Announcement</div>
@@ -2718,7 +2763,13 @@ function syncVisitToBackend(visit){
 // Pull all members from JSONBin and merge into localStorage
 function syncMembersFromBackend(callback){
   // Force a fresh fetch so newly-registered members from other sessions are always visible
+  // Wrap in a timeout so a hung fetch (e.g. cold-start Render) doesn't leave the page blank
+  var _syncDone=false;
+  var _syncTimer=setTimeout(function(){
+    if(!_syncDone){ _syncDone=true; try{document.documentElement.style.visibility='';}catch(e){} if(callback)callback(); }
+  }, 7000);
   _gopFetchMaster(true).then(function(master){
+    if(_syncDone) return; _syncDone=true; clearTimeout(_syncTimer);
     var data = master && Object.prototype.hasOwnProperty.call(master,'members') ? master['members'] : null;
     if(!data){if(callback)callback();return;}
     var remote=Array.isArray(data)?data.filter(Boolean):(typeof data==='object'?Object.values(data).filter(Boolean):[]);
@@ -10399,7 +10450,6 @@ function submitUpgradeRequest(){
   var url='https://paystack.shop/pay/'+slug
     +'?email='+encodeURIComponent(currentUser.email)
     +'&name='+encodeURIComponent(currentUser.firstName+' '+currentUser.lastName)
-    +'&amount='+(fee*100)
     +'&callback_url='+encodeURIComponent(upgradeCallbackUrl);
 
   var btn=el('submitUpgradeBtn');
@@ -13413,7 +13463,6 @@ function confirmPayment(){
   var url='https://paystack.shop/pay/'+slug
     +'?email='+encodeURIComponent(reg.email)
     +'&name='+encodeURIComponent(reg.firstName+' '+reg.lastName)
-    +'&amount='+(tier.fee*100)
     +'&callback_url='+encodeURIComponent(regCallbackUrl);
 
   // Open in popup window
@@ -14341,6 +14390,153 @@ function _processUpdateFile(file){
 }
 
 
-</script>
-<script src="https://replit-cdn.com/replit-pill/replit-pill.global.js" data-repl-id="f115ee18-b034-4c4c-b0c1-5be7feaca850"></script></body>
+
+
+// ── PROMO CODES ────────────────────────────────────────────────────────────
+
+function getPromoCodes(){return ld('gop_promo_codes',[]);}
+function savePromoCodes(v){sv('gop_promo_codes',v); try{jbPut('promo_codes',v);}catch(e){}}
+
+function renderAdminPromoCodes(){
+  var tbody=document.getElementById('adminPromoCodesBody');
+  if(!tbody) return;
+  var codes=getPromoCodes();
+  if(!codes.length){tbody.innerHTML='<tr><td colspan="8" class="empty-row">No promo codes yet. Create one above.</td></tr>';return;}
+  var now=new Date();
+  var html='';
+  codes.slice().reverse().forEach(function(c,i){
+    var expired=c.expiry&&new Date(c.expiry)<now;
+    var limitHit=c.maxUses>0&&(c.usedCount||0)>=c.maxUses;
+    var active=!expired&&!limitHit&&c.active!==false;
+    var statusLabel=expired?'Expired':limitHit?'Limit Reached':active?'Active':'Disabled';
+    var statusColor=active?'#16a34a':expired?'#dc2626':'#f59e0b';
+    var statusBg=active?'#f0fdf4':expired?'#fef2f2':'#fef3c7';
+    html+='<tr>';
+    html+='<td style="color:#9ca3af;font-size:12px">'+(i+1)+'</td>';
+    html+='<td><strong style="font-family:monospace;font-size:14px;letter-spacing:1px">'+c.code+'</strong></td>';
+    html+='<td style="font-weight:700;color:var(--green)">GHS '+parseFloat(c.amount).toFixed(2)+'</td>';
+    html+='<td>'+(c.usedCount||0)+' / '+(c.maxUses>0?c.maxUses:'&infin;')+'</td>';
+    html+='<td style="font-size:12.5px">'+(c.expiry||'&mdash;')+'</td>';
+    html+='<td><span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;background:'+statusBg+';color:'+statusColor+'">'+statusLabel+'</span></td>';
+    html+='<td style="font-size:12px;color:#6b7280">'+(c.createdAt||'&mdash;')+'</td>';
+    html+='<td style="white-space:nowrap">';
+    if(active){
+      html+='<button onclick="adminTogglePromoCode(''+c.id+'',false)" style="font-size:11px;padding:3px 9px;border-radius:6px;border:1.5px solid #f59e0b;background:#fff;color:#b45309;cursor:pointer;margin-right:4px">Disable</button>';
+    } else if(!expired&&!limitHit){
+      html+='<button onclick="adminTogglePromoCode(''+c.id+'',true)" style="font-size:11px;padding:3px 9px;border-radius:6px;border:1.5px solid #16a34a;background:#fff;color:#16a34a;cursor:pointer;margin-right:4px">Enable</button>';
+    }
+    html+='<button onclick="adminDeletePromoCode(''+c.id+'')" style="font-size:11px;padding:3px 9px;border-radius:6px;border:1.5px solid #dc2626;background:#fff;color:#dc2626;cursor:pointer">Delete</button>';
+    html+='</td></tr>';
+  });
+  tbody.innerHTML=html;
+}
+
+function adminTogglePromoCode(id,active){
+  var codes=getPromoCodes();
+  var idx=codes.findIndex(function(c){return c.id===id;});
+  if(idx<0) return;
+  codes[idx].active=active;
+  savePromoCodes(codes);
+  renderAdminPromoCodes();
+}
+
+function adminDeletePromoCode(id){
+  if(!confirm('Delete this promo code? This cannot be undone.')) return;
+  var codes=getPromoCodes().filter(function(c){return c.id!==id;});
+  savePromoCodes(codes);
+  renderAdminPromoCodes();
+}
+
+function redeemPromoCode(){
+  var input=document.getElementById('redeemCodeInput');
+  var statusEl=document.getElementById('redeemCodeStatus');
+  if(!input||!statusEl) return;
+  var code=(input.value||'').trim().toUpperCase();
+  function showErr(msg){statusEl.style.display='block';statusEl.style.background='#fef2f2';statusEl.style.color='#dc2626';statusEl.style.border='1.5px solid #fecaca';statusEl.textContent=msg;}
+  function showWarn(msg){statusEl.style.display='block';statusEl.style.background='#fef3c7';statusEl.style.color='#b45309';statusEl.style.border='1.5px solid #fde68a';statusEl.textContent=msg;}
+  function showOk(msg){statusEl.style.display='block';statusEl.style.background='#f0fdf4';statusEl.style.color='#16a34a';statusEl.style.border='1.5px solid #bbf7d0';statusEl.innerHTML=msg;}
+  if(!code){showErr('Please enter a promo code.');return;}
+  var member=currentUser;
+  if(!member){showErr('Please log in first.');return;}
+  var codes=getPromoCodes();
+  var idx=codes.findIndex(function(c){return c.code===code;});
+  if(idx<0){showErr('\u274C Invalid promo code. Please check and try again.');return;}
+  var c=codes[idx];
+  if((c.usedBy||[]).indexOf(member.id)>=0){showWarn('\u26A0\uFE0F You have already redeemed this code.');return;}
+  if(c.expiry&&new Date(c.expiry)<new Date()){showErr('\u274C This promo code has expired.');return;}
+  if(c.maxUses>0&&(c.usedCount||0)>=c.maxUses){showErr('\u274C This code has reached its maximum number of uses.');return;}
+  if(c.active===false){showErr('\u274C This promo code is currently disabled.');return;}
+  var amt=parseFloat(c.amount)||0;
+  var members=getMembers();
+  var mi=members.findIndex(function(m){return m.id===member.id;});
+  if(mi<0){showErr('Member not found.');return;}
+  members[mi].balance=(parseFloat(members[mi].balance)||0)+amt;
+  if(!Array.isArray(members[mi].notifications)) members[mi].notifications=[];
+  members[mi].notifications.push({text:'\uD83C\uDF81 Promo code <strong>'+code+'<\/strong> redeemed! <strong>GHS '+amt.toFixed(2)+'<\/strong> added to your balance.',ts:new Date().toISOString()});
+  saveMembers(members);
+  if(!c.usedBy) c.usedBy=[];
+  c.usedBy.push(member.id);
+  c.usedCount=(c.usedCount||0)+1;
+  codes[idx]=c;
+  savePromoCodes(codes);
+  currentUser=members[mi];
+  var balEl=document.getElementById('dashBalance');
+  if(balEl) balEl.textContent='GHS '+(currentUser.balance||0).toFixed(2);
+  input.value='';
+  showOk('\u2705 Code redeemed! <strong>GHS '+amt.toFixed(2)+'<\/strong> added to your balance.');
+  renderRedeemHistory(currentUser);
+}
+
+function renderRedeemHistory(member){
+  var wrap=document.getElementById('redeemHistoryWrap');
+  if(!wrap||!member) return;
+  var codes=getPromoCodes();
+  var used=codes.filter(function(c){return (c.usedBy||[]).indexOf(member.id)>=0;});
+  if(!used.length){wrap.innerHTML='';return;}
+  var html='<p style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:10px">Your Redeemed Codes</p>';
+  html+='<div style="overflow-x:auto"><table class="atable"><thead><tr><th>#</th><th>Code</th><th>Value</th><th>Created</th></tr></thead><tbody>';
+  used.forEach(function(c,i){
+    html+='<tr><td style="color:#9ca3af;font-size:12px">'+(i+1)+'</td>';
+    html+='<td><strong style="font-family:monospace;letter-spacing:1px">'+c.code+'</strong></td>';
+    html+='<td style="font-weight:700;color:var(--green)">+GHS '+parseFloat(c.amount).toFixed(2)+'</td>';
+    html+='<td style="font-size:12px;color:#6b7280">'+(c.createdAt||'&mdash;')+'</td></tr>';
+  });
+  html+='</tbody></table></div>';
+  wrap.innerHTML=html;
+}
+
+document.addEventListener('DOMContentLoaded',function(){
+  var createBtn=document.getElementById('createPromoCodeBtn');
+  var refreshBtn=document.getElementById('pcRefreshBtn');
+  if(createBtn) createBtn.addEventListener('click',function(){
+    var codeRaw=(document.getElementById('pcCodeInput').value||'').trim().toUpperCase();
+    var code=codeRaw||'GOP'+Date.now().toString(36).toUpperCase().slice(-6);
+    var amount=parseFloat(document.getElementById('pcAmountInput').value||'0');
+    var maxUses=parseInt(document.getElementById('pcMaxUsesInput').value||'0',10)||0;
+    var expiry=document.getElementById('pcExpiryInput').value||'';
+    var statusEl=document.getElementById('pcCreateStatus');
+    if(!amount||amount<0.10){statusEl.style.color='#dc2626';statusEl.textContent='Please enter a valid GHS value (minimum 0.10).';return;}
+    var existing=getPromoCodes();
+    if(existing.find(function(c){return c.code===code;})){statusEl.style.color='#dc2626';statusEl.textContent='A code with that name already exists.';return;}
+    var newCode={id:'PC'+Date.now(),code:code,amount:amount,maxUses:maxUses,expiry:expiry||null,usedCount:0,usedBy:[],active:true,createdAt:new Date().toLocaleDateString('en-GB')};
+    existing.push(newCode);
+    savePromoCodes(existing);
+    statusEl.style.color='#16a34a';
+    statusEl.textContent='\u2705 Code "'+code+'" created!';
+    document.getElementById('pcCodeInput').value='';
+    document.getElementById('pcAmountInput').value='';
+    document.getElementById('pcMaxUsesInput').value='0';
+    document.getElementById('pcExpiryInput').value='';
+    renderAdminPromoCodes();
+  });
+  if(refreshBtn) refreshBtn.addEventListener('click',renderAdminPromoCodes);
+  var redeemBtn=document.getElementById('redeemCodeBtn');
+  if(redeemBtn) redeemBtn.addEventListener('click',redeemPromoCode);
+  var redeemInput=document.getElementById('redeemCodeInput');
+  if(redeemInput) redeemInput.addEventListener('keydown',function(e){if(e.key==='Enter') redeemPromoCode();});
+  document.querySelectorAll('.a-tab[data-atab="promocodes"]').forEach(function(btn){btn.addEventListener('click',function(){setTimeout(renderAdminPromoCodes,50);});});
+  document.querySelectorAll('.d-tab[data-tab="redeem"]').forEach(function(btn){btn.addEventListener('click',function(){if(currentUser) renderRedeemHistory(currentUser);});});
+});
+
+</script></body>
 </html>
