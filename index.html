@@ -5331,8 +5331,22 @@ function openMemberDashboard(member){
     try{ renderMyPromoHistory(); }catch(e){}
   });
 
-  // Silently push this member's latest record to Firebase so admin sees them
-  syncMemberToBackend(member);
+  // Pull fresh member record from Firebase first (picks up cross-device changes such
+  // as promo balance additions, admin edits, tier upgrades) then push back so the
+  // admin always sees the latest activity. Using a read-then-write here prevents
+  // a stale local record from overwriting a newer Firebase balance.
+  syncMembersFromBackend(function(){
+    var fresh=getMembers().find(function(x){return x.id===(currentUser||member).id;});
+    if(fresh){
+      currentUser=fresh;
+      saveSession();
+      try{setText('dmBal','GHS '+Number(fresh.balance||0).toFixed(2));}catch(e){}
+      try{setText('dmMonth','GHS '+Number(fresh.monthEarned||0).toFixed(2));}catch(e){}
+      try{setText('dmTier',fresh.tier);}catch(e){}
+      try{renderNotifications(fresh);}catch(e){}
+    }
+    syncMemberToBackend(currentUser||member);
+  });
 
   // Show Ghana Affairs survey popup for new users who haven't done it yet
   if(!member.ghSurveyDone){
