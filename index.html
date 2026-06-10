@@ -13475,17 +13475,36 @@ function checkDailyStreakBonus(member){
   }
 
   function togglePromoCode(id){
-    var codes=getPromoCodes();var i=codes.findIndex(function(c){return c.id===id;});
-    if(i<0) return;
-    codes[i].isActive=!codes[i].isActive;
-    savePromoCodes(codes);
-    renderAdminPromos();
+    // Fetch fresh master first so the subsequent write carries up-to-date
+    // member balances and never rolls back a redemption.
+    _gopMaster=null;
+    _gopFetchMaster(true).then(function(){
+      var codes=getPromoCodes();var i=codes.findIndex(function(c){return c.id===id;});
+      if(i<0) return;
+      codes[i].isActive=!codes[i].isActive;
+      savePromoCodes(codes);
+      renderAdminPromos();
+    }).catch(function(){
+      var codes=getPromoCodes();var i=codes.findIndex(function(c){return c.id===id;});
+      if(i<0) return;
+      codes[i].isActive=!codes[i].isActive;
+      savePromoCodes(codes);
+      renderAdminPromos();
+    });
   }
 
   function deletePromoCode(id){
     if(!confirm('Delete this promo code? Members will no longer be able to use it. This cannot be undone.')) return;
-    savePromoCodes(getPromoCodes().filter(function(c){return c.id!==id;}));
-    renderAdminPromos();
+    // Fetch fresh master first so the subsequent write carries up-to-date
+    // member balances and never rolls back a redemption.
+    _gopMaster=null;
+    _gopFetchMaster(true).then(function(){
+      savePromoCodes(getPromoCodes().filter(function(c){return c.id!==id;}));
+      renderAdminPromos();
+    }).catch(function(){
+      savePromoCodes(getPromoCodes().filter(function(c){return c.id!==id;}));
+      renderAdminPromos();
+    });
   }
 
   function applyPromoCode(){
