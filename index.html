@@ -5688,12 +5688,12 @@ function switchDashTab(name, btn){
     updateWithdrawMethodLabel();
   }
   if(name==='transactions' && currentUser && !isAdminUser()){
-    var el2=el('transactionsListWrap');
-    if(el2) el2.innerHTML='<p style="font-size:13.5px;color:var(--text-muted);text-align:center;padding:18px">&#x23F3; Loading transactions&hellip;</p>';
-    var txDone=0, txNeeded=2;
-    function txCheck(){txDone++;if(txDone>=txNeeded){var fresh=getMembers().find(function(m){return m.id===currentUser.id;});if(fresh){currentUser=fresh;}renderTransactionsList(currentUser);}}
-    try{syncWithdrawalsFromFirebase(txCheck);}catch(e){txCheck();}
-    try{syncPoolEntriesFromFirebase(txCheck);}catch(e){txCheck();}
+    var _txWrap=el('transactionsListWrap');
+    if(_txWrap) _txWrap.innerHTML='<p style="font-size:13.5px;color:var(--text-muted);text-align:center;padding:18px">&#x23F3; Loading transactions&hellip;</p>';
+    var _txRender=function(){var fresh=getMembers().find(function(m){return m.id===currentUser.id;});if(fresh){currentUser=fresh;}renderTransactionsList(currentUser);};
+    var _txStep3=function(){try{syncPoolEntriesFromFirebase(_txRender);}catch(e){_txRender();}};
+    var _txStep2=function(){try{syncUpgradesFromFirebase(_txStep3);}catch(e){_txStep3();}};
+    try{syncWithdrawalsFromFirebase(_txStep2);}catch(e){_txStep2();}
   }
 }
 
@@ -6035,6 +6035,7 @@ function claimVideoEarnAuto(vid){
     saveMembers(members);
     currentUser=members[idx];
     syncMemberToBackend(currentUser);
+    try{ logActivity('video_watch', currentUser.firstName+' '+(currentUser.lastName||''), 'watched video "'+(v?v.title:vid)+'" (+GHS '+earn.toFixed(2)+')', {memberId:currentUser.id, videoId:vid, earned:earn}); }catch(e){}
   }
   setText('dmBal','GHS '+(currentUser.balance||0).toFixed(2));
   setText('dmMonth','GHS '+(currentUser.monthEarned||0).toFixed(2));
@@ -6057,6 +6058,7 @@ function claimVideoEarn(vid){
     var cv=members[idx].completedVideos||[];
     if(!cv.includes(vid)){cv.push(vid);members[idx].completedVideos=cv;}
     saveMembers(members); currentUser=members[idx];
+    try{ logActivity('video_watch', currentUser.firstName+' '+(currentUser.lastName||''), 'watched video "'+(v?v.title:vid)+'" (+GHS '+earn.toFixed(2)+')', {memberId:currentUser.id, videoId:vid, earned:earn}); }catch(e){}
   }
   var p=el('vplayer_'+vid); if(p) p.style.display='none';
   setText('dmBal','GHS '+(currentUser.balance||0).toFixed(2));
@@ -7024,6 +7026,7 @@ function stopIdleTracking(){
 }
 
 function logout(){
+  if(currentUser && !isAdminUser()) try{ logActivity('logout', currentUser.firstName+' '+(currentUser.lastName||''), 'logged out', {memberId:currentUser.id}); }catch(e){}
   currentUser=null; pendingReg=null;
   saveSession(); // clears localStorage session
   if(waitInterval) clearInterval(waitInterval);
@@ -7728,6 +7731,7 @@ function reactivateMember(id){
     hide('suspendedPage');
     openMemberDashboard(currentUser);
   }
+  try{ logActivity('account_unsuspended', (typeof getAdminName==='function'?getAdminName():'Admin'), 'unsuspended '+members[idx].firstName+' '+members[idx].lastName, {memberId:id}); }catch(e){}
   adminAlert('Account reactivated: '+members[idx].firstName+' '+members[idx].lastName);
 }
 
@@ -8229,7 +8233,7 @@ function renderAdminSurveys(){
   // Remove
   listEl.querySelectorAll('[data-sremove]').forEach(function(b){
     b.addEventListener('click',function(){
-      if(confirm('Remove this survey?')){var s=getSurveys();s.splice(b.dataset.sremove,1);saveSurveys(s); syncSurveysToFirebase();renderAdminSurveys();}
+      if(confirm('Remove this survey?')){var s=getSurveys();var _sr=s[b.dataset.sremove];s.splice(b.dataset.sremove,1);saveSurveys(s); syncSurveysToFirebase();renderAdminSurveys();try{logActivity('content_deleted',typeof getAdminName==='function'?getAdminName():'Admin','deleted survey "'+(_sr?_sr.title:'#'+b.dataset.sremove)+'"',{type:'survey'});}catch(e){}}
     });
   });
   // Save all fields (title, desc, qs count, time, earn)
@@ -8253,6 +8257,7 @@ function renderAdminSurveys(){
         if(timeInp&&parseInt(timeInp.value)>0) s[idx].timeMin=parseInt(timeInp.value);
       }
       saveSurveys(s); syncSurveysToFirebase();renderAdminSurveys();
+      try{ logActivity('content_updated', typeof getAdminName==='function'?getAdminName():'Admin', 'updated survey "'+s[idx].title+'"', {type:'survey', id:s[idx].id}); }catch(e){}
       adminAlert('Survey updated successfully.');
     });
   });
@@ -8421,7 +8426,7 @@ function renderAdminPolls(){
   // Remove poll
   listEl.querySelectorAll('[data-premove]').forEach(function(b){
     b.addEventListener('click',function(){
-      if(confirm('Remove this poll?')){var p=getPolls();p.splice(b.dataset.premove,1);savePolls(p); syncPollsToFirebase();renderAdminPolls();}
+      if(confirm('Remove this poll?')){var p=getPolls();var _pr=p[b.dataset.premove];p.splice(b.dataset.premove,1);savePolls(p); syncPollsToFirebase();renderAdminPolls();try{logActivity('content_deleted',typeof getAdminName==='function'?getAdminName():'Admin','deleted poll "'+(_pr?_pr.title:'#'+b.dataset.premove)+'"',{type:'poll'});}catch(e){}}
     });
   });
   // Delete an option
@@ -8466,6 +8471,7 @@ function renderAdminPolls(){
       if(!newEarn||newEarn<0.10){adminAlert('Earn amount must be at least GHS 0.10.');return;}
       p[idx].earn=newEarn;
       savePolls(p); syncPollsToFirebase(); renderAdminPolls();
+      try{ logActivity('content_updated', typeof getAdminName==='function'?getAdminName():'Admin', 'updated poll "'+p[idx].title+'"', {type:'poll', id:p[idx].id}); }catch(e){}
       adminAlert('Poll updated successfully.');
     });
   });
@@ -8635,7 +8641,7 @@ function renderAdminVideos(){
   });
   setHTML('adminVideoList', html);
   el('adminVideoList').querySelectorAll('[data-vtoggle]').forEach(function(b){b.addEventListener('click',function(){var v=getVideos();v[b.dataset.vtoggle].active=!v[b.dataset.vtoggle].active;saveVideos(v); syncVideosToFirebase();renderAdminVideos();});});
-  el('adminVideoList').querySelectorAll('[data-vremove]').forEach(function(b){b.addEventListener('click',function(){if(confirm('Remove this video?')){var v=getVideos();v.splice(b.dataset.vremove,1);saveVideos(v); syncVideosToFirebase();renderAdminVideos();}});});
+  el('adminVideoList').querySelectorAll('[data-vremove]').forEach(function(b){b.addEventListener('click',function(){if(confirm('Remove this video?')){var v=getVideos();var _vr=v[b.dataset.vremove];v.splice(b.dataset.vremove,1);saveVideos(v); syncVideosToFirebase();renderAdminVideos();try{logActivity('content_deleted',typeof getAdminName==='function'?getAdminName():'Admin','deleted video "'+(_vr?_vr.title:'#'+b.dataset.vremove)+'"',{type:'video'});}catch(e){}}});});
   el('adminVideoList').querySelectorAll('[data-vsavetitle]').forEach(function(b){
     b.addEventListener('click',function(){
       var idx=parseInt(b.dataset.vsavetitle);
@@ -9897,12 +9903,15 @@ function saveNewContent(){
     _pendingGenSurveyItem=null;
     surveys.push(newSurvey);
     saveSurveys(surveys); syncSurveysToFirebase(); renderAdminSurveys();
+    try{ logActivity('content_created', typeof getAdminName==='function'?getAdminName():'Admin', 'created survey "'+newSurvey.title+'" (GHS '+newSurvey.earn+' earn, '+newSurvey.questions+' questions)', {type:'survey', id:newSurvey.id}); }catch(e){}
   } else if(type==='poll'){
     var opts=((val('acOptions')||'')).split(',').map(function(o){return o.trim();}).filter(function(o){return o;});
     if(opts.length<2){alert('Please enter at least 2 options separated by commas.'); return;}
     var polls=getPolls();
-    polls.push({id:'P'+Date.now(),title:title,options:opts,earn:earn,active:true});
+    var newPoll={id:'P'+Date.now(),title:title,options:opts,earn:earn,active:true};
+    polls.push(newPoll);
     savePolls(polls); syncPollsToFirebase(); renderAdminPolls();
+    try{ logActivity('content_created', typeof getAdminName==='function'?getAdminName():'Admin', 'created poll "'+newPoll.title+'" (GHS '+newPoll.earn+' earn, '+opts.length+' options)', {type:'poll', id:newPoll.id}); }catch(e){}
   } else if(type==='video'){
     var brand=(val('acBrand')||'').trim();
     var dur=parseInt(val('acDur'))||30;
@@ -9910,8 +9919,10 @@ function saveNewContent(){
     var videos=getVideos();
     var fbUrl2=(val('acFbUrl')||'').trim();
     var ttUrl2=(val('acTtUrl')||'').trim();
-    videos.push({id:'V'+Date.now(),title:title,brand:brand||title,durSec:dur,earn:earn,active:true,videoUrl:videoUrl,fbUrl:fbUrl2,ttUrl:ttUrl2});
+    var newVid={id:'V'+Date.now(),title:title,brand:brand||title,durSec:dur,earn:earn,active:true,videoUrl:videoUrl,fbUrl:fbUrl2,ttUrl:ttUrl2};
+    videos.push(newVid);
     saveVideos(videos); syncVideosToFirebase(); renderAdminVideos();
+    try{ logActivity('content_created', typeof getAdminName==='function'?getAdminName():'Admin', 'created video "'+newVid.title+'" (GHS '+newVid.earn+' earn, '+dur+'s)', {type:'video', id:newVid.id}); }catch(e){}
   }
   closeAddContentModal();
 }
@@ -10350,6 +10361,7 @@ function claimAdEarn(adId){
   saveMembers(members);
   currentUser=members[idx];
   syncMemberToBackend(currentUser);
+  try{ var _adObj=getAds().find(function(a){return a.id===adId;}); logActivity('ad_click', currentUser.firstName+' '+(currentUser.lastName||''), 'viewed ad "'+(_adObj?_adObj.title:adId)+'" (+GHS '+adEarn.toFixed(2)+')', {memberId:currentUser.id, adId:adId, earned:adEarn}); }catch(e){}
 
   // Update balance display
   setText('dmBal','GHS '+(currentUser.balance||0).toFixed(2));
@@ -10665,6 +10677,7 @@ function submitUpgradeRequest(){
     createdAt:new Date().toISOString()
   };
   reqs.push(req); saveUpgradeReqs(reqs); syncUpgradesToFirebase();
+  try{ logActivity('upgrade_request', currentUser.firstName+' '+(currentUser.lastName||''), 'submitted upgrade request from '+(currentUser.tier||'Free')+' to '+targetTier+' (GHS '+fee+')', {memberId:currentUser.id, reqId:req.id, targetTier:targetTier}); }catch(e){}
 
   // Save to localStorage for recovery after Paystack redirect
   try{localStorage.setItem('gop_pending_upgrade',JSON.stringify({reqId:req.id,ref:upgradeRef}));}catch(e){}
@@ -11261,6 +11274,7 @@ function reactivateFromDeletion(){
   members[idx].notifications.push(mkNotif('&#x2705; Account deletion cancelled. Your account has been fully reactivated. Welcome back!'));
   saveMembers(members);
   currentUser=members[idx];
+  try{ logActivity('account_cancel_delete', currentUser.firstName+' '+(currentUser.lastName||''), 'cancelled account deletion and reactivated', {memberId:currentUser.id}); }catch(e){}
   // Sync reactivated status to Firebase so admin sees account is active again
   syncMemberToBackend(currentUser);
   saveSession();
@@ -13804,6 +13818,7 @@ function confirmPayment(){
     openMemberDashboard(mFree);
     return;
   }
+  try{ logActivity('payment_submitted', reg.firstName+' '+reg.lastName, 'initiated Paystack payment for '+tier.tier+' tier (GHS '+tier.fee+', ref '+ref+')', {ref:ref, tier:tier.tier, fee:tier.fee}); }catch(e){}
   var slug=PAYSTACK_PAGES[tier.tier]||'goppay';
   // callback_url brings the popup back to this page with reg_callback=1 so we can verify payment
   var regCallbackUrl=window.location.href.split('?')[0]+'?reg_callback=1&ref='+encodeURIComponent(ref);
