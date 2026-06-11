@@ -2229,6 +2229,8 @@ iframe[src*="badge"]{
               <option value="account">Account changes</option>
               <option value="broadcast">Announcements</option>
               <option value="content">Content created</option>
+              <option value="slot">Slot purchases</option>
+              <option value="promo">Promo code redemptions</option>
             </select>
             <button id="activityRefreshBtn" class="abtn vbtn" style="padding:6px 12px;font-size:12px">&#x21BB; Refresh</button>
             <button id="activityClearBtn" class="abtn rbtn" style="padding:6px 12px;font-size:12px">&#x1F5D1; Clear log</button>
@@ -4370,6 +4372,7 @@ document.addEventListener('DOMContentLoaded', function(){
               if(_pi>=0){_pools[_pi].slotsSold=(Number(_pools[_pi].slotsSold)||0)+Number(_pData.slotsCount||1);savePools(_pools);}
             }
           }
+          try{logActivity('slot_purchase',_pData.memberName,'purchased '+(_pData.slotsCount||1)+' slot'+(_pData.slotsCount>1?'s':'')+' in pool "'+(_pData.poolTitle||'Pool')+'" (GHS '+Number(_pData.amountPaid||0).toFixed(2)+')',{memberId:_pData.memberId,poolId:_pData.poolId,slotsCount:_pData.slotsCount,ref:_trxref});}catch(e){}
           var _verifiedPayload=JSON.stringify({trxref:_trxref,slotsCount:_pData.slotsCount,poolTitle:_pData.poolTitle});
           if(_isPopup){
             // Write into the OPENER's localStorage (not this popup window's)
@@ -7264,6 +7267,8 @@ function _activityTypeOf(t){
   if(t==='account_deleted'||t==='account_suspended'||t==='account_unsuspended'||t==='account_restored'||t==='account_cancel_delete') return 'account';
   if(t==='announcement_sent'||t==='announcement_cleared') return 'broadcast';
   if(t==='content_created'||t==='content_deleted'||t==='content_updated') return 'content';
+  if(t==='slot_purchase') return 'slot';
+  if(t==='promo_redeem') return 'promo';
   return 'event';
 }
 function _activityIconOf(cat){
@@ -7271,7 +7276,8 @@ function _activityIconOf(cat){
     login:'\uD83D\uDD11', register:'\uD83D\uDC64', payment:'\uD83D\uDCB3',
     survey:'\uD83D\uDCCB', poll:'\u26A1', page:'\uD83D\uDCF1', ad:'\uD83D\uDCE2',
     video:'\u25B6', withdrawal:'\uD83D\uDCB8', upgrade:'\u2B06', account:'\u26A0',
-    broadcast:'\uD83D\uDCE3', content:'\uD83D\uDCDD'
+    broadcast:'\uD83D\uDCE3', content:'\uD83D\uDCDD',
+    slot:'\uD83C\uDFAB', promo:'\uD83C\uDFAB'
   })[cat]||'\u2022';
 }
 function renderActivityFeed(){
@@ -13664,6 +13670,7 @@ function checkDailyStreakBonus(member){
       showPromoMsg('&#x1F389; Success! <strong>GHS '+Number(c.reward).toFixed(2)+'</strong> has been added to your balance.',true);
       try{setText('dmBal','GHS '+Number(currentUser.balance||0).toFixed(2));}catch(e){}
       try{renderNotifications(currentUser);}catch(e){}
+      try{logActivity('promo_redeem',currentUser.firstName+' '+(currentUser.lastName||''),'redeemed promo code '+code+' (+GHS '+Number(c.reward).toFixed(2)+')',{memberId:currentUser.id,code:code,reward:Number(c.reward)});}catch(e){}
       restoreBtn();
       renderMyPromoHistory();
     });
