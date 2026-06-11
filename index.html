@@ -7030,8 +7030,6 @@ function stopIdleTracking(){
 
 function logout(){
   if(currentUser && !isAdminUser()) try{ logActivity('logout', currentUser.firstName+' '+(currentUser.lastName||''), 'logged out', {memberId:currentUser.id}); }catch(e){}
-  try{var _uvb=document.getElementById('upgradeVerifyBanner');if(_uvb)_uvb.style.display='none';}catch(e){}
-  try{localStorage.removeItem('gop_pending_upgrade');}catch(e){}
   currentUser=null; pendingReg=null;
   saveSession(); // clears localStorage session
   if(waitInterval) clearInterval(waitInterval);
