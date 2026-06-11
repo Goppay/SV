@@ -4456,13 +4456,15 @@ document.addEventListener('DOMContentLoaded', function(){
     if(!ugRaw) return;
     var ugPend=null;try{ugPend=JSON.parse(ugRaw);}catch(e){}
     if(!ugPend||!ugPend.reqId) return;
+    var _ugSess=null;try{_ugSess=JSON.parse(localStorage.getItem('gop_session'));}catch(e){}
+    if(!_ugSess||!_ugSess.id||_ugSess.role==='superadmin'||_ugSess.role==='subadmin') return;
 
     function _showUpgradeVerifyBanner(visible, html){
       var b=document.getElementById('upgradeVerifyBanner');
       if(!b&&visible){
         b=document.createElement('div');
         b.id='upgradeVerifyBanner';
-        b.style.cssText='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:900;background:#1d4ed8;color:#fff;padding:14px 22px;border-radius:12px;font-size:13.5px;font-weight:600;display:flex;align-items:center;gap:12px;box-shadow:0 4px 24px rgba(29,78,216,.35);max-width:92vw;flex-wrap:wrap;justify-content:center;text-align:center';
+        b.style.cssText='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:900;background:#0d4a22;color:#fff;padding:14px 22px;border-radius:12px;font-size:13.5px;font-weight:600;display:flex;align-items:center;gap:12px;box-shadow:0 4px 24px rgba(29,78,216,.35);max-width:92vw;flex-wrap:wrap;justify-content:center;text-align:center';
         document.body.appendChild(b);
       }
       if(!b) return;
@@ -5693,7 +5695,8 @@ function switchDashTab(name, btn){
     var _txRender=function(){var fresh=getMembers().find(function(m){return m.id===currentUser.id;});if(fresh){currentUser=fresh;}renderTransactionsList(currentUser);};
     var _txStep3=function(){try{syncPoolEntriesFromFirebase(_txRender);}catch(e){_txRender();}};
     var _txStep2=function(){try{syncUpgradesFromFirebase(_txStep3);}catch(e){_txStep3();}};
-    try{syncWithdrawalsFromFirebase(_txStep2);}catch(e){_txStep2();}
+    var _txStep1=function(){try{syncWithdrawalsFromFirebase(_txStep2);}catch(e){_txStep2();}};
+    try{syncMembersFromBackend(_txStep1);}catch(e){_txStep1();}
   }
 }
 
@@ -7255,7 +7258,7 @@ function switchAdminTab(name, btn){
   if(name==='activity'){
     var aBody=document.getElementById('activityBody');
     if(aBody) aBody.innerHTML='<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:18px;font-size:13px">&#x23F3; Loading activity&hellip;</td></tr>';
-    _gopMaster=null; // bust cache so jbGet fetches genuinely fresh data from the bin
+    _gopMaster=null; _gopMasterPromise=null; // bust cache + any in-flight fetch so jbGet fetches genuinely fresh data from the bin
     syncActivityFromFirebase(renderActivityFeed);
   }
 }
