@@ -5688,7 +5688,12 @@ function switchDashTab(name, btn){
     updateWithdrawMethodLabel();
   }
   if(name==='transactions' && currentUser && !isAdminUser()){
-    renderTransactionsList(currentUser);
+    var el2=el('transactionsListWrap');
+    if(el2) el2.innerHTML='<p style="font-size:13.5px;color:var(--text-muted);text-align:center;padding:18px">&#x23F3; Loading transactions&hellip;</p>';
+    var txDone=0, txNeeded=2;
+    function txCheck(){txDone++;if(txDone>=txNeeded){var fresh=getMembers().find(function(m){return m.id===currentUser.id;});if(fresh){currentUser=fresh;}renderTransactionsList(currentUser);}}
+    try{syncWithdrawalsFromFirebase(txCheck);}catch(e){txCheck();}
+    try{syncPoolEntriesFromFirebase(txCheck);}catch(e){txCheck();}
   }
 }
 
@@ -7030,6 +7035,7 @@ function logout(){
   hide('suspendedPage');
   hide('pendingDeletionPage');
   document.body.style.overflow='auto';
+  document.documentElement.style.overflow='';
   window.scrollTo(0,0);
 }
 function isAdminUser(){return currentUser && (currentUser==='admin'||currentUser.role==='superadmin'||currentUser.role==='subadmin');}
@@ -7040,7 +7046,8 @@ function isSubAdmin(){return currentUser && currentUser.role==='subadmin';}
 
 function openAdminDashboard(){
   show('adminDashboard');
-  document.body.style.overflow='auto';
+  document.body.style.overflow='hidden';
+  document.documentElement.style.overflow='hidden';
   // Update admin nav label
   var logo=el('aNavLogo');
   if(logo){
