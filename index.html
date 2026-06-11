@@ -5693,7 +5693,10 @@ function switchDashTab(name, btn){
     var _txRender=function(){var fresh=getMembers().find(function(m){return m.id===currentUser.id;});if(fresh){currentUser=fresh;}renderTransactionsList(currentUser);};
     var _txStep3=function(){try{syncPoolEntriesFromFirebase(_txRender);}catch(e){_txRender();}};
     var _txStep2=function(){try{syncUpgradesFromFirebase(_txStep3);}catch(e){_txStep3();}};
-    try{syncWithdrawalsFromFirebase(_txStep2);}catch(e){_txStep2();}
+    var _txStep1=function(){try{syncWithdrawalsFromFirebase(_txStep2);}catch(e){_txStep2();}};
+    // Force a fresh fetch from the bin so we never show stale cached data
+    _gopMaster=null;
+    _gopFetchMaster(true).then(_txStep1).catch(_txStep1);
   }
 }
 
@@ -6813,7 +6816,7 @@ function renderAdminTransactions(){
 
   // 3. Upgrade payments
   try{
-    var upgrades=JSON.parse(localStorage.getItem('gop_upgrades')||'[]');
+    var upgrades=getUpgradeReqs();
     upgrades.forEach(function(u){
       if(!u.paystackRef&&!u.reference) return;
       allTx.push({
@@ -7256,7 +7259,13 @@ function switchAdminTab(name, btn){
     var aBody=document.getElementById('activityBody');
     if(aBody) aBody.innerHTML='<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:18px;font-size:13px">&#x23F3; Loading activity&hellip;</td></tr>';
     _gopMaster=null; // bust cache so jbGet fetches genuinely fresh data from the bin
-    syncActivityFromFirebase(renderActivityFeed);
+    _gopFetchMaster(true).then(function(){
+      syncMembersFromBackend(function(){
+        syncActivityFromFirebase(renderActivityFeed);
+      });
+    }).catch(function(){
+      syncActivityFromFirebase(renderActivityFeed);
+    });
   }
 }
 
